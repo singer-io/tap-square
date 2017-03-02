@@ -61,7 +61,9 @@ def gen_request(url, params=None):
         for row in data:
             yield row
 
-        if True:
+        if 'next' in resp.links:
+            url = resp.links['next']['url']
+        else:
             break
 
 
