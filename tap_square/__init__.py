@@ -10,13 +10,14 @@ from tap_square import utils
 
 
 REQUIRED_CONFIG_KEYS = ['accessToken']
-PER_PAGE = 100
+LIMIT = 200
 BASE_URL = "https://connect.squareup.com/v1"
 CONFIG = {}
 STATE = {}
 
 endpoints = {
-    "locations": "/me/locations"
+    "locations": "/me/locations",
+    "payments": "/{location_id}/payments",
     # "tickets": "/api/v2/tickets",
     # "sub_ticket": "/api/v2/tickets/{id}/{entity}",
     # "agents": "/api/v2/agents",
@@ -43,12 +44,10 @@ def get_start(entity):
 
 def gen_request(url, params=None):
     params = params or {}
-    page = 1
     headers = {"Content-Type": "application/json",
                "Accept": "application/json",
                "Authorization": "Bearer {}".format(CONFIG['accessToken'])}
     while True:
-        #params['page'] = page
         req = requests.Request('GET', url, params=params, headers=headers).prepare()
         logger.info("GET {}".format(req.url))
         resp = session.send(req)
@@ -62,9 +61,7 @@ def gen_request(url, params=None):
         for row in data:
             yield row
 
-        if len(data) == PER_PAGE:
-            page += 1
-        else:
+        if True:
             break
 
 
@@ -128,12 +125,30 @@ def sync_time_filtered(entity):
 
     singer.write_state(STATE)
 
+# TODO: pagination for payments
+def sync_payments(location_id):
+    logger.info("Location {}: Syncing payments".format(location_id))
+    state_name = "payments.{}".format(location_id)
+    start = get_start(state_name)
+    params = {
+        "limit": LIMIT,
+        "order": "ASC",
+        "begin_time": start
+    }
+    for payment in gen_request(get_url("payments", location_id=location_id), params):
+        if payment['created_at'] >= start:
+            singer.write_record("square_payments", payment)
+            utils.update_state(STATE, state_name, payment['created_at'])
+            singer.write_state(STATE)
+        
+
 def sync_locations():
     params = {}
     singer.write_schema("square_location", {}, ["id"])
-    for row in gen_request(get_url("locations"), params):
-        logger.info("Location {}: Syncing".format(row['id']))
-        singer.write_record("square_location", row)
+    for location in gen_request(get_url("locations"), params):
+        logger.info("Location {}: Syncing".format(location['id']))
+        singer.write_record("square_location", location)
+        sync_payments(location['id'])
 
 def do_sync():
     logger.info("Starting Square sync")
