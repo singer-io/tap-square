@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "properties": {
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "refunds": {
+      "type": ["null", "object"],
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "processed_at":{
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "itemizations": {
+      "type": ["null", "object"],
+      "properties": {
+        "quantity": "number"
+      }
+    }
+  }
+}

@@ -9,7 +9,7 @@ import singer
 from tap_square import utils
 
 
-REQUIRED_CONFIG_KEYS = ['accessToken']
+REQUIRED_CONFIG_KEYS = ['accessToken', 'start_date']
 LIMIT = 200
 BASE_URL = "https://connect.squareup.com/v1"
 CONFIG = {}
@@ -145,11 +145,12 @@ def sync_payments(location_id):
         
 
 def sync_locations():
-    params = {}
     singer.write_schema("square_location", {}, ["id"])
-    for location in gen_request(get_url("locations"), params):
+    singer.write_schema("square_payments", utils.load_schema("payments"), ["id"])
+    for location in gen_request(get_url("locations"), {}):
         logger.info("Location {}: Syncing".format(location['id']))
         singer.write_record("square_location", location)
+
         sync_payments(location['id'])
 
 def do_sync():
