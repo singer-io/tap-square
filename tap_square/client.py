@@ -1,6 +1,7 @@
 from square.client import Client
 from singer import bookmarks
 from datetime import timedelta
+from singer import utils
 
 class SquareClient():
     def __init__(self, config):
@@ -31,9 +32,9 @@ class SquareClient():
     def get_catalog_items(self, start_time, bookmarked_cursor):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
-        start_time = strptime_to_utc(start-time)
+        start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
-        start_time = stftime(start_time)
+        start_time = utils.strftime(start_time)
 
         body = {
             "object_types": ["ITEM"],
