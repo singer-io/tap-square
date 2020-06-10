@@ -1,6 +1,7 @@
 import datetime
 import json
 from singer import metadata
+from singer.catalog import Catalog
 import os
 from .streams import STREAMS
 
@@ -13,7 +14,7 @@ def get_schemas():
     schemas = {}
     schemas_metadata = {}
 
-    for stream_name, stream_metadata in STREAMS.items():
+    for stream_name, stream_object in STREAMS.items():
 
         schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
         with open(schema_path) as file:
@@ -21,8 +22,8 @@ def get_schemas():
 
         meta = metadata.get_standard_metadata(
             schema=schema,
-            valid_replication_keys=stream_metadata.get('replication_keys', None),
-            replication_method=stream_metadata.get('replication_method', None)
+            valid_replication_keys=stream_object.valid_replication_keys,
+            replication_method=stream_object.replication_method
         )
         schemas[stream_name] = schema
         schemas_metadata[stream_name] = meta
@@ -47,4 +48,4 @@ def discover():
 
         streams.append(catalog_entry)
 
-    return {'streams': streams}
+    return Catalog.from_dict({'streams': streams})

@@ -1,6 +1,32 @@
+import singer
+
+class Items:
+    tap_stream_id = 'items' # TODO should this be capitalized?
+    key_properties = []
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+
+    def sync(self, catalog_entry, client, state, start_time, bookmarked_cursor):
+        max_updated_at = start_time
+
+        for page, cursor in client.get_catalog_items(start_time, bookmarked_cursor):
+
+            for item in page:
+                singer.write_record(self.tap_stream_id, item)
+                if item['updated_at'] > max_updated_at:
+                    max_updated_at = item['updated_at']
+
+
+            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_updated_at)
+            singer.write_state(state)
+
+        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
+
+        return state
+
+
 STREAMS = {
-    'items': {
-        'replication_method': 'FULL_TABLE',
-        'replication_keys': ['updated_at']
-    }
+    'items': Items
 }

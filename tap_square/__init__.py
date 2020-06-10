@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import singer
+from singer.catalog import write_catalog
 from .discover import discover
+from .sync import sync
 import json
 
 
@@ -12,13 +14,12 @@ LOGGER = singer.get_logger()
 def main():
     args = singer.utils.parse_args([])
 
-    catalog = args.catalog.to_dict() if args.catalog else discover()
+    catalog = args.catalog if args.catalog else discover()
 
     if args.discover:
-        print(json.dumps(catalog, indent=2))
+        write_catalog(catalog)
     else:
-        state = args.state or {'bookmarks': {}}
-        #sync(args.config, state, catalog)
+        sync(args.config, args.state, catalog)
 
 
 if __name__ == '__main__':
