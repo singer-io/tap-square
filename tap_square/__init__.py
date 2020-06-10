@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
+import json
 
 import singer
 from singer.catalog import write_catalog
 from .discover import discover
 from .sync import sync
-import json
-
 
 LOGGER = singer.get_logger()
-
 
 @singer.utils.handle_top_exception(LOGGER)
 def main():
@@ -20,7 +18,6 @@ def main():
         write_catalog(catalog)
     else:
         sync(args.config, args.state, catalog)
-
 
 if __name__ == '__main__':
     main()

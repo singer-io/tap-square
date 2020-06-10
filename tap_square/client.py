@@ -1,6 +1,5 @@
-from square.client import Client
-from singer import bookmarks
 from datetime import timedelta
+from square.client import Client
 from singer import utils
 
 class SquareClient():
@@ -24,10 +23,11 @@ class SquareClient():
 
         result = client.o_auth.obtain_token(body)
 
-        if result.is_success():
-            return result.body['access_token']
-        elif result.is_error():
+        if result.is_error():
             raise Exception(result.errors)
+
+        return result.body['access_token']
+
 
     def get_catalog_items(self, start_time, bookmarked_cursor):
         # Move the max_updated_at back the smallest unit possible

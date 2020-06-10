@@ -7,7 +7,7 @@ class Items:
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, catalog_entry, client, state, start_time, bookmarked_cursor):
+    def sync(self, client, state, start_time, bookmarked_cursor):
         max_updated_at = start_time
 
         for page, cursor in client.get_catalog_items(start_time, bookmarked_cursor):

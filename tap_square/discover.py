@@ -1,8 +1,7 @@
-import datetime
 import json
+import os
 from singer import metadata
 from singer.catalog import Catalog
-import os
 from .streams import STREAMS
 
 def get_abs_path(path):
