@@ -10,9 +10,14 @@ setup(name='tap-square',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_square'],
       install_requires=[
-          'singer-python>=0.1.0',
-          'requests==2.12.4',
+          'singer-python==5.9.0',
+          'squareup==5.3.0.20200528'
       ],
+      extras_require={
+          'dev': [
+              'ipdb==0.11',
+          ]
+      },
       entry_points='''
           [console_scripts]
           tap-square=tap_square:main
@@ -20,15 +25,7 @@ setup(name='tap-square',
       packages=['tap_square'],
       package_data = {
           'tap_square/schemas': [
-              'agents.json',
-              'companies.json',
-              'contacts.json',
-              'conversations.json',
-              'groups.json',
-              'roles.json',
-              'satisfaction_ratings.json',
-              'tickets.json',
-              'time_entries.json',
+              'items.json'
           ],
       },
       include_package_data=True,
