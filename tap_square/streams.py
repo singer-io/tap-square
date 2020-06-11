@@ -2,7 +2,7 @@ import singer
 
 class Items:
     tap_stream_id = 'items' # TODO should this be capitalized?
-    key_properties = []
+    key_properties = ['id']
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
