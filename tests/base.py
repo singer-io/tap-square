@@ -33,7 +33,8 @@ class TestSquareBase(unittest.TestCase):
     @staticmethod
     def get_properties():
         return {
-            'start_date' : '2020-03-01T00:00:00Z'
+            'start_date' : '2020-03-01T00:00:00Z',
+            'sandbox' : 'true'
         }
 
     @staticmethod

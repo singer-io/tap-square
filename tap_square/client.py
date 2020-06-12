@@ -1,6 +1,7 @@
 from datetime import timedelta
 from square.client import Client
 from singer import utils
+import singer
 
 class SquareClient():
     def __init__(self, config):
@@ -8,8 +9,10 @@ class SquareClient():
         self._client_id = config['client_id']
         self._client_secret = config['client_secret']
 
+        self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
+
         self._access_token = self._get_access_token()
-        self._client = Client(access_token=self._access_token, environment='sandbox')
+        self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
         body = {
@@ -19,9 +22,10 @@ class SquareClient():
             'refresh_token': self._refresh_token
         }
 
-        client = Client(environment='sandbox') #FIXME Remove the environment before releasing
+        client = Client(environment=self._environment)
 
-        result = client.o_auth.obtain_token(body)
+        with singer.http_request_timer('GET access token'):
+            result = client.o_auth.obtain_token(body)
 
         if result.is_error():
             raise Exception(result.errors)
@@ -46,7 +50,8 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        result = self._client.catalog.search_catalog_objects(body=body)
+        with singer.http_request_timer('GET items'):
+            result = self._client.catalog.search_catalog_objects(body=body)
 
         if result.is_error():
             raise Exception(result.errors)
@@ -55,7 +60,8 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            result = self._client.catalog.search_catalog_objects(body=body)
+            with singer.http_request_timer('GET items'):
+                result = self._client.catalog.search_catalog_objects(body=body)
 
             if result.is_error():
                 raise Exception(result.errors)

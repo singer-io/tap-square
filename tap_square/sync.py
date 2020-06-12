@@ -1,7 +1,8 @@
 import singer
-
 from .client import SquareClient
 from .streams import STREAMS
+
+LOGGER = singer.get_logger()
 
 def sync(config, state, catalog):
     client = SquareClient(config)
@@ -11,6 +12,8 @@ def sync(config, state, catalog):
         stream_obj = STREAMS[tap_stream_id]()
         replication_key = stream_obj.replication_key
         stream_schema = stream.schema.to_dict()
+
+        LOGGER.info('Staring sync for stream: %s', tap_stream_id)
 
         state = singer.set_currently_syncing(state, tap_stream_id)
         singer.write_state(state)
