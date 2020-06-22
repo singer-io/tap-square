@@ -65,4 +65,32 @@ class SquareClient():
             if result.is_error():
                 raise Exception(result.errors)
 
-            yield (result.body.get('objects'), result.body.get('cursor'))
+            yield (result.body.get('objects', []), result.body.get('cursor'))
+
+
+    def get_employees(self, bookmarked_cursor):
+
+        body = {
+            'limit': 50,
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
+        with singer.http_request_timer('GET employee'):
+            result = self._client.employees.list_employees(**body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('employees', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET employees'):
+                result = self._client.employees.list_employees(**body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('employees', []), result.body.get('cursor'))

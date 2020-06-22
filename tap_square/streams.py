@@ -59,10 +59,31 @@ class Taxes(CatalogStream):
     replication_key = 'updated_at'
     object_type = 'TAX'
 
+class Employees():
+    tap_stream_id = 'employees'
+    key_properties = ['id']
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
+
+    def sync(self, client, state, bookmarked_cursor):
+
+        for page, cursor in client.get_employees(bookmarked_cursor):
+            for record in page:
+                singer.write_record(self.tap_stream_id, record)
+
+            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(state)
+
+        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
+
+        return state
+
 
 STREAMS = {
     'items': Items,
     'categories': Categories,
     'discounts': Discounts,
     'taxes': Taxes,
+    'employees': Employees,
 }
