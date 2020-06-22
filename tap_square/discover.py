@@ -22,12 +22,16 @@ def get_schemas():
         meta = metadata.get_standard_metadata(
             schema=schema,
             key_properties=stream_object.key_properties,
-            valid_replication_keys=stream_object.valid_replication_keys,
             replication_method=stream_object.replication_method
         )
 
         meta = metadata.to_map(meta)
-        meta = metadata.write(meta, ('properties', stream_object.replication_key), 'inclusion', 'automatic')
+
+        if stream_object.valid_replication_keys:
+            meta = metadata.write(meta, (), 'valid-replication-keys', stream_object.valid_replication_keys)
+        if stream_object.replication_key:
+            meta = metadata.write(meta, ('properties', stream_object.replication_key), 'inclusion', 'automatic')
+
         meta = metadata.to_list(meta)
 
         schemas[stream_name] = schema

@@ -52,6 +52,7 @@ class TestSquareBase(unittest.TestCase):
             'categories',
             'discounts',
             'taxes',
+            'employees',
         }
 
     def expected_metadata(self):
@@ -78,6 +79,10 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
+            "employees": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            }
         }
 
     def expected_replication_method(self):
