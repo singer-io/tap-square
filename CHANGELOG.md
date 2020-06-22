@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased][unreleased]
 
+## [0.4.0] - 2020-06-22
+### Added
+- `Locations` as a full table stream
+
 ## [0.3.0] - 2020-06-22
 ### Added
 - `Employees` as a full table stream
@@ -31,7 +35,8 @@ All notable changes to this project will be documented in this file. This change
     `updated_at`
     - No, the query does not support sorting by that attribute.
 
-[unreleased]: https://github.com/singer-io/tap-square/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/singer-io/tap-square/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/singer-io/tap-square/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/singer-io/tap-square/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/singer-io/tap-square/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/singer-io/tap-square/compare/v0.0.1...v0.1.0
