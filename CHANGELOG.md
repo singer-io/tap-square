@@ -3,15 +3,19 @@ All notable changes to this project will be documented in this file. This change
 
 ## [Unreleased][unreleased]
 
+## [0.3.0] - 2020-06-22
+### Added
+- `Employees` as a full table stream
+
 ## [0.2.0] - 2020-06-22
 ### Added
-- `Categories` as a syncable stream
-- `Discounts` as a syncable stream
-- `Taxes` as a syncable stream
+- `Categories` as a incremental stream
+- `Discounts` as a incremental stream
+- `Taxes` as a incremental stream
 
 ## [0.1.0] - 2020-06-12
 ### Added
-- `Items` as a syncable stream
+- `Items` as a incremental stream
 - `sandbox` as a config parameter which if true will have the tap connect
   to a sandbox environment
 
@@ -28,6 +32,7 @@ All notable changes to this project will be documented in this file. This change
     - No, the query does not support sorting by that attribute.
 
 [unreleased]: https://github.com/singer-io/tap-square/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/singer-io/tap-square/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/singer-io/tap-square/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/singer-io/tap-square/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/singer-io/tap-square/tree/v0.0.1
