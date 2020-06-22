@@ -67,3 +67,38 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('objects'), result.body.get('cursor'))
+
+    def get_catalog_categories(self, start_time, bookmarked_cursor):
+        # Move the max_updated_at back the smallest unit possible
+        # because the begin_time query param is exclusive
+        start_time = utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = utils.strftime(start_time)
+
+        body = {
+            "object_types": ["CATEGORY"],
+            "include_deleted_objects": True,
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        with singer.http_request_timer('GET categories'):
+            result = self._client.catalog.search_catalog_objects(body=body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('objects', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET categories'):
+                result = self._client.catalog.search_catalog_objects(body=body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('objects'), result.body.get('cursor'))
