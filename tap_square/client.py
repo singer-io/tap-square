@@ -77,7 +77,7 @@ class SquareClient():
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
 
-        with singer.http_request_timer('GET employee'):
+        with singer.http_request_timer('GET employees'):
             result = self._client.employees.list_employees(**body)
 
         if result.is_error():
