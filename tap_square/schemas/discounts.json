@@ -1,0 +1,102 @@
+{
+  "type": [
+    "null",
+    "object"
+  ],
+  "properties": {
+    "discount_data": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "amount_money": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "amount": {
+              "type": [
+                "null",
+                "integer"
+              ]
+            },
+            "currency": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
+        "application_method": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "discount_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "modify_tax_basis": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "percentage": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "is_deleted": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "present_at_all_locations": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "updated_at": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "version": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    }
+  }
+}

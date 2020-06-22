@@ -50,6 +50,7 @@ class TestSquareBase(unittest.TestCase):
         return {
             'items',
             'categories',
+            'discounts'
         }
 
     def expected_metadata(self):
@@ -62,6 +63,11 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_KEYS: {'updated_at'}
             },
             "categories": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
+            "discounts": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
