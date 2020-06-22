@@ -28,7 +28,7 @@ def sync(config, state, catalog):
         start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
 
-        if stream.replication_method == 'INCREMENTAL':
+        if stream_obj.replication_method == 'INCREMENTAL':
             state = stream_obj.sync(client, state, start_time, bookmarked_cursor)
         else:
             state = stream_obj.sync(client, state, bookmarked_cursor)
