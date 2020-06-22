@@ -2,6 +2,8 @@ import singer
 
 class CatalogStream:
     object_type = None
+    tap_stream_id = None
+    replication_key = None
 
     def sync(self, client, state, start_time, bookmarked_cursor):
         max_updated_at = start_time
