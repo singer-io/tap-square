@@ -1,7 +1,7 @@
 import singer
 
 class Items:
-    tap_stream_id = 'items' # TODO should this be capitalized?
+    tap_stream_id = 'items'
     key_properties = ['id']
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
@@ -17,6 +17,13 @@ class Items:
                 if item['updated_at'] > max_updated_at:
                     max_updated_at = item['updated_at']
 
+            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_updated_at)
+            singer.write_state(state)
+
+        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
+
+        return state
 
 class Categories:
     tap_stream_id = 'categories'
