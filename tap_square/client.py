@@ -94,3 +94,21 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('employees', []), result.body.get('cursor'))
+
+    def get_locations(self, bookmarked_cursor):
+        with singer.http_request_timer('GET locations'):
+            result = self._client.locations.list_locations()
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('locations', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET locations'):
+                result = self._client.locations.list_locations()
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('locations', []), result.body.get('cursor'))

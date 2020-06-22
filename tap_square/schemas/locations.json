@@ -1,0 +1,130 @@
+{
+  "type": [
+    "null",
+    "object"
+  ],
+  "properties": {
+    "address": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "address_line_1": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "administrative_district_level_1": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "country": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "locality": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "postal_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
+    "business_name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "capabilities": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
+    "country": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created_at": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "currency": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "language_code": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "mcc": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "merchant_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "timezone": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    }
+  }
+}
