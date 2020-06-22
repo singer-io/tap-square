@@ -32,8 +32,7 @@ class SquareClient():
 
         return result.body['access_token']
 
-
-    def get_catalog_items(self, start_time, bookmarked_cursor):
+    def get_catalog(self, object_type, start_time, bookmarked_cursor):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
         start_time = utils.strptime_to_utc(start_time)
@@ -41,7 +40,7 @@ class SquareClient():
         start_time = utils.strftime(start_time)
 
         body = {
-            "object_types": ["ITEM"],
+            "object_types": [object_type],
             "include_deleted_objects": True,
         }
 
@@ -50,7 +49,7 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        with singer.http_request_timer('GET items'):
+        with singer.http_request_timer('GET ' + object_type):
             result = self._client.catalog.search_catalog_objects(body=body)
 
         if result.is_error():
@@ -60,77 +59,7 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET items'):
-                result = self._client.catalog.search_catalog_objects(body=body)
-
-            if result.is_error():
-                raise Exception(result.errors)
-
-            yield (result.body.get('objects'), result.body.get('cursor'))
-
-    def get_catalog_categories(self, start_time, bookmarked_cursor):
-        # Move the max_updated_at back the smallest unit possible
-        # because the begin_time query param is exclusive
-        start_time = utils.strptime_to_utc(start_time)
-        start_time = start_time - timedelta(milliseconds=1)
-        start_time = utils.strftime(start_time)
-
-        body = {
-            "object_types": ["CATEGORY"],
-            "include_deleted_objects": True,
-        }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
-
-        with singer.http_request_timer('GET categories'):
-            result = self._client.catalog.search_catalog_objects(body=body)
-
-        if result.is_error():
-            raise Exception(result.errors)
-
-        yield (result.body.get('objects', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET categories'):
-                result = self._client.catalog.search_catalog_objects(body=body)
-
-            if result.is_error():
-                raise Exception(result.errors)
-
-            yield (result.body.get('objects'), result.body.get('cursor'))
-
-    def get_catalog_discounts(self, start_time, bookmarked_cursor):
-        # Move the max_updated_at back the smallest unit possible
-        # because the begin_time query param is exclusive
-        start_time = utils.strptime_to_utc(start_time)
-        start_time = start_time - timedelta(milliseconds=1)
-        start_time = utils.strftime(start_time)
-
-        body = {
-            "object_types": ["DISCOUNT"],
-            "include_deleted_objects": True,
-        }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
-
-        with singer.http_request_timer('GET discounts'):
-            result = self._client.catalog.search_catalog_objects(body=body)
-
-        if result.is_error():
-            raise Exception(result.errors)
-
-        yield (result.body.get('objects', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET discounts'):
+            with singer.http_request_timer('GET ' + object_type):
                 result = self._client.catalog.search_catalog_objects(body=body)
 
             if result.is_error():
