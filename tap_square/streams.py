@@ -10,7 +10,7 @@ class CatalogStream:
 
             for record in page:
                 singer.write_record(self.tap_stream_id, record)
-                if item['updated_at'] > max_updated_at:
+                if record['updated_at'] > max_updated_at:
                     max_updated_at = record['updated_at']
 
             state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
@@ -21,6 +21,7 @@ class CatalogStream:
 
         return state
 
+
 class Items(CatalogStream):
     tap_stream_id = 'items'
     key_properties = ['id']
@@ -28,6 +29,7 @@ class Items(CatalogStream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
     object_type = 'ITEM'
+
 
 class Categories(CatalogStream):
     tap_stream_id = 'categories'
