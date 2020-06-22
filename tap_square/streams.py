@@ -49,8 +49,18 @@ class Discounts(CatalogStream):
     object_type = 'DISCOUNT'
 
 
+class Taxes(CatalogStream):
+    tap_stream_id = 'taxes'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'TAX'
+
+
 STREAMS = {
     'items': Items,
     'categories': Categories,
-    'discounts': Discounts
+    'discounts': Discounts,
+    'taxes': Taxes,
 }
