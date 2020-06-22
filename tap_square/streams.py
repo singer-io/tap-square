@@ -87,9 +87,9 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, state, bookmarked_cursor):
+    def sync(self, client, state, bookmarked_cursor): #pylint: disable=unused-argument
 
-        for page, cursor in client.get_locations(bookmarked_cursor):
+        for page, cursor in client.get_locations():
             for record in page:
                 singer.write_record(self.tap_stream_id, record)
 

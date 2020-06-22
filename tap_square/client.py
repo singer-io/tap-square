@@ -95,7 +95,7 @@ class SquareClient():
 
             yield (result.body.get('employees', []), result.body.get('cursor'))
 
-    def get_locations(self, bookmarked_cursor):
+    def get_locations(self):
         with singer.http_request_timer('GET locations'):
             result = self._client.locations.list_locations()
 
