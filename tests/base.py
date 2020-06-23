@@ -1,6 +1,7 @@
 import os
 import unittest
 
+import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
 
 class TestSquareBase(unittest.TestCase):
@@ -109,10 +110,25 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    # @staticmethod
-    # def preserve_refresh_token(existing_conns, payload):
-    #     if not existing_conns:
-    #         return payload
-    #     conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
-    #     payload['properties']['refresh_token'] = conn_with_creds['credentials']['refresh_token']
-    #     return payload
+    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
+        """Select all streams and all fields within streams"""
+        for catalog in catalogs:
+            if exclude_streams and catalog.get('stream_name') in exclude_streams:
+                continue
+            schema = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
+            non_selected_properties = []
+            if not select_all_fields:
+                # get a list of all properties so that none are selected
+                non_selected_properties = schema.get('annotated-schema', {}).get(
+                    'properties', {})
+                # remove properties that are automatic
+                for prop in self.expected_automatic_fields().get(catalog['stream_name'], []):
+                    if prop in non_selected_properties:
+                        del non_selected_properties[prop]
+                non_selected_properties = non_selected_properties.keys()
+            additional_md = []
+
+            connections.select_catalog_and_fields_via_metadata(
+                conn_id, catalog, schema, additional_md=additional_md,
+                non_selected_fields=non_selected_properties
+            )

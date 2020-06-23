@@ -1,27 +1,13 @@
-import singer
-
 class CatalogStream:
     object_type = None
     tap_stream_id = None
     replication_key = None
 
-    def sync(self, client, state, start_time, bookmarked_cursor):
-        max_updated_at = start_time
+    def sync(self, client, start_time, bookmarked_cursor):
 
         for page, cursor in client.get_catalog(self.object_type, start_time, bookmarked_cursor):
+            yield page, cursor
 
-            for record in page:
-                singer.write_record(self.tap_stream_id, record)
-                if record['updated_at'] > max_updated_at:
-                    max_updated_at = record['updated_at']
-
-            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_updated_at)
-            singer.write_state(state)
-
-        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
-
-        return state
 
 
 class Items(CatalogStream):
@@ -66,18 +52,10 @@ class Employees():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, state, bookmarked_cursor):
+    def sync(self, client, bookmarked_cursor): #pylint: disable=no-self-use
 
         for page, cursor in client.get_employees(bookmarked_cursor):
-            for record in page:
-                singer.write_record(self.tap_stream_id, record)
-
-            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
-
-        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
-
-        return state
+            yield page, cursor
 
 
 class Locations():
@@ -87,18 +65,10 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, state, bookmarked_cursor): #pylint: disable=unused-argument
+    def sync(self, client, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
 
         for page, cursor in client.get_locations():
-            for record in page:
-                singer.write_record(self.tap_stream_id, record)
-
-            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
-
-        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
-
-        return state
+            yield page, cursor
 
 
 STREAMS = {
