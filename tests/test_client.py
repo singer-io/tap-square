@@ -1,5 +1,7 @@
 from tap_square.client import SquareClient
 import singer
+import uuid
+import os
 
 LOGGER = singer.get_logger()
 
@@ -14,14 +16,14 @@ typesToKeyMap = {
 
 class TestClient(SquareClient):
     def __init__(self):
-        creds = {
-            'refresh_token': 'EQAAELy4Y17Rse798JQ3dR-96G5NpmZBwgmHzh3EvFIMsNbekzyBrs6LVpP5RGpm',
-            'client_id': 'sandbox-sq0idb-Z52_UgkVhll132sRuxUeaw',
-            'client_secret': 'sandbox-sq0csb-KQnZtzedQUf007Iws2DU49UVttQM5lNVKRj6cFb-17I',
+        config = {
+            'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
+            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
+            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
             'sandbox': 'true'
         }
 
-        super().__init__(creds)
+        super().__init__(config)
 
     def get_all(self, stream, start_date=None, end_date=None):
         if stream == 'items':
@@ -53,9 +55,12 @@ class TestClient(SquareClient):
         where `address` and `description` are optional, but `name` is required
         """
         resp = self._client.locations.create_location(body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
         location_id = resp.body.get('location', {}).get('id')
         location_name = resp.body.get('location', {}).get('name')
         LOGGER.info('Created location with id %s and name %s', location_id, location_name)
+        return resp
 
 
     def post_category(self, body):
@@ -77,8 +82,62 @@ class TestClient(SquareClient):
         }
         """
         resp = self._client.catalog.batch_upsert_catalog_objects(body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
         for obj in resp.body['objects']:
             category_id = obj.get('id')
             category_type = obj.get('type')
             category_name = obj.get(typesToKeyMap.get(category_type), {}).get('name', 'NONE')
             LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
+        return resp
+
+    def create(self, stream):
+        if stream == 'items':
+            return self.create_item()
+        elif stream == 'categories':
+            return self.create_categories()
+        elif stream == 'discounts':
+            return self.create_discounts()
+        elif stream == 'taxes':
+            return self.create_taxes()
+        elif stream == 'employees':
+            return self.create_employees()
+        elif stream == 'locations':
+            return self.create_locations()
+        else:
+            raise NotImplementedError
+
+    def create_item(self):
+        body = {'batches': [{'objects': [{'id': '#10',
+                                          'type': 'ITEM',
+                                          'item_data': {'name': 'tap_tester_item_data'}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_categories(self):
+        body = {'batches': [{'objects': [{'id': '#11',
+                                          'type': 'CATEGORY',
+                                          'category_data': {'name': 'tap_tester_category_data'}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_discounts(self):
+        body = {'batches': [{'objects': [{'id': '#12',
+                                          'type': 'DISCOUNT',
+                                          'discount_data': {'name': 'tap_tester_discount_data',
+                                                            'discount_type': 'FIXED_AMOUNT',
+                                                            'amount_money': {'amount': 34500,
+                                                                             'currency': 'USD'}}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_taxes(self):
+        body = {'batches': [{'objects': [{'id': '#13',
+                                          'type': 'TAX',
+                                          'tax_data': {'name': 'tap_tester_tax_data'}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_locations(self):
+        body = {'location': {'name': 'tap_tester_location_data_2'}}
+        return self.post_location(body)

@@ -51,9 +51,8 @@ class TestAutomaticFields(TestSquareBase):
 
         # ensure data exists for sync streams and set expectations
         expected_records = defaultdict(list)
-        start_date = "2020-03-01T00:00:00Z"
         for stream in self.testable_streams():
-            existing_objects = self.client.get_all(stream, start_date)
+            existing_objects = self.client.get_all(stream, self.START_DATE)
             if existing_objects:
                 print("Data exists for stream: {}".format(stream))
                 for obj in existing_objects:

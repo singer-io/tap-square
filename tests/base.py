@@ -13,6 +13,7 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    START_DATE = "2020-06-24T00:00:00Z"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -31,12 +32,17 @@ class TestSquareBase(unittest.TestCase):
     def tap_name():
         return "tap-square"
 
-    @staticmethod
-    def get_properties():
-        return {
-            'start_date' : '2020-03-01T00:00:00Z',
+    def get_properties(self, original = True):
+        return_value = {
+            'start_date' : '2020-06-24T00:00:00Z',
             'sandbox' : 'true'
         }
+
+        if original:
+            return return_value
+
+        return_value['start_date'] = self.START_DATE
+        return return_value
 
     @staticmethod
     def get_credentials():
@@ -100,6 +106,14 @@ class TestSquareBase(unittest.TestCase):
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
+
+    def expected_incremental_streams(self):
+        return set(stream for stream, rep_meth in self.expected_replication_method().items()
+                   if rep_meth == self.INCREMENTAL)
+
+    def expected_full_table_streams(self):
+        return set(stream for stream, rep_meth in self.expected_replication_method().items()
+                   if rep_meth == self.FULL)
 
     def expected_primary_keys(self):
         """
