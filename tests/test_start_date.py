@@ -291,7 +291,7 @@ class TestSquareStartDateIncremental(TestSquareBase):
             existing_objects = self.client.get_all(stream, self.START_DATE)
             assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
             print("Data exists for stream: {}".format(stream))
-            expected_records_1[stream] = existing_objects:
+            expected_records_1[stream] = existing_objects
 
             # If no objects exist since the 2nd start_date, create one
             data_in_range = False

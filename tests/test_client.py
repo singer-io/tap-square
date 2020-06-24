@@ -2,6 +2,7 @@ from tap_square.client import SquareClient
 import singer
 import uuid
 import os
+import random
 
 LOGGER = singer.get_logger()
 
@@ -139,5 +140,5 @@ class TestClient(SquareClient):
         return self.post_category(body)
 
     def create_locations(self):
-        body = {'location': {'name': 'tap_tester_location_data_2'}}
+        body = {'location': {'name': 'tap_tester_location_' + str(random.randint(0,100000000))}}
         return self.post_location(body)
