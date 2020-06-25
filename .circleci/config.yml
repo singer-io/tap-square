@@ -12,7 +12,7 @@ jobs:
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
             pip install --upgrade pip
-            pip install -e .
+            pip install .
             pip install pylint
             pylint tap_square -d 'broad-except,chained-comparison,empty-docstring,fixme,invalid-name,line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,no-else-raise,no-else-return,too-few-public-methods,too-many-arguments,too-many-branches,too-many-lines,too-many-locals,ungrouped-imports,wrong-spelling-in-comment,wrong-spelling-in-docstring'
       - run:
