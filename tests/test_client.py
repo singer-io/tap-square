@@ -16,6 +16,21 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
+
+    stream_to_data_schema = {
+        'items': {'type': 'ITEM',
+                  'item_data': {'name': 'tap_tester_item_data'}},
+        'categories': {'type': 'CATEGORY',
+                       'category_data': {'name': 'tap_tester_category_data'}},
+        'discounts': {'type': 'DISCOUNT',
+                      'discount_data': {'name': 'tap_tester_discount_data',
+                                        'discount_type': 'FIXED_AMOUNT',
+                                        'amount_money': {'amount': 34500,
+                                                         'currency': 'USD'}}},
+        'taxes': {'type': 'TAX',
+                  'tax_data': {'name': 'tap_tester_tax_data'}},
+    }
+
     def __init__(self):
         config = {
             'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
@@ -84,7 +99,8 @@ class TestClient(SquareClient):
         """
         resp = self._client.catalog.batch_upsert_catalog_objects(body)
         if resp.is_error():
-            raise RuntimeError(resp.errors)
+            stream_name = body['batches'][0]['objects'][0]['type']
+            raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
         for obj in resp.body['objects']:
             category_id = obj.get('id')
             category_type = obj.get('type')
@@ -142,3 +158,18 @@ class TestClient(SquareClient):
     def create_locations(self):
         body = {'location': {'name': 'tap_tester_location_' + str(random.randint(0,100000000))}}
         return self.post_location(body)
+
+    def delete_catalog(self, ids_to_delete):
+        body = {'object_ids': ids_to_delete}
+        return self.client._client.catalog.batch_delete_catalog_objects(body)
+
+    def create_batch_post(self, stream, num_records):
+        recs_to_create = []
+        for i in range(num_records):
+            # Use dict() to make a copy so you don't get a list of the same object
+            obj = dict(self.stream_to_data_schema[stream])
+            obj['id'] = '#' + stream + str(i)
+            recs_to_create.append(obj)
+        body = {'idempotency_key': str(uuid.uuid4()),
+                'batches': [{'objects': recs_to_create}]}
+        return self.post_category(body)

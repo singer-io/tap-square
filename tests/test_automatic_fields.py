@@ -19,17 +19,6 @@ class TestAutomaticFields(TestSquareBase):
     def name(self):
         return "tap_tester_square_automatic_fields"
 
-
-    def testable_streams(self):
-        return self.expected_streams().difference(set())
-
-    def expected_automatic_fields(self):
-
-        auto_fields = {}
-        for k, v in self.expected_metadata().items():
-            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
-        return auto_fields
-
     @classmethod
     def setUpClass(cls):
         print("\n\nTEST SETUP\n")

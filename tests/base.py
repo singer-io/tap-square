@@ -103,6 +103,9 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def testable_streams(self):
+        return self.expected_streams().difference(set())
+
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
@@ -123,6 +126,12 @@ class TestSquareBase(unittest.TestCase):
         return {table: properties.get(self.PRIMARY_KEYS, set())
                 for table, properties
                 in self.expected_metadata().items()}
+
+    def expected_automatic_fields(self):
+        auto_fields = {}
+        for k, v in self.expected_metadata().items():
+            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
+        return auto_fields
 
     def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
         """Select all streams and all fields within streams"""
