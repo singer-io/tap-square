@@ -3,6 +3,7 @@ import singer
 import uuid
 import os
 import random
+from datetime import datetime
 
 LOGGER = singer.get_logger()
 
@@ -125,24 +126,27 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError
 
+    def make_id(self, stream):
+        return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
+
     def create_item(self):
-        body = {'batches': [{'objects': [{'id': '#10',
+        body = {'batches': [{'objects': [{'id': self.make_id('item'),
                                           'type': 'ITEM',
-                                          'item_data': {'name': 'tap_tester_item_data'}}]}],
+                                          'item_data': {'name': self.make_id('item')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def create_categories(self):
-        body = {'batches': [{'objects': [{'id': '#11',
+        body = {'batches': [{'objects': [{'id': self.make_id('category'),
                                           'type': 'CATEGORY',
-                                          'category_data': {'name': 'tap_tester_category_data'}}]}],
+                                          'category_data': {'name': self.make_id('category')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def create_discounts(self):
-        body = {'batches': [{'objects': [{'id': '#12',
+        body = {'batches': [{'objects': [{'id': self.make_id('discount'),
                                           'type': 'DISCOUNT',
-                                          'discount_data': {'name': 'tap_tester_discount_data',
+                                          'discount_data': {'name': self.make_id('discount'),
                                                             'discount_type': 'FIXED_AMOUNT',
                                                             'amount_money': {'amount': 34500,
                                                                              'currency': 'USD'}}}]}],
@@ -150,14 +154,14 @@ class TestClient(SquareClient):
         return self.post_category(body)
 
     def create_taxes(self):
-        body = {'batches': [{'objects': [{'id': '#13',
+        body = {'batches': [{'objects': [{'id': self.make_id('tax'),
                                           'type': 'TAX',
-                                          'tax_data': {'name': 'tap_tester_tax_data'}}]}],
+                                          'tax_data': {'name': self.make_id('tax')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def create_locations(self):
-        body = {'location': {'name': 'tap_tester_location_' + str(random.randint(0,100000000))}}
+        body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
 
     def delete_catalog(self, ids_to_delete):
