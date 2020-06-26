@@ -85,7 +85,7 @@ class TestClient(SquareClient):
         {
         'idempotency_key': <uuid>,
         'batches': [
-        'objects': [
+        {'objects': [
         {'id': <required>,
         'type': <required>,
         'item_data': <CatalogItem, required for CatalogItem object>,
@@ -94,6 +94,7 @@ class TestClient(SquareClient):
         'tax_data': <CatalogTax, required for CatalogTax object>,
         }
         ]
+        }
         ]
         }
         """
