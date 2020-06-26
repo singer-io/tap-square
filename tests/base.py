@@ -110,7 +110,8 @@ class TestSquareBase(unittest.TestCase):
                 in self.expected_metadata().items()}
 
     def testable_streams(self):
-        return self.expected_streams().difference(set())
+        # We have no way of creating employees, so we execlude it from tests
+        return self.expected_streams().difference({'employees'})
 
     def expected_streams(self):
         """A set of expected stream names"""
@@ -161,3 +162,13 @@ class TestSquareBase(unittest.TestCase):
                 conn_id, catalog, schema, additional_md=additional_md,
                 non_selected_fields=non_selected_properties
             )
+
+    def get_selected_fields_from_metadata(self, metadata):
+        selected_fields = set()
+        for field in metadata:
+            is_field_metadata = len(field['breadcrumb']) > 1
+            inclusion_automatic_or_selected = (field['metadata']['inclusion'] == 'automatic'
+                                               or field['metadata']['selected'] == True)
+            if is_field_metadata and inclusion_automatic_or_selected:
+                selected_fields.add(field['breadcrumb'][1])
+        return selected_fields
