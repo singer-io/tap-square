@@ -35,7 +35,7 @@ class TestSquarePagination(TestSquareBase):
         # Ensure tested streams have a record count which exceeds the API LIMIT
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
-            if len(existing_objects) <= 1000:
+            if len(existing_objects) <= self.API_LIMIT:
                 num_to_post = 1001-len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
                 self.client.create_batch_post(stream, num_to_post)
