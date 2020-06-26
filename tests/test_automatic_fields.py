@@ -90,12 +90,15 @@ class TestAutomaticFields(TestSquareBase):
 
         # Ensure our selection worked
         for cat in found_catalogs:
+            expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
             # Verify all streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
             self.assertTrue(selected, msg="Stream not selected by default")
-            # TODO check selection for fields
+            # Verify only automatic fields are selected
+            selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+            self.assertEqual(expected_automatic_fields, selected_fields)
 
         #clear state
         menagerie.set_state(conn_id, {})
