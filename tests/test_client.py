@@ -164,6 +164,61 @@ class TestClient(SquareClient):
         body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
 
+    def update(self, stream, obj_id, version):
+        if stream == 'items':
+            return self.update_item(obj_id, version)
+        elif stream == 'categories':
+            return self.update_categories(obj_id, version)
+        elif stream == 'discounts':
+            return self.update_discounts(obj_id, version)
+        elif stream == 'taxes':
+            return self.update_taxes(obj_id, version)
+        elif stream == 'employees':
+            return self.update_employees(obj_id, version)
+        elif stream == 'locations':
+            return self.update_locations(obj_id, version)
+        else:
+            raise NotImplementedError
+
+    def update_item(self, obj_id, version):
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                          'type': 'ITEM',
+                                          'item_data': {'name': self.make_id('item')},
+                                          'version': version}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def update_categories(self, obj_id, version):
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                          'type': 'CATEGORY',
+                                          'version': version,
+                                          'category_data': {'name': self.make_id('category')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def update_discounts(self, obj_id, version):
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                          'type': 'DISCOUNT',
+                                          'version': version,
+                                          'discount_data': {'name': self.make_id('discount'),
+                                                            'discount_type': 'FIXED_AMOUNT',
+                                                            'amount_money': {'amount': 34500,
+                                                                             'currency': 'USD'}}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def update_taxes(self, obj_id, version):
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                          'type': 'TAX',
+                                          'version': version,
+                                          'tax_data': {'name': self.make_id('tax')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def update_locations(self, obj_id, version):
+        body = {'location': {'name': obj_id}}
+        return self.post_location(body)
+
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
         return self.client._client.catalog.batch_delete_catalog_objects(body)
