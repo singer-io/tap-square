@@ -9,7 +9,6 @@ from datetime import datetime as dt
 from functools import reduce
 
 from base import TestSquareBase
-from test_client import TestClient
 
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
