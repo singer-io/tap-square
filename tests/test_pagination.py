@@ -2,8 +2,6 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-import os
-import logging
 from datetime import timedelta, date
 from datetime import datetime as dt
 from functools import reduce

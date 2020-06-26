@@ -10,13 +10,11 @@ from base import TestSquareBase
 from test_client import TestClient
 
 
-class TestSquareStartDateFullTable(TestSquareBase):
+class TestSquareStartDate(TestSquareBase):
     START_DATE = ""
-    END_DATE = ""
-    MIDNIGHT_FORMAT = "%Y-%m-%dT00:00:00Z"
 
     def name(self):
-        return "tap_tester_square_start_date_full_table"
+        return "tap_tester_square_start_date_test"
 
     def strip_format(self, date_value):
         try:
@@ -128,7 +126,7 @@ class TestSquareStartDateFullTable(TestSquareBase):
 
         self.START_DATE = start_date_2
         print("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(start_date_1, start_date_2))
-        # REPLICATION START DATE CHANGE: 2020-06-24T00:00:00Z ===>>> 2020-06-26T00:00:00Z
+
         ##########################################################################
         ### Second Sync
         ##########################################################################

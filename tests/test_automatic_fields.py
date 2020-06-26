@@ -1,10 +1,6 @@
-import os
-import unittest
-
 from collections import defaultdict
 from functools import reduce
 
-from singer import metadata
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -19,15 +15,6 @@ class TestAutomaticFields(TestSquareBase):
     def name(self):
         return "tap_tester_square_automatic_fields"
 
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
-
-    @classmethod
-    def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
-
     def test_run(self):
         """
         Verify that for each stream you can get data when no fields are selected
@@ -36,22 +23,18 @@ class TestAutomaticFields(TestSquareBase):
 
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
-        # TODO ensure multiple pages of data exist
-
         # ensure data exists for sync streams and set expectations
         expected_records = defaultdict(list)
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
-            if existing_objects:
-                print("Data exists for stream: {}".format(stream))
-                for obj in existing_objects:
-                    expected_records[stream].append(
-                        {field: obj.get(field)
-                         for field in self.expected_automatic_fields().get(stream)}
-                    )
-            else:
-                print("Data does not exist for stream: {}".format(stream))
-                assert None, "more test functinality needed for stream {}".format(stream)
+            assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
+            print("Data exists for stream: {}".format(stream))
+
+            for obj in existing_objects:
+                expected_records[stream].append(
+                    {field: obj.get(field)
+                     for field in self.expected_automatic_fields().get(stream)}
+                )
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
@@ -152,10 +135,3 @@ class TestAutomaticFields(TestSquareBase):
                 for expected_record in expected_records.get(stream):
                     self.assertTrue(expected_record in actual_records,
                                     msg="Expected record missing from target.")
-
-        # TODO Remove when test complete
-        print("\n\n\tTOOD's PRESENT | The test is incomplete\n\n")
-
-
-if __name__ == '__main__':
-    unittest.main()

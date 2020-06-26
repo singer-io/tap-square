@@ -8,7 +8,6 @@ from base import TestSquareBase
 from test_client import TestClient
 
 class TestSquareIncrementalReplication(TestSquareBase):
-    START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     START_DATE = "2020-06-01T00:00:00Z"
 
     def get_properties(self, original = True):
@@ -23,17 +22,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return_value['start_date'] = self.START_DATE
         return return_value
 
-
     def name(self):
         return "tap_tester_square_incremental_replication"
-
-    @staticmethod
-    def select_all_streams_and_fields(conn_id, catalogs):
-        """Select all streams and all fields within streams"""
-        for catalog in catalogs:
-            schema = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
-
-            connections.select_catalog_and_fields_via_metadata(conn_id, catalog, schema)
 
     def run_sync(self, conn_id):
         """
@@ -52,12 +42,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         sync_record_count = runner.examine_target_output_file(
             self, conn_id, self.expected_streams(), self.expected_primary_keys())
         return sync_record_count
-
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
 
     def test_run(self):
         """
@@ -151,9 +135,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                in second_sync_records.get(stream, {}).get("messages", {"data": {}})]
 
                 replication_key = next(iter(self.expected_metadata().get(stream).get(self.REPLICATION_KEYS)))
-                first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key).split('T')[0]
+                first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
                 for date_value in second_data:
 
-                    self.assertEqual(first_sync_bookmark,
-                                     date_value.split('T')[0],
-                                     msg="First sync bookmark does not equal 2nd sync record's replication-key")
+                    self.assertGreater(date_value,
+                                     first_sync_bookmark,
+                                     msg="First sync bookmark is not less than 2nd sync record's replication-key")
