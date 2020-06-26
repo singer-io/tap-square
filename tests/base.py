@@ -38,6 +38,10 @@ class TestSquareBase(unittest.TestCase):
         print("\n\nTEST SETUP\n")
         cls.client = TestClient()
 
+    @classmethod
+    def tearDownClass(cls):
+        print("\n\nTEST TEARDOWN\n\n")
+
     def get_properties(self, original = True):
         return_value = {
             'start_date' : '2020-06-24T00:00:00Z',
