@@ -84,6 +84,9 @@ class TestSquarePagination(TestSquareBase):
         replicated_row_count =  reduce(lambda accum,c : accum + c, record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
+        schemas = {catalog['tap_stream_id']: menagerie.get_annotated_schema(conn_id, catalog['stream_id']) for catalog in found_catalogs}
+        all_fields = {stream: set(schema['annotated-schema']['properties'].keys()) for stream, schema in schemas.items()}
+
         for stream in self.testable_streams():
             with self.subTest(stream=stream):
 
@@ -97,7 +100,7 @@ class TestSquarePagination(TestSquareBase):
                 for actual_keys in record_messages_keys:
 
                     # Verify that the automatic fields are sent to the target for paginated streams
-                    self.assertEqual(self.expected_automatic_fields().get(stream) - actual_keys,
+                    self.assertEqual(all_fields.get(stream) - actual_keys,
                                      set(), msg="A paginated synced stream has a record that is missing automatic fields.")
 
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
