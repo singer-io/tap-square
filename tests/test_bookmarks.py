@@ -107,6 +107,14 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Get the set of records from a first sync
         first_sync_records = runner.get_records_from_target_output()
 
+        # Add data before next sync via insert and update
+        for stream in incremental_streams:
+            self.client.create(stream)
+            first_rec_id = first_sync_records[stream]['messages'][0]['data']['id']
+            first_rec_version = first_sync_records[stream]['messages'][0]['data']['version']
+            self.client.update(stream, first_rec_id, first_rec_version)
+
+
         # Run a second sync job using orchestrator
         second_sync_record_count = self.run_sync(conn_id)
 
@@ -119,8 +127,14 @@ class TestSquareIncrementalReplication(TestSquareBase):
         for stream in incremental_streams:
             with self.subTest(stream=stream):
 
-                # verify both syncs write / keep the same bookdmark
-                self.assertEqual(first_sync_state, second_sync_state)
+                # Verify both syncs write / keep the same bookmark
+                self.assertEqual(set(first_sync_state['bookmarks'].keys()),
+                                 set(second_sync_state['bookmarks'].keys()))
+
+                # Verify second sync's bookmarks move past the first sync's
+                self.assertGreater(second_sync_state['bookmarks'][stream]['updated_at'],
+                                   first_sync_state['bookmarks'][stream]['updated_at'])
+
 
                 # verify that there is more than 1 record of data - setup necessary
                 self.assertGreater(first_sync_record_count.get(stream, 0), 1,

@@ -165,6 +165,10 @@ class TestClient(SquareClient):
         return self.post_location(body)
 
     def update(self, stream, obj_id, version):
+        """For `stream` update `obj_id` with a new name
+
+        We found that you have to send the same `obj_id` and `version` for the update to work
+        """
         if stream == 'items':
             return self.update_item(obj_id, version)
         elif stream == 'categories':
