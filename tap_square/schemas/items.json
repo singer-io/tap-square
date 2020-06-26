@@ -1,17 +1,31 @@
 {
+  "type": [
+    "null",
+    "object"
+  ],
   "properties": {
+    "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "is_deleted": {
+      "type": [
+        "null",
+        "boolean"
+      ]
+    },
     "item_data": {
+      "type": [
+        "null",
+        "object"
+      ],
       "properties": {
-        "visibility": {
+        "name": {
           "type": [
             "null",
             "string"
-          ]
-        },
-        "skip_modifier_screen": {
-          "type": [
-            "null",
-            "boolean"
           ]
         },
         "product_type": {
@@ -19,188 +33,8 @@
             "null",
             "string"
           ]
-        },
-        "description": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "variations": {
-          "items": {
-            "properties": {
-              "item_variation_data": {
-                "properties": {
-                  "pricing_type": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  "item_id": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  "sku": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  },
-                  "price_money": {
-                    "properties": {
-                      "amount": {
-                        "type": [
-                          "null",
-                          "integer"
-                        ]
-                      },
-                      "currency": {
-                        "type": [
-                          "null",
-                          "string"
-                        ]
-                      }
-                    },
-                    "type": [
-                      "null",
-                      "object"
-                    ]
-                  },
-                  "location_overrides": {
-                    "items": {
-                      "properties": {
-                        "location_id": {
-                          "type": [
-                            "null",
-                            "string"
-                          ]
-                        },
-                        "track_inventory": {
-                          "type": [
-                            "null",
-                            "boolean"
-                          ]
-                        },
-                        "inventory_alert_threshold": {
-                          "type": [
-                            "null",
-                            "integer"
-                          ]
-                        },
-                        "inventory_alert_type": {
-                          "type": [
-                            "null",
-                            "string"
-                          ]
-                        }
-                      },
-                      "type": [
-                        "null",
-                        "object"
-                      ]
-                    },
-                    "type": [
-                      "null",
-                      "array"
-                    ]
-                  },
-                  "ordinal": {
-                    "type": [
-                      "null",
-                      "integer"
-                    ]
-                  },
-                  "name": {
-                    "type": [
-                      "null",
-                      "string"
-                    ]
-                  }
-                },
-                "type": [
-                  "null",
-                  "object"
-                ]
-              },
-              "present_at_all_locations": {
-                "type": [
-                  "null",
-                  "boolean"
-                ]
-              },
-              "type": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "id": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "updated_at": {
-                "type": [
-                  "null",
-                  "string"
-                ]
-              },
-              "version": {
-                "type": [
-                  "null",
-                  "integer"
-                ]
-              },
-              "is_deleted": {
-                "type": [
-                  "null",
-                  "boolean"
-                ]
-              },
-              "present_at_location_ids": {
-                "items": {
-                  "type": [
-                    "null",
-                    "string"
-                  ]
-                },
-                "type": [
-                  "null",
-                  "array"
-                ]
-              }
-            },
-            "type": [
-              "null",
-              "object"
-            ]
-          },
-          "type": [
-            "null",
-            "array"
-          ]
-        },
-        "category_id": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "name": {
-          "type": [
-            "null",
-            "string"
-          ]
         }
-      },
-      "type": [
-        "null",
-        "object"
-      ]
+      }
     },
     "present_at_all_locations": {
       "type": [
@@ -209,12 +43,6 @@
       ]
     },
     "type": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "id": {
       "type": [
         "null",
         "string"
@@ -231,28 +59,6 @@
         "null",
         "integer"
       ]
-    },
-    "is_deleted": {
-      "type": [
-        "null",
-        "boolean"
-      ]
-    },
-    "present_at_location_ids": {
-      "items": {
-        "type": [
-          "null",
-          "string"
-        ]
-      },
-      "type": [
-        "null",
-        "array"
-      ]
     }
-  },
-  "type": [
-    "null",
-    "object"
-  ]
+  }
 }
