@@ -21,11 +21,6 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams(self):
         return self.expected_incremental_streams()
 
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
-
     def test_run(self):
         """
         Verify that for each stream you can get multiple pages of data

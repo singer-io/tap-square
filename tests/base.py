@@ -3,6 +3,7 @@ import unittest
 
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
+from test_client import TestClient
 
 class TestSquareBase(unittest.TestCase):
     REPLICATION_KEYS = "valid-replication-keys"
@@ -31,6 +32,11 @@ class TestSquareBase(unittest.TestCase):
     @staticmethod
     def tap_name():
         return "tap-square"
+
+    @classmethod
+    def setUpClass(cls):
+        print("\n\nTEST SETUP\n")
+        cls.client = TestClient()
 
     def get_properties(self, original = True):
         return_value = {
