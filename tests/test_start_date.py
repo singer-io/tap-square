@@ -244,9 +244,6 @@ class TestSquareStartDateFullTable(TestSquareBase):
                     records_from_sync_2 = set(row.get('data').get('updated_at')
                                               for row in synced_records_2.get(stream, []).get('messages', []))
                     for record in records_from_sync_2:
-                        # BUG | https://stitchdata.atlassian.net/browse/SRCE-3408
-                        if self.strip_format(record) < self.strip_format(start_date_2): # SKIPPING ASSERTION BELOW
-                            continue # TODO REMOVE THIS WHEN BUG ADDRESSED
                         self.assertGreaterEqual(self.strip_format(record), self.strip_format(start_date_2),
                                                 msg="Record was created prior to start date for 2nd sync.\n" +
                                                 "Sync 2 start_date: {}\n".format(start_date_2) +
@@ -254,6 +251,3 @@ class TestSquareStartDateFullTable(TestSquareBase):
                 else:
                     raise Exception("Expectations are set incorrectly. {} cannot have a "
                                     "replication method of {}".format(stream, replication_type))
-
-        # TODO Remove when test complete
-        print("\n\n\tTOOD's PRESENT | The test is incomplete\n\n")
