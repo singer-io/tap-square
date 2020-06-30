@@ -130,8 +130,25 @@ class TestAutomaticFields(TestSquareBase):
 
                 # verify by values, that we replicated the expected records
                 for actual_record in actual_records:
+                    if not actual_record in expected_records.get(stream):
+                        print("\n==== DATA DISCREPANCY ====\n")
+                        print("Expected: {}\n".format(actual_record))
+                        e_record = [record for record in expected_records.get(stream)
+                                    if actual_record.get('eid') == record.get('eid')]
+                        print("Actual: {}\n".format(e_record))
+                        for key in schema_keys:
+                            e_val = e_record[0].get(key)
+                            val = actual_record.get(key)
+                            if e_val != val:
+                                print("\nDISCREPANCEY | KEY {}: ACTUAL: {} EXPECTED {}".format(key, val, e_val))
                     self.assertTrue(actual_record in expected_records.get(stream),
                                     msg="Actual record missing from expectations")
                 for expected_record in expected_records.get(stream):
+                    if not expected_record in actual_records:
+                        print("\n==== DATA DISCREPANCY ====\n")
+                        print("Expected: {}\n".format(expected_record))
+                        a_record = [record for record in actual_records
+                                    if expected_record.get('eid') == record.get('eid')]
+                        print("Actual: {}\n".format(a_record))
                     self.assertTrue(expected_record in actual_records,
                                     msg="Expected record missing from target.")
