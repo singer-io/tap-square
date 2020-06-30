@@ -1,7 +1,9 @@
 import os
 import unittest
 
+import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
+from test_client import TestClient
 
 class TestSquareBase(unittest.TestCase):
     REPLICATION_KEYS = "valid-replication-keys"
@@ -12,6 +14,7 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    START_DATE = "2020-06-24T00:00:00Z"
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -30,12 +33,26 @@ class TestSquareBase(unittest.TestCase):
     def tap_name():
         return "tap-square"
 
-    @staticmethod
-    def get_properties():
-        return {
-            'start_date' : '2020-03-01T00:00:00Z',
+    @classmethod
+    def setUpClass(cls):
+        print("\n\nTEST SETUP\n")
+        cls.client = TestClient()
+
+    @classmethod
+    def tearDownClass(cls):
+        print("\n\nTEST TEARDOWN\n\n")
+
+    def get_properties(self, original = True):
+        return_value = {
+            'start_date' : '2020-06-24T00:00:00Z',
             'sandbox' : 'true'
         }
+
+        if original:
+            return return_value
+
+        return_value['start_date'] = self.START_DATE
+        return return_value
 
     @staticmethod
     def get_credentials():
@@ -96,9 +113,21 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def testable_streams(self):
+        # We have no way of creating employees, so we execlude it from tests
+        return self.expected_streams().difference({'employees'})
+
     def expected_streams(self):
         """A set of expected stream names"""
         return set(self.expected_metadata().keys())
+
+    def expected_incremental_streams(self):
+        return set(stream for stream, rep_meth in self.expected_replication_method().items()
+                   if rep_meth == self.INCREMENTAL)
+
+    def expected_full_table_streams(self):
+        return set(stream for stream, rep_meth in self.expected_replication_method().items()
+                   if rep_meth == self.FULL)
 
     def expected_primary_keys(self):
         """
@@ -109,10 +138,41 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    # @staticmethod
-    # def preserve_refresh_token(existing_conns, payload):
-    #     if not existing_conns:
-    #         return payload
-    #     conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
-    #     payload['properties']['refresh_token'] = conn_with_creds['credentials']['refresh_token']
-    #     return payload
+    def expected_automatic_fields(self):
+        auto_fields = {}
+        for k, v in self.expected_metadata().items():
+            auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
+        return auto_fields
+
+    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
+        """Select all streams and all fields within streams"""
+        for catalog in catalogs:
+            if exclude_streams and catalog.get('stream_name') in exclude_streams:
+                continue
+            schema = menagerie.get_annotated_schema(conn_id, catalog['stream_id'])
+            non_selected_properties = []
+            if not select_all_fields:
+                # get a list of all properties so that none are selected
+                non_selected_properties = schema.get('annotated-schema', {}).get(
+                    'properties', {})
+                # remove properties that are automatic
+                for prop in self.expected_automatic_fields().get(catalog['stream_name'], []):
+                    if prop in non_selected_properties:
+                        del non_selected_properties[prop]
+                non_selected_properties = non_selected_properties.keys()
+            additional_md = []
+
+            connections.select_catalog_and_fields_via_metadata(
+                conn_id, catalog, schema, additional_md=additional_md,
+                non_selected_fields=non_selected_properties
+            )
+
+    def get_selected_fields_from_metadata(self, metadata):
+        selected_fields = set()
+        for field in metadata:
+            is_field_metadata = len(field['breadcrumb']) > 1
+            inclusion_automatic_or_selected = (field['metadata']['inclusion'] == 'automatic'
+                                               or field['metadata']['selected'] == True)
+            if is_field_metadata and inclusion_automatic_or_selected:
+                selected_fields.add(field['breadcrumb'][1])
+        return selected_fields

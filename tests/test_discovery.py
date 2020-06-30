@@ -5,7 +5,6 @@ import re
 
 from tap_tester import menagerie, connections, runner
 
-from tap_tester.scenario import SCENARIOS
 from base import TestSquareBase
 
 
@@ -173,6 +172,3 @@ class DiscoveryTest(TestSquareBase):
                          and item.get("breadcrumb", ["properties", None])[1]
                          not in actual_automatic_fields}),
                     msg="Not all non key properties are set to available in metadata")
-
-
-SCENARIOS.add(DiscoveryTest)
