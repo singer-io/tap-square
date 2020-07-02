@@ -1,9 +1,12 @@
-from tap_square.client import SquareClient
-import singer
 import uuid
+import json
 import os
 import random
 from datetime import datetime
+
+import singer
+
+from tap_square.client import SquareClient
 
 LOGGER = singer.get_logger()
 
@@ -112,17 +115,17 @@ class TestClient(SquareClient):
 
     def create(self, stream):
         if stream == 'items':
-            return self.create_item()
+            return self.create_item().body.get('objects')
         elif stream == 'categories':
-            return self.create_categories()
+            return self.create_categories().body.get('objects')
         elif stream == 'discounts':
-            return self.create_discounts()
+            return self.create_discounts().body.get('objects')
         elif stream == 'taxes':
-            return self.create_taxes()
+            return self.create_taxes().body.get('objects')
         elif stream == 'employees':
-            return self.create_employees()
+            return self.create_employees().body.get('objects')
         elif stream == 'locations':
-            return self.create_locations()
+            return self.create_locations().body.get('objects')
         else:
             raise NotImplementedError
 
@@ -170,17 +173,17 @@ class TestClient(SquareClient):
         We found that you have to send the same `obj_id` and `version` for the update to work
         """
         if stream == 'items':
-            return self.update_item(obj_id, version)
+            return self.update_item(obj_id, version).body.get('objects')
         elif stream == 'categories':
-            return self.update_categories(obj_id, version)
+            return self.update_categories(obj_id, version).body.get('objects')
         elif stream == 'discounts':
-            return self.update_discounts(obj_id, version)
+            return self.update_discounts(obj_id, version).body.get('objects')
         elif stream == 'taxes':
-            return self.update_taxes(obj_id, version)
+            return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
-            return self.update_employees(obj_id, version)
+            return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
-            return self.update_locations(obj_id, version)
+            return self.update_locations(obj_id, version).body.get('objects')
         else:
             raise NotImplementedError
 
