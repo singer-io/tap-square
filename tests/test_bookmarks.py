@@ -232,9 +232,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         e_val = created_record.get(key)
                         if e_val != val:
                             print("\nDISCREPANCEY | KEY {}: ACTUAL: {} EXPECTED {}".format(key, val, e_val))
-                # BUG | https://stitchdata.atlassian.net/browse/SRCE-3518`
-                if stream == 'items':
-                    continue
                 self.assertIn(created_record, second_sync_data,
                               msg="Data discrepancy for the created record.")
 
