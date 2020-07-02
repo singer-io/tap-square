@@ -136,7 +136,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         for stream in self.expected_full_table_streams():
             for record in expected_records_1.get(stream, []):
                 if record.get('id') == updated_records[stream].get('id'):
-                    continue  # do not add the orginal version of the updated record 
+                    continue  # do not add the orginal version of the updated record
                 expected_records_2[stream].append(record)
 
         # ensure validity of expected_records_2
