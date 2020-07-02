@@ -17,8 +17,8 @@ class TestSquarePagination(TestSquareBase):
         return "tap_tester_square_pagination_test"
 
     def testable_streams(self):
-        return self.expected_incremental_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+        return self.expected_streams().difference(
+            {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
                 'locations'
             }
@@ -126,3 +126,10 @@ class TestSquarePagination(TestSquareBase):
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
                     self.assertGreater(actual_keys, self.expected_automatic_fields().get(stream),
                                       msg="A paginated synced stream has a record that is missing non-automatic fields.")
+
+        print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
+            self.expected_streams().difference(self.testable_streams()))
+        )
+
+if __name__ == '__main__':
+    unittest.main()
