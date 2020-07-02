@@ -1,11 +1,13 @@
-import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
-import tap_tester.runner      as runner
 import unittest
 import simplejson
 
+import tap_tester.connections as connections
+import tap_tester.menagerie   as menagerie
+import tap_tester.runner      as runner
+
 from base import TestSquareBase
 from test_client import TestClient
+
 
 class TestSquareIncrementalReplication(TestSquareBase):
     START_DATE = "2020-06-01T00:00:00Z"

@@ -10,13 +10,19 @@ from base import TestSquareBase
 
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
+
     API_LIMIT = 1000
 
     def name(self):
         return "tap_tester_square_pagination_test"
 
     def testable_streams(self):
-        return self.expected_incremental_streams()
+        return self.expected_incremental_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'employees',
+                'locations'
+            }
+        )
 
     def test_run(self):
         """
@@ -30,16 +36,32 @@ class TestSquarePagination(TestSquareBase):
         """
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
+
         # Ensure tested streams have a record count which exceeds the API LIMIT
+        expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
+            if len(existing_objects) == 0:
+                assert None, "NO DATA EXISTS, SOMETHING HAS GONE TERRIBLY WRONG"
+
+            expected_records[stream] += existing_objects
             if len(existing_objects) <= self.API_LIMIT:
                 num_to_post = 1001-len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
-                self.client.create_batch_post(stream, num_to_post)
+                new_objects = self.client.create_batch_post(stream, num_to_post)
+                expected_records[stream] += new_objects
                 print('{}: Created {} records'.format(stream, num_to_post))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
+
+        # verify the expected test data exceeds API LIMIT for all testable streams
+        for stream in self.testable_streams():
+            record_count = len(expected_records[stream])
+            print("Verifying data is sufficient for stream {}. ".format(stream) +
+                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT))
+            self.assertGreater(record_count, self.API_LIMIT,
+                               msg="Pagination not ensured.\n" +
+                               "{} does not have sufficient data in expecatations.\n ".format(stream))
 
         # Create connection with default start date
         conn_id = connections.ensure_connection(self)
