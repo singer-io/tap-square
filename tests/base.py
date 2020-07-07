@@ -203,7 +203,11 @@ class TestSquareBase(unittest.TestCase):
             date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
             return date_stripped
         except ValueError:
-            raise NotImplementedError
+            try:
+                date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+                return date_stripped
+            except ValueError:
+                raise NotImplementedError
 
     def expected_schema_keys(self, stream):
 
