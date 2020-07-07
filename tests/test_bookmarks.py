@@ -75,10 +75,15 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             if len(existing_objects) == 0:
                 # TODO change from 'failure you need data' to 'create data then so we can test'
-                assert None, "NO DATA EXISTS, SOMETHING HAS GONE TERRIBLY WRONG"
+                assert None, "NO DATA EXISTS FOR {}, SOMETHING HAS GONE TERRIBLY WRONG".format(stream)
 
             expected_records_1[stream] += existing_objects
             print('{}: Have sufficent amount of data to continue test'.format(stream))
+
+        # Adjust expectations for datetime format
+        for stream, expected_records in expected_records_1.items():
+            print("Adjust expectations for stream: {}".format(stream))
+            self.modify_expected_datatypes(expected_records)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -139,13 +144,20 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     continue  # do not add the orginal version of the updated record
                 expected_records_2[stream].append(record)
 
+        # Adjust expectations for datetime format
+        for record_set in [created_records, updated_records, expected_records_2]:
+            for stream, expected_records in record_set.items():
+                print("Adjust expectations for stream: {}".format(stream))
+                self.modify_expected_datatypes(expected_records)
+
         # ensure validity of expected_records_2
         for stream in self.testable_streams():
             if stream in self.expected_incremental_streams():
-                assert len(expected_records_2.get(stream)) == 2, "Expectations are invalid for full table {}".format(stream)
+                assert len(expected_records_2.get(stream)) == 2, "Expectations are invalid for" + \
+                    " incremental stream {}".format(stream)
             if stream in self.expected_full_table_streams():
-                assert len(expected_records_2.get(stream)) ==  len(expected_records_1.get(stream)) + 1, "Expectations are " +\
-                    "invalid for incremental {}".format(stream)
+                assert len(expected_records_2.get(stream)) ==  len(expected_records_1.get(stream)) + 1, "Expectations are " + \
+                    "invalid for full table stream {}".format(stream)
 
         # Run a second sync job using orchestrator
         second_sync_record_count = self.run_sync(conn_id)

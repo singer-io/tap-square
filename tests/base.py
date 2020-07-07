@@ -1,6 +1,8 @@
 import os
 import json
 import unittest
+from datetime import datetime as dt
+from datetime import timedelta
 
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
@@ -195,6 +197,13 @@ class TestSquareBase(unittest.TestCase):
 
         return schemas
 
+    def parse_date(self, date_value):
+        try:
+            date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            return date_stripped
+        except ValueError:
+            raise NotImplementedError
+
     def expected_schema_keys(self, stream):
 
         props = self._load_schemas(stream).get(stream).get('properties')
@@ -202,3 +211,20 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
+    def modify_expected_datatypes(self, expected_records):
+        """ Align expected data with how the tap _should_ emit them. """
+        if type(expected_records) == list: # Modify a list of records
+            for record in expected_records:
+                for key, value in record.items():
+                    self.align_date_type(record, key, value)
+            return
+
+        for key, value in expected_records.items(): # Modify a single record
+            self.align_date_type(expected_records, key, value)
+
+    def align_date_type(self, record, key, value):
+        """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
+        if isinstance(value, str) and key in ['updated_at']:
+            raw_date = self.parse_date(value)
+            iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
+            record[key] = iso_date

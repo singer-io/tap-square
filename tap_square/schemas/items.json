@@ -10,7 +10,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "present_at_location_ids": {
       "type": [
@@ -175,7 +176,8 @@
                 "type": [
                   "null",
                   "string"
-                ]
+                ],
+                "format": "date-time"
               }
             },
             "type": [
