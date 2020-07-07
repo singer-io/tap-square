@@ -1,9 +1,12 @@
 import os
+import json
 import unittest
 
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
+
 from test_client import TestClient
+
 
 class TestSquareBase(unittest.TestCase):
     REPLICATION_KEYS = "valid-replication-keys"
@@ -146,6 +149,7 @@ class TestSquareBase(unittest.TestCase):
 
     def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
         """Select all streams and all fields within streams"""
+
         for catalog in catalogs:
             if exclude_streams and catalog.get('stream_name') in exclude_streams:
                 continue
@@ -176,3 +180,25 @@ class TestSquareBase(unittest.TestCase):
             if is_field_metadata and inclusion_automatic_or_selected:
                 selected_fields.add(field['breadcrumb'][1])
         return selected_fields
+
+    def _get_abs_path(self, path):
+        return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+    def _load_schemas(self, stream):
+        schemas = {}
+
+        path = self._get_abs_path("schemas") + "/" + stream + ".json"
+        final_path = path.replace('tests', 'tap_square')
+
+        with open(final_path) as file:
+            schemas[stream] = json.load(file)
+
+        return schemas
+
+    def expected_schema_keys(self, stream):
+
+        props = self._load_schemas(stream).get(stream).get('properties')
+        assert props, "{} schema not configured proprerly"
+
+        return props.keys()
+
