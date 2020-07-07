@@ -118,6 +118,7 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    # TODO Remove if employees is addressed OR if it cannot be included in any test
     def testable_streams(self):
         # We have no way of creating employees, so we execlude it from tests
         return self.expected_streams().difference({'employees'})

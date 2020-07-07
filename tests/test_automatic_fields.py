@@ -15,6 +15,14 @@ class TestAutomaticFields(TestSquareBase):
     def name(self):
         return "tap_tester_square_automatic_fields"
 
+    def testable_streams(self):
+        return self.expected_streams().difference(
+            {  # STREAMS NOT CURRENTY TESTABLE
+                'employees',
+                'locations'
+            }
+        )
+
     def test_run(self):
         """
         Verify that for each stream you can get data when no fields are selected
@@ -24,7 +32,8 @@ class TestAutomaticFields(TestSquareBase):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # ensure data exists for sync streams and set expectations
-        expected_records = defaultdict(list)
+        # expected_records = defaultdict(list) # TODO why was this used?
+        expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
             assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
@@ -35,6 +44,11 @@ class TestAutomaticFields(TestSquareBase):
                     {field: obj.get(field)
                      for field in self.expected_automatic_fields().get(stream)}
                 )
+
+        # Adjust expectations for datetime format
+        for stream, records in expected_records.items():
+            print("Adjust expectations for stream: {}".format(stream))
+            self.modify_expected_datatypes(records)
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
@@ -112,7 +126,7 @@ class TestAutomaticFields(TestSquareBase):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
-
+                schema_keys = set(self.expected_schema_keys(stream))
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
