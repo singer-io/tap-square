@@ -120,12 +120,12 @@ class TestSquarePagination(TestSquareBase):
                 for actual_keys in record_messages_keys:
 
                     # Verify that the automatic fields are sent to the target for paginated streams
-                    self.assertEqual(all_fields.get(stream) - actual_keys,
-                                     set(), msg="A paginated synced stream has a record that is missing automatic fields.")
+                    self.assertGreater(actual_keys, self.expected_automatic_fields().get(stream),
+                                      msg="A paginated synced stream has a record that is missing automatic fields.")
 
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
-                    self.assertGreater(actual_keys, self.expected_automatic_fields().get(stream),
-                                      msg="A paginated synced stream has a record that is missing non-automatic fields.")
+                    self.assertEqual(all_fields.get(stream) - actual_keys,
+                                     set(), msg="A paginated synced stream has a record that is missing expected fields.")
 
         print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
             self.expected_streams().difference(self.testable_streams()))
