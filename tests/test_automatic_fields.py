@@ -19,7 +19,6 @@ class TestAutomaticFields(TestSquareBase):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
-                'locations'
             }
         )
 
