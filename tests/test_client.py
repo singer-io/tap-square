@@ -20,7 +20,10 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
-
+    """
+    Client used to perfrom GET, CREATE and UPDATE on streams.
+        NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
+    """
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
                   'item_data': {'name': 'tap_tester_item_data'}},

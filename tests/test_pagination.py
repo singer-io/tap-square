@@ -19,8 +19,8 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees',
-                'locations'
+                'employees',  # TODO
+                'locations'  # Only 300 locations can be created, and 300 are returned in a single request
             }
         )
 
