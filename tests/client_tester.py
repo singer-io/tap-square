@@ -35,7 +35,7 @@ if __name__ == "__main__":
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")
