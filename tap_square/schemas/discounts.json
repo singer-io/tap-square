@@ -90,7 +90,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "version": {
       "type": [

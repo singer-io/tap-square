@@ -116,16 +116,17 @@ class TestSquarePagination(TestSquareBase):
 
                 data = synced_records.get(stream, [])
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
+                auto_fields = self.expected_automatic_fields().get(stream)
 
                 for actual_keys in record_messages_keys:
 
                     # Verify that the automatic fields are sent to the target for paginated streams
-                    self.assertEqual(all_fields.get(stream) - actual_keys,
-                                     set(), msg="A paginated synced stream has a record that is missing automatic fields.")
+                    self.assertTrue(auto_fields.issubset(actual_keys),
+                                    msg="A paginated synced stream has a record that is missing automatic fields.")
 
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
-                    self.assertGreater(actual_keys, self.expected_automatic_fields().get(stream),
-                                      msg="A paginated synced stream has a record that is missing non-automatic fields.")
+                    self.assertEqual(auto_fields.difference(actual_keys),
+                                     set(), msg="A paginated synced stream has a record that is missing expected fields.")
 
         print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
             self.expected_streams().difference(self.testable_streams()))

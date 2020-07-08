@@ -16,25 +16,6 @@ class TestSquareStartDate(TestSquareBase):
     def name(self):
         return "tap_tester_square_start_date_test"
 
-    def strip_format(self, date_value):
-        try:
-            date_stripped = dt.strptime(date_value, "%Y-%m-%d %H:%M:%S")
-            return date_stripped
-        except ValueError:
-            try:
-                date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
-                return date_stripped
-            except ValueError:
-                try:
-                    date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S+0000Z")
-                    return date_stripped
-                except ValueError:
-                    try:
-                        date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
-                        return date_stripped
-                    except ValueError:
-                        raise NotImplementedError
-
     def timedelta_formatted(self, dtime, days=0):
         try:
             date_stripped = dt.strptime(dtime, self.START_DATE_FORMAT)
@@ -61,11 +42,11 @@ class TestSquareStartDate(TestSquareBase):
             expected_records_1[stream] = existing_objects
 
             # If no objects exist since the 2nd start_date, create one
-            data_in_range = False
+            data_in_range = False # TODO this can be cleaned up
             for obj in expected_records_1.get(stream):
                 created = obj.get('created_at') or obj.get('updated_at')
 
-                if self.strip_format(created) > self.strip_format(start_date_2):
+                if self.parse_date(created) > self.parse_date(start_date_2):
                     data_in_range = True
                     break
             if not data_in_range:
@@ -233,7 +214,7 @@ class TestSquareStartDate(TestSquareBase):
                     records_from_sync_1 = set(row.get('data').get('updated_at')
                                               for row in synced_records_1.get(stream, []).get('messages', []))
                     for record in records_from_sync_1:
-                        self.assertGreaterEqual(self.strip_format(record), self.strip_format(start_date_1),
+                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(start_date_1),
                                                 msg="Record was created prior to start date for 1st sync.\n" +
                                                 "Sync 1 start_date: {}\n".format(start_date_1) +
                                                 "Record bookmark: {} ".format(record))
@@ -242,7 +223,7 @@ class TestSquareStartDate(TestSquareBase):
                     records_from_sync_2 = set(row.get('data').get('updated_at')
                                               for row in synced_records_2.get(stream, []).get('messages', []))
                     for record in records_from_sync_2:
-                        self.assertGreaterEqual(self.strip_format(record), self.strip_format(start_date_2),
+                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(start_date_2),
                                                 msg="Record was created prior to start date for 2nd sync.\n" +
                                                 "Sync 2 start_date: {}\n".format(start_date_2) +
                                                 "Record bookmark: {} ".format(record))
