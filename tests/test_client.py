@@ -125,7 +125,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
-            return self.create_locations().body.get('objects')
+            return [self.create_locations().body.get('location')]
         else:
             raise NotImplementedError
 
@@ -167,7 +167,7 @@ class TestClient(SquareClient):
         body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
 
-    def update(self, stream, obj_id, version):
+    def update(self, stream, obj_id, version=None):
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work
@@ -183,7 +183,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
-            return self.update_locations(obj_id, version).body.get('objects')
+            return [self.update_locations(obj_id).body.get('location')]
         else:
             raise NotImplementedError
 
@@ -222,9 +222,9 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_locations(self, obj_id, version):
-        body = {'location': {'name': obj_id}}
-        return self.post_location(body)
+    def update_locations(self, obj_id):
+        body = {'location': {'name': self.make_id('location')}}
+        return self._client.locations.update_location(obj_id, body)
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
