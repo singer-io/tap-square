@@ -21,6 +21,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'employees'
             }
         )
+    @classmethod
+    def tearDownClass(cls):
+        print("\n\nTEST TEARDOWN\n\n")
+        # TODO add delete for locations if possible
 
     def run_sync(self, conn_id):
         """
@@ -39,20 +43,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         sync_record_count = runner.examine_target_output_file(
             self, conn_id, self.expected_streams(), self.expected_primary_keys())
         return sync_record_count
-
-    # TODO define start_date in base across all tests if possible.
-    # TODO rip the get_properties from test files if this ^ happens
-    def get_properties(self, original = True):
-        return_value = {
-            'start_date' : '2020-06-01T00:00:00Z',
-            'sandbox' : 'true'
-        }
-
-        if original:
-            return return_value
-
-        return_value['start_date'] = self.START_DATE
-        return return_value
 
     def test_run(self):
         """
@@ -123,6 +113,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
         expected_records_2 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             # Create
+            if stream == 'locations':
+                import pdb; pdb.set_trace()
             new_record = self.client.create(stream)
             assert len(new_record) > 0, "Failed to create a {} record".format(stream)
             assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))

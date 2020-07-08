@@ -14,16 +14,16 @@ if __name__ == "__main__":
     START_DATE = '2020-06-24T00:00:00Z'
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
-    test_creates = True
-    test_updates = True # To test updates, must also test creates
-    test_gets = False
+    test_creates = False
+    test_updates = False # To test updates, must also test creates
+    test_gets = True
     test_deletes = False
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")

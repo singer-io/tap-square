@@ -18,7 +18,7 @@ class TestSquareBase(unittest.TestCase):
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
-    START_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+    START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
     START_DATE = "2020-06-24T00:00:00Z"
 
     def setUp(self):
@@ -43,13 +43,13 @@ class TestSquareBase(unittest.TestCase):
         print("\n\nTEST SETUP\n")
         cls.client = TestClient()
 
-    @classmethod
-    def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+    # @classmethod
+    # def tearDownClass(cls):
+    #     print("\n\nTEST TEARDOWN\n\n")
 
     def get_properties(self, original = True):
         return_value = {
-            'start_date' : '2020-06-24T00:00:00Z',
+            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox' : 'true'
         }
 
