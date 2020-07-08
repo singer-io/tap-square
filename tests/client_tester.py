@@ -14,34 +14,33 @@ if __name__ == "__main__":
     START_DATE = '2020-06-24T00:00:00Z'
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
-    test_creates = False
-    test_updates = False
-    test_gets = True
+    test_creates = True
+    test_updates = True # To test updates, must also test creates
+    test_gets = False
     test_deletes = False
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - 
-        'categories',  # GET - DONE | CREATE - DONE | UPDATE - 
-        'discounts',  # GET - DONE | CREATE - DONE | UPDATE - 
-        'taxes',  # GET - DONE | CREATE - DONE | UPDATE - 
+        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'employees',  # GET - DONE | CREATE -  | UPDATE - 
-        'locations',  # GET - DONE | CREATE - DONE | UPDATE - 
+        'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE
     ]
 
     print("********** Testing basic functions of test client **********")
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")
                 if print_objects:
-                    print("{} Records".format(len(existing_obj)))
-                    # print(existing_obj)
+                    print("{}\n".format(existing_obj))
                 continue
             print("FAILED")
     if test_creates:
@@ -49,20 +48,22 @@ if __name__ == "__main__":
             print("Testing CREATE: {}".format(obj))
             # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             created_obj = client.create(obj)
-            if created_obj:
-                print("SUCCESS")
-                if print_objects:
-                    print(created_obj)
+            if not created_obj:
+                print("FAILED")
                 continue
-            print("FAILED")
-    if test_updates:
-        for obj in objects_to_test:
-            print("Testing UPDATE: {}".format(obj))
-            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
-            updated_obj = client.update(obj)
-            if updated_obj:
-                print("SUCCESS")
-                if print_objects:
-                    print(updated_obj)
-                continue
-            print("FAILED")
+            print("SUCCESS")
+            if print_objects:
+                    print("{}\n".format(created_obj))
+
+            if test_updates: # Need to reference specific attr from an obj to update
+                print("Testing UPDATE: {}".format(obj))
+                # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+                obj_id = created_obj[0].get('id')
+                version = created_obj[0].get('version')
+                updated_obj = client.update(obj, obj_id=obj_id, version=version)
+                if updated_obj:
+                    print("SUCCESS")
+                    if print_objects:
+                        print("{}\n".format(updated_obj))
+                    continue
+                print("FAILED")
