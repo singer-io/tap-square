@@ -1,6 +1,5 @@
 from datetime import datetime as dt
 from datetime import timedelta
-from functools import reduce
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
@@ -94,7 +93,7 @@ class TestSquareStartDate(TestSquareBase):
         # read target output
         record_count_by_stream_1 = runner.examine_target_output_file(self, conn_id,
                                                                      self.expected_streams(), self.expected_primary_keys())
-        replicated_row_count_1 =  reduce(lambda accum,c : accum + c, record_count_by_stream_1.values())
+        replicated_row_count_1 =  sum(record_count_by_stream_1.values())
         self.assertGreater(replicated_row_count_1, 0, msg="failed to replicate any data: {}".format(record_count_by_stream_1))
         print("total replicated row count: {}".format(replicated_row_count_1))
         synced_records_1 = runner.get_records_from_target_output()
@@ -149,7 +148,7 @@ class TestSquareStartDate(TestSquareBase):
         # This should be validating the the PKs are written in each record
         record_count_by_stream_2 = runner.examine_target_output_file(self, conn_id,
                                                                      self.expected_streams(), self.expected_primary_keys())
-        replicated_row_count_2 =  reduce(lambda accum,c : accum + c, record_count_by_stream_2.values(), 0)
+        replicated_row_count_2 =  sum(record_count_by_stream_2.values())
         self.assertGreater(replicated_row_count_2, 0, msg="failed to replicate any data")
         print("total replicated row count: {}".format(replicated_row_count_2))
 
