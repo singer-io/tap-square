@@ -4,9 +4,9 @@ import tap_tester.runner      as runner
 
 from datetime import timedelta, date
 from datetime import datetime as dt
-from functools import reduce
 
 from base import TestSquareBase
+
 
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
@@ -101,7 +101,7 @@ class TestSquarePagination(TestSquareBase):
         record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.testable_streams(),
                                                                          self.expected_primary_keys())
-        replicated_row_count =  reduce(lambda accum,c : accum + c, record_count_by_stream.values())
+        replicated_row_count =  sum(record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         schemas = {catalog['tap_stream_id']: menagerie.get_annotated_schema(conn_id, catalog['stream_id']) for catalog in found_catalogs}
