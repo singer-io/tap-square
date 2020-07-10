@@ -12,6 +12,7 @@ class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
     API_LIMIT = 1000
+    PAGINATION_START_DATE = "2020-06-24T00:00:00Z"
 
     def name(self):
         return "tap_tester_square_pagination_test"
@@ -19,7 +20,7 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees',
+                'employees', # Requires production environment to create records
                 'locations'
             }
         )
@@ -36,6 +37,8 @@ class TestSquarePagination(TestSquareBase):
         """
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
+        # Set start date to ensure we do not need to create many records
+        self.START_DATE = self.PAGINATION_START_DATE
 
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
@@ -63,8 +66,8 @@ class TestSquarePagination(TestSquareBase):
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
 
-        # Create connection with default start date
-        conn_id = connections.ensure_connection(self)
+        # Create connection but do not use default start date
+        conn_id = connections.ensure_connection(self, original_properties=False)
 
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)

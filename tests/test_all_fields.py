@@ -40,8 +40,10 @@ class TestSquareAllFields(TestSquareBase):
 
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
-        # ensure data exists for sync streams and set expectations
+        # Instatiate default start date
         self.START_DATE = self.get_properties().get('start_date')
+
+        # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)

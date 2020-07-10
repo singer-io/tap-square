@@ -19,7 +19,7 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    START_DATE = "2020-06-24T00:00:00Z"
+    START_DATE = "2020-06-24T00:00:00Z" # used for pagination testing
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -48,6 +48,7 @@ class TestSquareBase(unittest.TestCase):
     #     print("\n\nTEST TEARDOWN\n\n")
 
     def get_properties(self, original = True):
+        # Default values
         return_value = {
             'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox' : 'true'
