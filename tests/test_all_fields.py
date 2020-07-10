@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from functools import reduce
 from singer import metadata
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
@@ -110,7 +109,7 @@ class TestSquareAllFields(TestSquareBase):
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-        replicated_row_count =  reduce(lambda accum,c : accum + c, first_record_count_by_stream.values())
+        replicated_row_count =  sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         # Verify target has records for all synced streams
