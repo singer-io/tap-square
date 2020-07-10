@@ -1,10 +1,6 @@
 import os
 import unittest
 
-<<<<<<< HEAD
-from functools import reduce
-=======
->>>>>>> master
 from singer import metadata
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
