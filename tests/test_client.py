@@ -2,6 +2,7 @@ import uuid
 import json
 import os
 import random
+import requests
 from datetime import datetime
 
 import singer
@@ -166,6 +167,24 @@ class TestClient(SquareClient):
     def create_locations(self):
         body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
+
+    def create_employees(self):
+        # TODO implement v1 endpoint
+        HEADERS = {
+            'Authorization': 'Bearer {}'.format(self._access_token),
+            'Content-Type': 'application/json',
+        }
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "employees"
+        full_url = base_v1 + endpoint
+        body = {
+            'first_name': 'singer',
+            'last_name': 'songerwriter',
+            'email': '{}@stitchdata.com'.format(self.make_id('employee')[1:].replace('_', '')),
+        }
+        response = requests.post(full_url, headers=HEADERS, data=body)
+        return response.json()
+
 
     def update(self, stream, obj_id, version):
         """For `stream` update `obj_id` with a new name
