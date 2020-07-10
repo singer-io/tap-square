@@ -15,6 +15,14 @@ class TestSquareStartDate(TestSquareBase):
     def name(self):
         return "tap_tester_square_start_date_test"
 
+    def testable_streams(self):
+        return self.expected_streams().difference(
+            {  # STREAMS NOT CURRENTY TESTABLE
+                'employees', # Requires production environment to create records
+                'locations'
+            }
+        )
+
     def timedelta_formatted(self, dtime, days=0):
         try:
             date_stripped = dt.strptime(dtime, self.START_DATE_FORMAT)
