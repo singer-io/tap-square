@@ -43,10 +43,6 @@ class TestSquareBase(unittest.TestCase):
         print("\n\nTEST SETUP\n")
         cls.client = TestClient()
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     print("\n\nTEST TEARDOWN\n\n")
-
     def get_properties(self, original = True):
         # Default values
         return_value = {
