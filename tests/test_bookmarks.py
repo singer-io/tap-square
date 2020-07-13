@@ -18,10 +18,14 @@ class TestSquareIncrementalReplication(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees',
+                'employees', # Requires production environment to create records
                 'locations'
             }
         )
+    @classmethod
+    def tearDownClass(cls):
+        print("\n\nTEST TEARDOWN\n\n")
+        # TODO add delete for locations if possible
 
     def run_sync(self, conn_id):
         """
@@ -41,20 +45,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             self, conn_id, self.expected_streams(), self.expected_primary_keys())
         return sync_record_count
 
-    # TODO define start_date in base across all tests if possible.
-    # TODO rip the get_properties from test files if this ^ happens
-    def get_properties(self, original = True):
-        return_value = {
-            'start_date' : '2020-06-01T00:00:00Z',
-            'sandbox' : 'true'
-        }
-
-        if original:
-            return return_value
-
-        return_value['start_date'] = self.START_DATE
-        return return_value
-
     def test_run(self):
         """
         Verify for each stream that you can do a sync which records bookmarks.
@@ -68,6 +58,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nRUNNING {}\n\n".format(self.name()))
+
+        # Instatiate default start date
+        self.START_DATE = self.get_properties().get('start_date')
+
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records_1 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
