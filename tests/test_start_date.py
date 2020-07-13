@@ -20,7 +20,7 @@ class TestSquareStartDate(TestSquareBase):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'locations'
+                'locations'  # Requires proper permissions
             }
         )
 
@@ -40,7 +40,7 @@ class TestSquareStartDate(TestSquareBase):
         # Initialize start_date state to make assertions
         self.START_DATE = self.get_properties().get('start_date')
         start_date_1 = self.START_DATE
-        start_date_2 = self.timedelta_formatted(self.START_DATE, 2)  # Add 2 days
+        start_date_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
 
         # get expected records
         expected_records_1 = {}
