@@ -20,7 +20,10 @@ class TestSquareAllFields(TestSquareBase):
 
     def testable_streams(self):
         return set(self.expected_streams()).difference(
-            {'employees'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'employees',
+                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+            }
         )
 
     @classmethod
