@@ -2,6 +2,7 @@ import uuid
 import json
 import os
 import random
+import requests
 from datetime import datetime
 
 import singer
@@ -170,7 +171,27 @@ class TestClient(SquareClient):
         body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
 
-    def update(self, stream, obj_id, version=None):
+    def create_employees(self):
+        # # TODO Either remove this or make every other stream refernce production
+        # HEADERS = {
+        #     "Authorization":"Bearer {}".format("{" + self._access_token + "}"),
+        #     "Content-Type": "application/json"}
+        # base_v1 = "https://connect.squareup.com/v1/me/"
+        # # base_v1 = "https://connect.squareupsandbox.com/v1" # THIS DOES NOT EXIST
+        # endpoint = "employees"
+        # full_url = base_v1 + endpoint
+        # body = {'id': self.make_id('employee'),
+        #         'first_name': 'singer',
+        #         'last_name': 'songerwriter'}
+        # #'email': '{}@stitchdata.com'.format(self.make_id('employee')[1:].replace('_', '')),
+        # response = requests.post(full_url, headers=HEADERS, data=body)
+        # if response.status_code >= 400:
+        #     print(response.text)
+        #     import pdb; pdb.set_trace()
+        # return response.json()
+        return None
+
+    def update(self, stream, obj_id, version):
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work

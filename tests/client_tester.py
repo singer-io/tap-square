@@ -28,14 +28,14 @@ if __name__ == "__main__":
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'employees',  # GET - DONE | CREATE -  | UPDATE - 
-        'locations',  # GET - DONE | CREATE - DONE | UPDATE -
+        'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE
     ]
 
     print("********** Testing basic functions of test client **********")
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")

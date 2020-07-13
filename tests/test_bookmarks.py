@@ -18,8 +18,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'locations',
-                'employees'
+                'employees', # Requires production environment to create records
+                'locations'
             }
         )
     @classmethod
@@ -58,6 +58,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nRUNNING {}\n\n".format(self.name()))
+
+        # Instatiate default start date
+        self.START_DATE = self.get_properties().get('start_date')
+
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records_1 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():

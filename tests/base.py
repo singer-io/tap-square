@@ -19,7 +19,7 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    START_DATE = "2020-06-24T00:00:00Z"
+    START_DATE = "2020-07-13T00:00:00Z" # used for pagination testing
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -43,11 +43,8 @@ class TestSquareBase(unittest.TestCase):
         print("\n\nTEST SETUP\n")
         cls.client = TestClient()
 
-    # @classmethod
-    # def tearDownClass(cls):
-    #     print("\n\nTEST TEARDOWN\n\n")
-
     def get_properties(self, original = True):
+        # Default values
         return_value = {
             'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox' : 'true'
@@ -233,3 +230,19 @@ class TestSquareBase(unittest.TestCase):
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
+
+    # TODO REMOVE or UNCOMMENT once we determine if this is needed
+    # def sort_array_type(self, record, key, value):
+    #     """
+    #     List values are returned by square as unordered arrays.
+    #     In order to accurately compare expected and actual records, we must sort all lists.
+    #     """
+    #     try:
+    #         if isinstance(value, list) and value: #  and key in ['ads']:
+    #             if isinstance(value[0], dict) and "id" in value[0].keys():
+    #                 record[key] = sorted(value, key=lambda x: x['id'])
+    #             else:
+    #                 record[key] = sorted(value)
+    #     except Exception as ex:
+    #         print("Could not sort array at key: {}, value: {}".format(key, value))
+    #         raise
