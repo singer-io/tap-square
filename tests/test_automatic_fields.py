@@ -31,7 +31,6 @@ class TestAutomaticFields(TestSquareBase):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # ensure data exists for sync streams and set expectations
-        # expected_records = defaultdict(list) # TODO why was this used?
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)

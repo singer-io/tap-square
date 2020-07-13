@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 from datetime import timedelta
 
+import unittest
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -15,6 +16,14 @@ class TestSquareStartDate(TestSquareBase):
     def name(self):
         return "tap_tester_square_start_date_test"
 
+    def testable_streams(self):
+        return self.expected_streams().difference(
+            {  # STREAMS NOT CURRENTY TESTABLE
+                'employees', # Requires production environment to create records
+                'locations'  # Requires proper permissions
+            }
+        )
+
     def timedelta_formatted(self, dtime, days=0):
         try:
             date_stripped = dt.strptime(dtime, self.START_DATE_FORMAT)
@@ -24,13 +33,14 @@ class TestSquareStartDate(TestSquareBase):
         except ValueError:
             return Exception("Datetime object is not of the format: {}".format(self.START_DATE_FORMAT))
 
+    @unittest.skip("This requires multiple days of data which is not pssible since the app was created today (7/13/20)")
     def test_run(self):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Initialize start_date state to make assertions
         self.START_DATE = self.get_properties().get('start_date')
         start_date_1 = self.START_DATE
-        start_date_2 = self.timedelta_formatted(self.START_DATE, 2)  # Add 2 days
+        start_date_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
 
         # get expected records
         expected_records_1 = {}

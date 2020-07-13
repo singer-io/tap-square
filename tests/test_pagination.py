@@ -41,8 +41,8 @@ class TestSquarePagination(TestSquareBase):
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
-#            if len(existing_objects) == 0:
-#                assert None, "NO DATA EXISTS, SOMETHING HAS GONE TERRIBLY WRONG"
+            if len(existing_objects) == 0:
+               print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
             if len(existing_objects) <= self.API_LIMIT:

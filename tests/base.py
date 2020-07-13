@@ -18,8 +18,8 @@ class TestSquareBase(unittest.TestCase):
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
-    START_DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
-    START_DATE = "2020-06-24T00:00:00Z"
+    START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
+    START_DATE = "2020-06-24T00:00:00Z" # used for pagination testing
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -49,7 +49,7 @@ class TestSquareBase(unittest.TestCase):
 
     def get_properties(self, original = True):
         return_value = {
-            'start_date' : '2020-06-24T00:00:00Z',
+            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox' : 'true'
         }
 
