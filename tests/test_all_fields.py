@@ -155,9 +155,9 @@ class TestSquareAllFields(TestSquareBase):
 
                 # verify by values, that we replicated the expected records
                 for actual_record in actual_records:
-                    # Array data types need sorted for a proper comparison
-                    for key, value in actual_record.items():
-                        self.sort_array_type(actual_record, key, value)
+                    # Array data types need sorted for a proper comparison # TODO Determine if this will be needed
+                    # for key, value in actual_record.items():
+                    #     self.sort_array_type(actual_record, key, value)
                     if not actual_record in expected_records.get(stream):
                         print("\nDATA DISCREPANCY STREAM: {}".format(stream))
                         print("Actual: {}".format(actual_record))

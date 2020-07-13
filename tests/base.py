@@ -219,12 +219,10 @@ class TestSquareBase(unittest.TestCase):
             for record in expected_records:
                 for key, value in record.items():
                     self.align_date_type(record, key, value)
-                    self.sort_array_type(record, key, value)
             return
 
         for key, value in expected_records.items(): # Modify a single record
             self.align_date_type(expected_records, key, value)
-            self.sort_array_type(expected_records, key, value)
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
@@ -233,13 +231,18 @@ class TestSquareBase(unittest.TestCase):
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
-    def sort_array_type(self, record, key, value):
-        try:
-            if isinstance(value, list) and value and key in ['ads']:
-                if isinstance(value[0], dict) and "id" in value[0].keys():
-                    record[key] = sorted(value, key=lambda x: x['id'])
-                else:
-                    record[key] = sorted(value)
-        except Exception as ex:
-            print("Could not sort array at key: {}, value: {}".format(key, value))
-            raise
+    # TODO REMOVE or UNCOMMENT once we determine if this is needed
+    # def sort_array_type(self, record, key, value):
+    #     """
+    #     List values are returned by square as unordered arrays.
+    #     In order to accurately compare expected and actual records, we must sort all lists.
+    #     """
+    #     try:
+    #         if isinstance(value, list) and value: #  and key in ['ads']:
+    #             if isinstance(value[0], dict) and "id" in value[0].keys():
+    #                 record[key] = sorted(value, key=lambda x: x['id'])
+    #             else:
+    #                 record[key] = sorted(value)
+    #     except Exception as ex:
+    #         print("Could not sort array at key: {}, value: {}".format(key, value))
+    #         raise
