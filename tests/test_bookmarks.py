@@ -18,6 +18,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
+                'locations',
                 'employees'
             }
         )
@@ -113,8 +114,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         expected_records_2 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             # Create
-            if stream == 'locations':
-                import pdb; pdb.set_trace()
             new_record = self.client.create(stream)
             assert len(new_record) > 0, "Failed to create a {} record".format(stream)
             assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
