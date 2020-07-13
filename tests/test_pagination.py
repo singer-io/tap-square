@@ -41,15 +41,15 @@ class TestSquarePagination(TestSquareBase):
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
-            if len(existing_objects) == 0:
-                assert None, "NO DATA EXISTS, SOMETHING HAS GONE TERRIBLY WRONG"
+#            if len(existing_objects) == 0:
+#                assert None, "NO DATA EXISTS, SOMETHING HAS GONE TERRIBLY WRONG"
 
             expected_records[stream] += existing_objects
             if len(existing_objects) <= self.API_LIMIT:
-                num_to_post = 1001-len(existing_objects)
+                num_to_post = self.API_LIMIT + 1 - len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
                 new_objects = self.client.create_batch_post(stream, num_to_post)
-                expected_records[stream] += new_objects
+                expected_records[stream] += new_objects.body.get('objects', [])
                 print('{}: Created {} records'.format(stream, num_to_post))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
