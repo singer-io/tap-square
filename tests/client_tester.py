@@ -28,7 +28,7 @@ if __name__ == "__main__":
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE
         # 'employees',  # GET - DONE | CREATE -  | UPDATE - 
-        'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        'locations',  # GET - DONE | CREATE - DONE | UPDATE -
     ]
 
     print("********** Testing basic functions of test client **********")
@@ -43,6 +43,7 @@ if __name__ == "__main__":
                     print("{}\n".format(existing_obj))
                 continue
             print("FAILED")
+
     if test_creates:
         for obj in objects_to_test:
             print("Testing CREATE: {}".format(obj))
