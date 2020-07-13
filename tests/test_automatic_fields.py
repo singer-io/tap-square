@@ -17,7 +17,6 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams(self):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees',
                 'locations'
             }
         )
@@ -29,6 +28,9 @@ class TestAutomaticFields(TestSquareBase):
         """
 
         print("\n\nRUNNING {}\n\n".format(self.name()))
+
+        # Instatiate default start date
+        self.START_DATE = self.get_properties().get('start_date')
 
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()}

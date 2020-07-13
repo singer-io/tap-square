@@ -20,7 +20,7 @@ class TestSquareAllFields(TestSquareBase):
 
     def testable_streams(self):
         return set(self.expected_streams()).difference(
-            {'employees', 'locations'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
+            {'locations'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
         )
 
     @classmethod
@@ -40,8 +40,10 @@ class TestSquareAllFields(TestSquareBase):
 
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
-        # ensure data exists for sync streams and set expectations
+        # Instatiate default start date
         self.START_DATE = self.get_properties().get('start_date')
+
+        # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
@@ -153,8 +155,8 @@ class TestSquareAllFields(TestSquareBase):
 
                 # verify by values, that we replicated the expected records
                 for actual_record in actual_records:
-                    # Array data types need sorted for a proper comparison
-                    # for key, value in actual_record.items():  # TODO this can probably be dropped?
+                    # Array data types need sorted for a proper comparison # TODO Determine if this will be needed
+                    # for key, value in actual_record.items():
                     #     self.sort_array_type(actual_record, key, value)
                     if not actual_record in expected_records.get(stream):
                         print("\nDATA DISCREPANCY STREAM: {}".format(stream))
