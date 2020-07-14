@@ -70,7 +70,18 @@ class Locations():
         for page, cursor in client.get_locations():
             yield page, cursor
 
+class Payments():
+    tap_stream_id = 'payments'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'DISCOUNT'
 
+    def sync(self, client, start_time, bookmarked_cursor):
+        for page, cursor in client.get_payments(client, start_time, bookmarked_cursor):
+            yield page, cursor
+        
 STREAMS = {
     'items': Items,
     'categories': Categories,
@@ -78,4 +89,5 @@ STREAMS = {
     'taxes': Taxes,
     'employees': Employees,
     'locations': Locations,
+    'payments': Payments
 }

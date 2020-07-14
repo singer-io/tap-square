@@ -5,7 +5,7 @@ import singer
 
 class SquareClient():
     def __init__(self, config):
-        self._refresh_token = config['refresh_token']
+        self._refresh_token = 'EQAAEFGKlw5Y0R0J1fjD_tNX2sXOl0OHLTxPXP0daLmSh6wbMgGHWUMqSq_q85B4'#config['refresh_token']
         self._client_id = config['client_id']
         self._client_secret = config['client_secret']
 
@@ -112,3 +112,34 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
+
+    def get_payments(self, object_type, start_time, bookmarked_cursor):
+        start_time = utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = utils.strftime(start_time)
+
+        body = {
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        with singer.http_request_timer('GET payments'):
+            result = self._client.payments.list_payments(**body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('payments', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET ' + object_type):
+                result = self._client.catalog.search_catalog_objects(body=body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('payments', []), result.body.get('cursor'))
