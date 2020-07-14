@@ -65,16 +65,8 @@ class TestSquareBase(unittest.TestCase):
             'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
         }
 
-    @staticmethod
-    def expected_check_streams():
-        return {
-            'items',
-            'categories',
-            'discounts',
-            'taxes',
-            'employees',
-            'locations',
-        }
+    def expected_check_streams(self):
+        return set(self.expected_metadata().keys()).difference(set())
 
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
@@ -107,6 +99,11 @@ class TestSquareBase(unittest.TestCase):
             "locations": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
+            },
+            "payments": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
             },
         }
 

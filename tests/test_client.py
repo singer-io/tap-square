@@ -59,6 +59,8 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_employees(None) for obj in page]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
+        elif stream == 'payments':
+            return [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
         else:
             raise NotImplementedError
 

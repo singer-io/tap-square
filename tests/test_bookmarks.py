@@ -19,7 +19,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'locations'
+                'locations',
+                'payments',
+                'discounts', # Currently ITEMS_WRITE scope isn't working
+                'taxes'
             }
         )
     @classmethod
