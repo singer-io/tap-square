@@ -115,10 +115,19 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    # TODO Remove if employees is addressed OR if it cannot be included in any test
-    def testable_streams(self):
-        # We have no way of creating employees, so we execlude it from tests
-        return self.expected_streams().difference({'employees'})
+
+    def static_data_streams(self):
+        """
+        Some streams require use of a static data set, and should
+        only be referenced in static tests.
+        """
+        return {
+            'locations',  # Limit 300 objects, DELETES not supported
+        }
+
+    def dynamic_data_streams(self):
+        """Expected streams minus streams with static data."""
+        return self.expected_streams().difference(self.static_data_streams())
 
     def expected_streams(self):
         """A set of expected stream names"""

@@ -252,7 +252,7 @@ class TestClient(SquareClient):
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
-        return self.client._client.catalog.batch_delete_catalog_objects(body)
+        return self._client.catalog.batch_delete_catalog_objects(body)
 
     def create_batch_post(self, stream, num_records):
         recs_to_create = []

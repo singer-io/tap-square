@@ -10,22 +10,19 @@ from test_client import TestClient
 
 
 class TestSquareIncrementalReplication(TestSquareBase):
-    START_DATE = "2020-06-01T00:00:00Z"
 
     def name(self):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams(self):
-        return self.expected_streams().difference(
+        return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'locations'
             }
         )
     @classmethod
     def tearDownClass(cls):
         print("\n\nTEST TEARDOWN\n\n")
-        # TODO add delete for locations if possible
 
     def run_sync(self, conn_id):
         """
@@ -63,7 +60,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Instatiate default start date
         self.START_DATE = self.get_properties().get('start_date')
 
-        # Ensure tested streams have a record count which exceeds the API LIMIT
+        # Ensure tested streams have existing records
         expected_records_1 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
             existing_objects = self.client.get_all(stream, self.START_DATE)
@@ -189,7 +186,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                        msg="Data isn't set up to be able to test full sync")
 
                     # verify that you get less/same amount of data on the 2nd sync
-                    self.assertGreaterEqual(
+                    self.assertGreater(
                         first_sync_record_count.get(stream, 0),
                         second_sync_record_count.get(stream, 0),
                         msg="first sync didn't have more records, bookmark usage not verified")
