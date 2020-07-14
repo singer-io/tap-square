@@ -28,7 +28,8 @@ class SquareClient():
             result = client.o_auth.obtain_token(body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            exception_message = result.errors if result.errors else result.body
+            raise Exception(exception_message)
 
         return result.body['access_token']
 
