@@ -80,6 +80,11 @@ class TestSquareBase(unittest.TestCase):
         """The expected streams and metadata about the streams"""
 
         return {
+            "payments": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
             "items": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
