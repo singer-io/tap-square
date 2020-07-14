@@ -12,7 +12,7 @@ class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
     API_LIMIT = 1000
-    PAGINATION_START_DATE = "2020-06-24T00:00:00Z"
+    PAGINATION_START_DATE = "2020-07-13T00:00:00Z"
 
     def name(self):
         return "tap_tester_square_pagination_test"

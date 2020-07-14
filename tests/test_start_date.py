@@ -33,7 +33,6 @@ class TestSquareStartDate(TestSquareBase):
         except ValueError:
             return Exception("Datetime object is not of the format: {}".format(self.START_DATE_FORMAT))
 
-    @unittest.skip("This requires multiple days of data which is not pssible since the app was created today (7/13/20)")
     def test_run(self):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
