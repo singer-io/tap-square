@@ -13,15 +13,22 @@ from test_client import TestClient
 class TestSquareAllFields(TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
 
-    START_DATE = ""
+    STATIC_START_DATE = "2020-07-13T00:00:00Z"
+    TESTABLE_STREAMS = set()
 
     def name(self):
         return "tap_tester_square_all_fields"
 
     def testable_streams(self):
-        return set(self.expected_streams()).difference(
+        return self.expected_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
+                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+            }
+        )
+    def testable_streams_static(self):
+        return self.static_data_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
             }
         )
@@ -36,19 +43,32 @@ class TestSquareAllFields(TestSquareBase):
         print("\n\nTEST TEARDOWN\n\n")
 
     def test_run(self):
+        """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING WITH DYNAMIC DATA")
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams()
+        self.all_fields_test()
+
+        print("\n\nTESTING WITH STATIC DATA")
+        self.START_DATE = self.STATIC_START_DATE
+        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.all_fields_test()
+
+    def all_fields_test(self):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
         """
 
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        print("\n\nRUNNING {}".format(self.name()))
+        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # Instatiate default start date
-        self.START_DATE = self.get_properties().get('start_date')
+        if self.TESTABLE_STREAMS == set(): # REMOVE once BUG addressed
+            print("WE ARE SKIPPING THIS TEST\n\n")
 
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if existing_objects:
                 print("Data exists for stream: {}".format(stream))
@@ -124,7 +144,7 @@ class TestSquareAllFields(TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         # Test by Stream
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
