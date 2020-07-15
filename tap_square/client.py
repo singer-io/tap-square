@@ -137,7 +137,7 @@ class SquareClient():
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
             with singer.http_request_timer('GET ' + object_type):
-                result = self._client.catalog.search_catalog_objects(body=body)
+                result = self._client.payments.list_payments(**body)
 
             if result.is_error():
                 raise Exception(result.errors)
