@@ -5,7 +5,7 @@ import singer
 
 class SquareClient():
     def __init__(self, config):
-        self._refresh_token = 'EQAAEFGKlw5Y0R0J1fjD_tNX2sXOl0OHLTxPXP0daLmSh6wbMgGHWUMqSq_q85B4'#config['refresh_token']
+        self._refresh_token = config['refresh_token']
         self._client_id = config['client_id']
         self._client_secret = config['client_secret']
 
