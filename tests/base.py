@@ -236,6 +236,7 @@ class TestSquareBase(unittest.TestCase):
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
+        # TODO update this to execute fo all datetime objects
         if isinstance(value, str) and key in ['updated_at']:
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
