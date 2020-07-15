@@ -112,3 +112,34 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
+
+    def get_refunds(self, object_type, start_time, bookmarked_cursor): # TODO:check sort_order input
+        start_time = utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = utils.strftime(start_time)
+
+        body = {
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        with singer.http_request_timer('GET refunds'):
+            result = self._client.refunds.list_payment_refunds(**body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('refunds', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET ' + object_type):
+                result = self._client.refunds.list_payment_refunds(**body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('refunds', []), result.body.get('cursor'))
