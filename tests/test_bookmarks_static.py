@@ -84,7 +84,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)
         menagerie.verify_check_exit_status(self, exit_status, check_job_name)
 
-        # Select all streams and no fields within streams
+        # Select all testable streams and no fields within streams
         found_catalogs = menagerie.get_catalogs(conn_id)
         streams_to_select = self.testable_streams()
         our_catalogs = [catalog for catalog in found_catalogs if

@@ -99,20 +99,26 @@ class TestSquareAllFields(TestSquareBase):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # Select all available fields from all streams
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True)
+        # Select all available fields from all testable streams
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
         # Ensure our selection worked
-        for cat in found_catalogs:
+        for cat in catalogs:
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
-            # Verify all streams are selected
+            # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            if cat['stream_name'] not in self.TESTABLE_STREAMS:
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
 
-            # Verify all fields within each stream are selected
+            # Verify all fields within each selected stream are selected
             for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                 field_selected = field_props.get('selected')
                 print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))

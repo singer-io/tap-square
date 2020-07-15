@@ -38,9 +38,10 @@ class TestSquarePagination(TestSquareBase):
         self.pagination_test()
 
         print("\n\nTESTING WITH STATIC DATA")
-        self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static()
-        self.pagination_test()
+        # TODO Uncomment once TASK addressed https://stitchdata.atlassian.net/browse/SRCE-3575
+        # self.START_DATE = self.STATIC_START_DATE
+        # self.TESTABLE_STREAMS = self.testable_streams_static()
+        # self.pagination_test()
 
     def pagination_test(self):
         """
@@ -60,7 +61,7 @@ class TestSquarePagination(TestSquareBase):
 
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if len(existing_objects) == 0:
                print("NO DATA EXISTS FOR STREAM {}".format(stream))
@@ -76,7 +77,7 @@ class TestSquarePagination(TestSquareBase):
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
 
         # verify the expected test data exceeds API LIMIT for all testable streams
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             record_count = len(expected_records[stream])
             print("Verifying data is sufficient for stream {}. ".format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT))
@@ -104,7 +105,7 @@ class TestSquarePagination(TestSquareBase):
         print("discovered schemas are OK")
 
         #select all catalogs
-        exclude_streams = list(self.expected_streams().difference(self.testable_streams()))
+        exclude_streams = list(self.expected_streams().difference(self.TESTABLE_STREAMS))
         self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs,
                                            exclude_streams=exclude_streams)
 
@@ -120,7 +121,7 @@ class TestSquarePagination(TestSquareBase):
 
         # read target output
         record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                         self.testable_streams(),
+                                                                         self.TESTABLE_STREAMS,
                                                                          self.expected_primary_keys())
         replicated_row_count =  sum(record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
@@ -128,7 +129,7 @@ class TestSquarePagination(TestSquareBase):
         schemas = {catalog['tap_stream_id']: menagerie.get_annotated_schema(conn_id, catalog['stream_id']) for catalog in found_catalogs}
         all_fields = {stream: set(schema['annotated-schema']['properties'].keys()) for stream, schema in schemas.items()}
 
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
 
                 # Verify we are paginating for testable synced streams
@@ -150,7 +151,7 @@ class TestSquarePagination(TestSquareBase):
                                      set(), msg="A paginated synced stream has a record that is missing expected fields.")
 
         print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
-            self.expected_streams().difference(self.testable_streams()))
+            self.expected_streams().difference(self.TESTABLE_STREAMS))
         )
 
 if __name__ == '__main__':

@@ -27,9 +27,7 @@ class TestSquareStartDate(TestSquareBase):
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'
-            }
+            set()  # STREAMS THAT CANNOT CURRENTLY BE TESTED
         )
 
     def timedelta_formatted(self, dtime, days=0):
@@ -64,7 +62,7 @@ class TestSquareStartDate(TestSquareBase):
 
         # get expected records
         expected_records_1 = {}
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
             print("Data exists for stream: {}".format(stream))
@@ -79,7 +77,7 @@ class TestSquareStartDate(TestSquareBase):
                     data_in_range = True
                     break
             if not data_in_range:
-                if stream in self.testable_streams():
+                if stream in self.TESTABLE_STREAMS:
                     expected_records_1[stream].append(self.client.create(stream))
                     continue
                 assert None, "Sufficient test data does not exist for {}, test will fail.".format(stream)
@@ -105,8 +103,11 @@ class TestSquareStartDate(TestSquareBase):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # Select all available streams and their fields
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs)
+        # Select all testable streams and their fields
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
@@ -186,7 +187,7 @@ class TestSquareStartDate(TestSquareBase):
 
         state_2 = menagerie.get_state(conn_id)
 
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 replication_type = self.expected_replication_method().get(stream)
                 record_count_1 = record_count_by_stream_1.get(stream, 0)

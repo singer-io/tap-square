@@ -95,19 +95,25 @@ class TestAutomaticFields(TestSquareBase):
                 print("Validating inclusion on {}: {}".format(cat['stream_name'], mdata))
                 self.assertTrue(mdata and mdata['metadata']['inclusion'] == 'automatic')
 
-        # Deselect all available fields from all streams, keep automatic fields
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs, select_all_fields=False)
+        # Select testable streams. Deselect all available fields from all testable streams, keep automatic fields
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=False, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
         # Ensure our selection worked
-        for cat in found_catalogs:
+        for cat in catalogs:
             expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
-            # Verify all streams are selected
+            # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
-            self.assertTrue(selected, msg="Stream not selected by default")
+            if cat['stream_name'] not in self.TESTABLE_STREAMS:
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
+            self.assertTrue(selected, msg="Stream not selected.")
             # Verify only automatic fields are selected
             selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
             self.assertEqual(expected_automatic_fields, selected_fields)
