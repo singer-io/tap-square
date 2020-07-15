@@ -54,7 +54,7 @@ class TestSquareStartDate(TestSquareBase):
         print("\n\nTESTING WITH STATIC DATA")
         self.START_DATE = self.STATIC_START_DATE
         self.START_DATE_1 = self.STATIC_START_DATE
-        self.START_DATE_2 = dt.strftime(self.STATIC_START_DATE + timedelta(days=2), self.START_DATE_FORMAT)
+        self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
         self.TESTABLE_STREAMS = self.testable_streams_static()
         self.start_date_test()
 
