@@ -35,7 +35,7 @@ def sync(config, state, catalog):
             if stream_obj.replication_method == 'INCREMENTAL':
                 max_updated_at = start_time
                 for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
-                    
+
                     for record in page:
                         singer.write_record(
                             tap_stream_id,
