@@ -20,7 +20,8 @@ class TestSquareStartDate(TestSquareBase):
         return self.expected_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'locations'  # Requires proper permissions
+                'locations',  # Requires proper permissions
+                'refunds'
             }
         )
 

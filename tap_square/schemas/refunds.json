@@ -59,7 +59,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "processing_fee": {
       "type": [

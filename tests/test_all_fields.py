@@ -20,7 +20,7 @@ class TestSquareAllFields(TestSquareBase):
 
     def testable_streams(self):
         return set(self.expected_streams()).difference(
-            {'locations'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
+            {'locations', 'employees'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
         )
 
     @classmethod
