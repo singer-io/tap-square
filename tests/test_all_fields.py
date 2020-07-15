@@ -12,15 +12,13 @@ from test_client import TestClient
 
 class TestSquareAllFields(TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
-
-    STATIC_START_DATE = "2020-07-13T00:00:00Z"
     TESTABLE_STREAMS = set()
 
     def name(self):
         return "tap_tester_square_all_fields"
 
     def testable_streams(self):
-        return self.expected_streams().difference(
+        return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
                 'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532

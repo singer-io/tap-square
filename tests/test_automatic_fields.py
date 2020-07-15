@@ -15,26 +15,41 @@ class TestAutomaticFields(TestSquareBase):
         return "tap_tester_square_automatic_fields"
 
     def testable_streams(self):
-        return self.expected_streams().difference(
+        return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
             }
         )
 
+    def testable_streams_static(self):
+        return self.static_data_streams().difference(
+            set() # STREAMS THAT CANNOT CURRENTLY BE TESTED
+        )
+
     def test_run(self):
+        """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING WITH DYNAMIC DATA")
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams()
+        self.auto_fields_test()
+
+        print("\n\nTESTING WITH STATIC DATA")
+        self.START_DATE = self.STATIC_START_DATE
+        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.auto_fields_test()
+
+    def auto_fields_test(self):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
         """
 
-        print("\n\nRUNNING {}\n\n".format(self.name()))
-
-        # Instatiate default start date
-        self.START_DATE = self.get_properties().get('start_date')
+        print("\n\nRUNNING {}".format(self.name()))
+        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()}
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
             print("Data exists for stream: {}".format(stream))
@@ -121,7 +136,7 @@ class TestAutomaticFields(TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         # Test by Stream
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]

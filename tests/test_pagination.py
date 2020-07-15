@@ -12,20 +12,37 @@ class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
     API_LIMIT = 1000
-    PAGINATION_START_DATE = "2020-07-13T00:00:00Z"
 
     def name(self):
         return "tap_tester_square_pagination_test"
 
     def testable_streams(self):
-        return self.expected_streams().difference(
+        return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
+            }
+        )
+
+    def testable_streams_static(self):
+        return self.static_data_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations'  # Only 300 locations can be created, and 300 are returned in a single request
             }
         )
 
     def test_run(self):
+        """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING WITH DYNAMIC DATA")
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams()
+        self.pagination_test()
+
+        print("\n\nTESTING WITH STATIC DATA")
+        self.START_DATE = self.STATIC_START_DATE
+        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.pagination_test()
+
+    def pagination_test(self):
         """
         Verify that for each stream you can get multiple pages of data
         when no fields are selected and only the automatic fields are replicated.
@@ -35,10 +52,11 @@ class TestSquarePagination(TestSquareBase):
         fetch of data.  For instance if you have a limit of 250 records ensure
         that 251 (or more) records have been posted for that stream.
         """
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        print("\n\nRUNNING {}".format(self.name()))
+        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # Set start date to ensure we do not need to create many records
-        self.START_DATE = self.PAGINATION_START_DATE
+        if self.TESTABLE_STREAMS == set(): # REMOVE once we are testing a static stream
+            print("WE ARE SKIPPING THIS TEST\n\n")
 
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
