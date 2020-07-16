@@ -57,6 +57,13 @@ class Employees():
         for page, cursor in client.get_employees(bookmarked_cursor):
             yield page, cursor
 
+class ModifierLists(CatalogStream):
+    tap_stream_id = 'modifier_lists'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'MODIFIER_LIST'
 
 class Locations():
     tap_stream_id = 'locations'
@@ -78,10 +85,33 @@ class BankAccounts():
     replication_key = None
     object_type = 'BANK ACCOUNTS'
 
-    def sync(self, client, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
         for page, cursor in client.get_bank_accounts():
             yield page, cursor
 
+class Refunds():
+    tap_stream_id = 'refunds'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['created_at']
+    replication_key = 'created_at'
+    object_type = 'REFUND'
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        for page, cursor in client.get_refunds(client, start_time, bookmarked_cursor):
+            yield page, cursor
+
+class Payments():
+    tap_stream_id = 'payments'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'DISCOUNT'
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        for page, cursor in client.get_payments(client, start_time, bookmarked_cursor):
+            yield page, cursor
 
 STREAMS = {
     'items': Items,
@@ -91,4 +121,7 @@ STREAMS = {
     'employees': Employees,
     'locations': Locations,
     'bank_accounts': BankAccounts,
+    'refunds': Refunds,
+    'payments': Payments,
+    'modifier_lists': ModifierLists
 }

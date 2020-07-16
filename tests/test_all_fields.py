@@ -12,15 +12,22 @@ from test_client import TestClient
 
 class TestSquareAllFields(TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
-
-    START_DATE = ""
+    TESTABLE_STREAMS = set()
 
     def name(self):
         return "tap_tester_square_all_fields"
 
     def testable_streams(self):
-        return set(self.expected_streams()).difference(
-            {'locations'} # STREAMS THAT CANNOT CURRENTLY BE TESTED
+        return self.dynamic_data_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'employees'
+            }
+        )
+    def testable_streams_static(self):
+        return self.static_data_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+            }
         )
 
     @classmethod
@@ -33,19 +40,32 @@ class TestSquareAllFields(TestSquareBase):
         print("\n\nTEST TEARDOWN\n\n")
 
     def test_run(self):
+        """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING WITH DYNAMIC DATA")
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams()
+        self.all_fields_test()
+
+        print("\n\nTESTING WITH STATIC DATA")
+        self.START_DATE = self.STATIC_START_DATE
+        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.all_fields_test()
+
+    def all_fields_test(self):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
         """
 
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        print("\n\nRUNNING {}".format(self.name()))
+        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # Instatiate default start date
-        self.START_DATE = self.get_properties().get('start_date')
+        if self.TESTABLE_STREAMS == set(): # REMOVE once BUG addressed
+            print("WE ARE SKIPPING THIS TEST\n\n")
 
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if existing_objects:
                 print("Data exists for stream: {}".format(stream))
@@ -58,7 +78,7 @@ class TestSquareAllFields(TestSquareBase):
         # modify data set to conform to expectations (json standards)
         for stream, records in expected_records.items():
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
-            self.modify_expected_datatypes(records)
+            self.modify_expected_records(records)
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
@@ -78,20 +98,26 @@ class TestSquareAllFields(TestSquareBase):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # Select all available fields from all streams
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True)
+        # Select all available fields from all testable streams
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
         # Ensure our selection worked
-        for cat in found_catalogs:
+        for cat in catalogs:
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
-            # Verify all streams are selected
+            # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            if cat['stream_name'] not in self.TESTABLE_STREAMS:
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
 
-            # Verify all fields within each stream are selected
+            # Verify all fields within each selected stream are selected
             for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                 field_selected = field_props.get('selected')
                 print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
@@ -121,7 +147,7 @@ class TestSquareAllFields(TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         # Test by Stream
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
@@ -156,8 +182,7 @@ class TestSquareAllFields(TestSquareBase):
                 # verify by values, that we replicated the expected records
                 for actual_record in actual_records:
                     # Array data types need sorted for a proper comparison # TODO Determine if this will be needed
-                    # for key, value in actual_record.items():
-                    #     self.sort_array_type(actual_record, key, value)
+                    self.sort_record_recur(actual_record)
                     if not actual_record in expected_records.get(stream):
                         print("\nDATA DISCREPANCY STREAM: {}".format(stream))
                         print("Actual: {}".format(actual_record))

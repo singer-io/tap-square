@@ -19,8 +19,8 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    START_DATE = "2020-07-13T00:00:00Z" # used for pagination testing
-
+    STATIC_START_DATE = "2020-07-13T00:00:00Z"
+    START_DATE = ""
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -65,16 +65,8 @@ class TestSquareBase(unittest.TestCase):
             'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
         }
 
-    @staticmethod
-    def expected_check_streams():
-        return {
-            'items',
-            'categories',
-            'discounts',
-            'taxes',
-            'employees',
-            'locations',
-        }
+    def expected_check_streams(self):
+        return set(self.expected_metadata().keys()).difference(set())
 
     def expected_metadata(self):
         """The expected streams and metadata about the streams"""
@@ -108,6 +100,21 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
+            "refunds": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'created_at'}
+            },
+            "payments": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
+            "modifier_lists": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):
@@ -116,10 +123,19 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    # TODO Remove if employees is addressed OR if it cannot be included in any test
-    def testable_streams(self):
-        # We have no way of creating employees, so we execlude it from tests
-        return self.expected_streams().difference({'employees'})
+
+    def static_data_streams(self):
+        """
+        Some streams require use of a static data set, and should
+        only be referenced in static tests.
+        """
+        return {
+            'locations',  # Limit 300 objects, DELETES not supported
+        }
+
+    def dynamic_data_streams(self):
+        """Expected streams minus streams with static data."""
+        return self.expected_streams().difference(self.static_data_streams())
 
     def expected_streams(self):
         """A set of expected stream names"""
@@ -214,36 +230,59 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
-    def modify_expected_datatypes(self, expected_records):
-        """ Align expected data with how the tap _should_ emit them. """
-        if type(expected_records) == list: # Modify a list of records
-            for record in expected_records:
-                for key, value in record.items():
-                    self.align_date_type(record, key, value)
-            return
+    def sort_records_recur(self, records):
+        for record in records:
+            self.sort_record_recur(record)
 
-        for key, value in expected_records.items(): # Modify a single record
-            self.align_date_type(expected_records, key, value)
+    def sort_record_recur(self, record):
+        if isinstance(record, dict):
+            for key, value in record.items():
+                if type(value) == dict:
+                    self.sort_record_recur(value)
+                elif type(value) == list:
+                    for rec in value:
+                        self.sort_record_recur(rec)
+                    self.sort_array_type(record, key, value)
+            
+
+    def modify_expected_records(self, records):
+       for rec in records:
+           self.modify_expected_record(rec)
+
+           
+    def modify_expected_record(self, expected_record):
+        """ Align expected data with how the tap _should_ emit them. """
+        if isinstance(expected_record, dict):
+            for key, value in expected_record.items(): # Modify a single record
+                if type(value) == dict:
+                    self.modify_expected_record(value)
+                elif type(value) == list:
+                    for item in value:
+                        self.modify_expected_record(item)
+                    self.sort_array_type(expected_record, key, value)
+                else:
+                    self.align_date_type(expected_record, key, value)
+
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        if isinstance(value, str) and key in ['updated_at']:
+        # TODO update this to execute fo all datetime objects
+        if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
-    # TODO REMOVE or UNCOMMENT once we determine if this is needed
-    # def sort_array_type(self, record, key, value):
-    #     """
-    #     List values are returned by square as unordered arrays.
-    #     In order to accurately compare expected and actual records, we must sort all lists.
-    #     """
-    #     try:
-    #         if isinstance(value, list) and value: #  and key in ['ads']:
-    #             if isinstance(value[0], dict) and "id" in value[0].keys():
-    #                 record[key] = sorted(value, key=lambda x: x['id'])
-    #             else:
-    #                 record[key] = sorted(value)
-    #     except Exception as ex:
-    #         print("Could not sort array at key: {}, value: {}".format(key, value))
-    #         raise
+    def sort_array_type(self, record, key, value):
+        """
+        List values are returned by square as unordered arrays.
+        In order to accurately compare expected and actual records, we must sort all lists.
+        """
+        try:
+            if isinstance(value, list) and value:
+                if isinstance(value[0], dict) and "id" in value[0].keys():
+                    record[key] = sorted(value, key=lambda x: x['id'])
+                else:
+                    record[key] = sorted(value)
+        except Exception as ex:
+            print("Could not sort array at key: {}, value: {}".format(key, value))
+            raise

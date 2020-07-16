@@ -14,21 +14,21 @@ if __name__ == "__main__":
     START_DATE = '2020-06-24T00:00:00Z'
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
-    test_creates = False
-    test_updates = False # To test updates, must also test creates
-    test_gets = True
-    test_deletes = False
+    test_creates = True
+    test_updates = False  # To test updates, must also test creates
+    test_gets = False
+    test_deletes = False  # To test updates, must also test creates
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE
-        # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE
-        # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE
-        # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE
-        'employees',  # GET - DONE | CREATE -  | UPDATE - 
-        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE
+        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - 
     ]
 
     print("********** Testing basic functions of test client **********")
@@ -43,6 +43,7 @@ if __name__ == "__main__":
                     print("{}\n".format(existing_obj))
                 continue
             print("FAILED")
+
     if test_creates:
         for obj in objects_to_test:
             print("Testing CREATE: {}".format(obj))
@@ -65,5 +66,18 @@ if __name__ == "__main__":
                     print("SUCCESS")
                     if print_objects:
                         print("{}\n".format(updated_obj))
+                    continue
+                print("FAILED")
+
+            if test_deletes: # Need to reference id from an obj to delete
+                print("Testing UPDATE: {}".format(obj))
+                # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+                obj_ids = [created_obj[0].get('id')]
+                version = created_obj[0].get('version')
+                deleted_obj = client.delete_catalog(ids_to_delete=obj_ids)
+                if deleted_obj:
+                    print("SUCCESS")
+                    if print_objects:
+                        print("{}\n".format(deleted_obj))
                     continue
                 print("FAILED")
