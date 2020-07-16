@@ -100,6 +100,11 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
+            "refunds": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'created_at'}
+            },
             "payments": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -224,7 +229,7 @@ class TestSquareBase(unittest.TestCase):
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        if isinstance(value, str) and key in ['updated_at']:
+        if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date

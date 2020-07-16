@@ -70,6 +70,18 @@ class Locations():
         for page, cursor in client.get_locations():
             yield page, cursor
 
+class Refunds():
+    tap_stream_id = 'refunds'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['created_at']
+    replication_key = 'created_at'
+    object_type = 'REFUND'
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        for page, cursor in client.get_refunds(client, start_time, bookmarked_cursor):
+            yield page, cursor
+
 class Payments():
     tap_stream_id = 'payments'
     key_properties = ['id']
@@ -89,5 +101,6 @@ STREAMS = {
     'taxes': Taxes,
     'employees': Employees,
     'locations': Locations,
+    'refunds': Refunds,
     'payments': Payments
 }

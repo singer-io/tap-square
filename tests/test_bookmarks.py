@@ -20,6 +20,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'locations',
+                'refunds',
                 'payments'
             }
         )

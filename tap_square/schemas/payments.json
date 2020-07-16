@@ -14,7 +14,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "updated_at": {
       "type": [
@@ -244,6 +245,38 @@
         "null",
         "string"
       ]
+    },
+    "refund_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
+    "refunded_money": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "amount": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "currency": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
     },
     "delay_action": {
       "type": [
