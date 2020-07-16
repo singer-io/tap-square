@@ -21,7 +21,10 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
-
+    """
+    Client used to perfrom GET, CREATE and UPDATE on streams.
+        NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
+    """
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
                   'item_data': {'name': 'tap_tester_item_data'}},
@@ -130,7 +133,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
-            return self.create_locations().body.get('objects')
+            return [self.create_locations().body.get('location')]
         else:
             raise NotImplementedError
 
@@ -208,7 +211,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
-            return self.update_locations(obj_id, version).body.get('objects')
+            return [self.update_locations(obj_id).body.get('location')]
         else:
             raise NotImplementedError
 
@@ -247,13 +250,13 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_locations(self, obj_id, version):
-        body = {'location': {'name': obj_id}}
-        return self.post_location(body)
+    def update_locations(self, obj_id):
+        body = {'location': {'name': self.make_id('location')}}
+        return self._client.locations.update_location(obj_id, body)
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
-        return self.client._client.catalog.batch_delete_catalog_objects(body)
+        return self._client.catalog.batch_delete_catalog_objects(body)
 
     def create_batch_post(self, stream, num_records):
         recs_to_create = []

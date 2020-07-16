@@ -19,8 +19,8 @@ class TestSquareBase(unittest.TestCase):
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
     START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
-    START_DATE = "2020-07-13T00:00:00Z" # used for pagination testing
-
+    STATIC_START_DATE = "2020-07-13T00:00:00Z"
+    START_DATE = ""
 
     def setUp(self):
         missing_envs = [x for x in [
@@ -118,10 +118,19 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    # TODO Remove if employees is addressed OR if it cannot be included in any test
-    def testable_streams(self):
-        # We have no way of creating employees, so we execlude it from tests
-        return self.expected_streams().difference({'employees'})
+
+    def static_data_streams(self):
+        """
+        Some streams require use of a static data set, and should
+        only be referenced in static tests.
+        """
+        return {
+            'locations',  # Limit 300 objects, DELETES not supported
+        }
+
+    def dynamic_data_streams(self):
+        """Expected streams minus streams with static data."""
+        return self.expected_streams().difference(self.static_data_streams())
 
     def expected_streams(self):
         """A set of expected stream names"""
@@ -229,6 +238,7 @@ class TestSquareBase(unittest.TestCase):
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
+        # TODO update this to execute fo all datetime objects
         if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
