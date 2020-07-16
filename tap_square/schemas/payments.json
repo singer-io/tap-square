@@ -183,7 +183,8 @@
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "format": "date-time"
           },
           "type": {
             "type": [
@@ -288,7 +289,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     }
   }
 }
