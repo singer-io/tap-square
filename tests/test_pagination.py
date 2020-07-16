@@ -21,7 +21,8 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'refunds',
-                'payments'
+                'payments',
+                'modifier_lists'
             }
         )
 
