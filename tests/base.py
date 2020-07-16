@@ -221,7 +221,7 @@ class TestSquareBase(unittest.TestCase):
                 date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
                 return date_stripped
             except ValueError:
-                raise NotImplementedError
+                return date_value
 
     def expected_schema_keys(self, stream):
 
@@ -263,22 +263,22 @@ class TestSquareBase(unittest.TestCase):
                 else:
                     self.align_date_type(expected_record, key, value)
 
-    def modify_expected_record(self, expected_record):
-        if type(expected_records) == list: Modify a list of records
-            for record in expected_records:
-                for key, value in record.items():
-                    self.align_date_type(record, key, value)
-                    self.sort_array_type(record, key, value)
-            return
+    # def modify_expected_record(self, expected_record):
+    #     if type(expected_records) == list: # Modify a list of records
+    #         for record in expected_records:
+    #             for key, value in record.items():
+    #                 self.align_date_type(record, key, value)
+    #                 self.sort_array_type(record, key, value)
+    #         return
 
-        for key, value in expected_records.items(): Modify a single record
-            self.align_date_type(expected_records, key, value)
-            self.sort_array_type(expected_records, key, value)
+    #     for key, value in expected_records.items(): # Modify a single record
+    #         self.align_date_type(expected_records, key, value)
+    #         self.sort_array_type(expected_records, key, value)
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        # TODO update this to execute fo all datetime objects
-        if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
+        if isinstance(value, str) and isinstance(self.parse_date(value), dt):
+            # key in ['updated_at', 'created_at']:
             raw_date = self.parse_date(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
