@@ -63,7 +63,7 @@ class TestAutomaticFields(TestSquareBase):
         # Adjust expectations for datetime format
         for stream, records in expected_records.items():
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_datatypes(records)
+            self.modify_expected_records(records)
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)

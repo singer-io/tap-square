@@ -66,6 +66,8 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_refunds('REFUND', start_date, None) for obj in page]
         elif stream == 'payments':
             return [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
+        elif stream == 'modifier_lists':
+            return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         else:
             raise NotImplementedError
 

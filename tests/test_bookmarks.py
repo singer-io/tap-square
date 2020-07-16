@@ -19,7 +19,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'refunds',
-                'payments'
+                'payments',
+                'modifier_lists'
             }
         )
     @classmethod
@@ -77,7 +78,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Adjust expectations for datetime format
         for stream, expected_records in expected_records_1.items():
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_datatypes(expected_records)
+            self.modify_expected_records(expected_records)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -141,10 +142,14 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 expected_records_2[stream].append(record)
 
         # Adjust expectations for datetime format
-        for record_set in [created_records, updated_records, expected_records_2]:
+        for record_set in [created_records, updated_records]:
             for stream, expected_records in record_set.items():
                 print("Adjust expectations for stream: {}".format(stream))
-                self.modify_expected_datatypes(expected_records)
+                self.modify_expected_record(expected_records)
+
+        for stream, expected_records in expected_records_2.items():
+                print("Adjust expectations for stream: {}".format(stream))
+                self.modify_expected_records(expected_records)
 
         # ensure validity of expected_records_2
         for stream in self.testable_streams():
