@@ -33,7 +33,8 @@ def sync(config, state, catalog):
             bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
 
             if stream_obj.replication_method == 'INCREMENTAL':
-                max_updated_at = start_time
+                replication_key = stream_obj.replication_key
+                max_record_value = start_time
                 for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
                     for record in page:
                         singer.write_record(
@@ -41,12 +42,13 @@ def sync(config, state, catalog):
                             transformer.transform(
                                 record, stream_schema, stream_metadata,
                             ))
-                        if record['updated_at'] > max_updated_at:
-                            max_updated_at = record['updated_at']
+                        if record[replication_key] > max_record_value:
+                            max_record_value = record[replication_key]
 
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
-                    state = singer.write_bookmark(state, tap_stream_id, replication_key, max_updated_at)
+                    state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
                     singer.write_state(state)
+
             else:
                 for page, cursor in stream_obj.sync(client, bookmarked_cursor):
                     for record in page:

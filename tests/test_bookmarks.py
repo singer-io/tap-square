@@ -18,6 +18,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
+                'refunds',
+                'payments'
             }
         )
     @classmethod
@@ -167,7 +169,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 second_sync_data = [record.get("data") for record
                                     in second_sync_records.get(stream, {}).get("messages", {"data": {}})]
-        
+
                 # TESTING INCREMENTAL STREAMS
                 if stream in self.expected_incremental_streams():
 

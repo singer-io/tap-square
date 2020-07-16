@@ -21,7 +21,9 @@ class TestSquareStartDate(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees', # Requires production environment to create records
-                'locations'  # Requires proper permissions
+                'locations',  # Requires proper permissions
+                'refunds',
+                'payments'
             }
         )
 

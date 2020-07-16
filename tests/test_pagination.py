@@ -20,6 +20,8 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
+                'refunds',
+                'payments'
             }
         )
 
