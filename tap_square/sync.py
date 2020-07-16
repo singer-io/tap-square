@@ -36,6 +36,8 @@ def sync(config, state, catalog):
                 max_updated_at = start_time
                 for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
                     for record in page:
+                        import ipdb; ipdb.set_trace()
+                        1+1
                         singer.write_record(
                             tap_stream_id,
                             transformer.transform(
@@ -49,12 +51,46 @@ def sync(config, state, catalog):
                     singer.write_state(state)
             else:
                 for page, cursor in stream_obj.sync(client, bookmarked_cursor):
+                    page = [
+    {
+      "id": "ao6iaQ9vhDiaQD7n3GB",
+      "account_number_suffix": "971",
+      "country": "US",
+      "currency": "USD",
+      "account_type": "CHECKING",
+      "holder_name": "Jane Doe",
+      "primary_bank_identification_number": "112200303",
+      "location_id": "S8GWD5example",
+      "status": "VERIFICATION_IN_PROGRESS",
+      "creditable": false,
+      "debitable": false,
+      "version": 5,
+      "bank_name": "Bank Name"
+    },
+    {
+      "id": "4x7WXuaxrkQkVlka3GB",
+      "account_number_suffix": "972",
+      "country": "US",
+      "currency": "USD",
+      "account_type": "CHECKING",
+      "holder_name": "Jane Doe",
+      "primary_bank_identification_number": "112200303",
+      "location_id": "S8GWD5example",
+      "status": "VERIFICATION_IN_PROGRESS",
+      "creditable": false,
+      "debitable": false,
+      "version": 5,
+      "bank_name": "Bank Name"
+    }
+  ]
                     for record in page:
                         singer.write_record(
                             tap_stream_id,
-                            transformer.transform(
-                                record, stream_schema, stream_metadata,
-                            ))
+                            record
+                            # transformer.transform(
+                            #     record, stream_schema, stream_metadata,
+                            # )
+                        )
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
                     singer.write_state(state)
             state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
