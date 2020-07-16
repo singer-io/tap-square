@@ -110,6 +110,11 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
+            "modifier_lists": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):
@@ -225,16 +230,39 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
-    def modify_expected_datatypes(self, expected_records):
-        """ Align expected data with how the tap _should_ emit them. """
-        if type(expected_records) == list: # Modify a list of records
-            for record in expected_records:
-                for key, value in record.items():
-                    self.align_date_type(record, key, value)
-            return
+    def sort_records_recur(self, records):
+        for record in records:
+            self.sort_record_recur(record)
 
-        for key, value in expected_records.items(): # Modify a single record
-            self.align_date_type(expected_records, key, value)
+    def sort_record_recur(self, record):
+        if isinstance(record, dict):
+            for key, value in record.items():
+                if type(value) == dict:
+                    self.sort_record_recur(value)
+                elif type(value) == list:
+                    for rec in value:
+                        self.sort_record_recur(rec)
+                    self.sort_array_type(record, key, value)
+            
+
+    def modify_expected_records(self, records):
+       for rec in records:
+           self.modify_expected_record(rec)
+
+           
+    def modify_expected_record(self, expected_record):
+        """ Align expected data with how the tap _should_ emit them. """
+        if isinstance(expected_record, dict):
+            for key, value in expected_record.items(): # Modify a single record
+                if type(value) == dict:
+                    self.modify_expected_record(value)
+                elif type(value) == list:
+                    for item in value:
+                        self.modify_expected_record(item)
+                    self.sort_array_type(expected_record, key, value)
+                else:
+                    self.align_date_type(expected_record, key, value)
+
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
@@ -244,18 +272,17 @@ class TestSquareBase(unittest.TestCase):
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
-    # TODO REMOVE or UNCOMMENT once we determine if this is needed
-    # def sort_array_type(self, record, key, value):
-    #     """
-    #     List values are returned by square as unordered arrays.
-    #     In order to accurately compare expected and actual records, we must sort all lists.
-    #     """
-    #     try:
-    #         if isinstance(value, list) and value: #  and key in ['ads']:
-    #             if isinstance(value[0], dict) and "id" in value[0].keys():
-    #                 record[key] = sorted(value, key=lambda x: x['id'])
-    #             else:
-    #                 record[key] = sorted(value)
-    #     except Exception as ex:
-    #         print("Could not sort array at key: {}, value: {}".format(key, value))
-    #         raise
+    def sort_array_type(self, record, key, value):
+        """
+        List values are returned by square as unordered arrays.
+        In order to accurately compare expected and actual records, we must sort all lists.
+        """
+        try:
+            if isinstance(value, list) and value:
+                if isinstance(value[0], dict) and "id" in value[0].keys():
+                    record[key] = sorted(value, key=lambda x: x['id'])
+                else:
+                    record[key] = sorted(value)
+        except Exception as ex:
+            print("Could not sort array at key: {}, value: {}".format(key, value))
+            raise

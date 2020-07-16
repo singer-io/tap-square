@@ -78,7 +78,7 @@ class TestSquareAllFields(TestSquareBase):
         # modify data set to conform to expectations (json standards)
         for stream, records in expected_records.items():
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
-            self.modify_expected_datatypes(records)
+            self.modify_expected_records(records)
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
@@ -182,8 +182,7 @@ class TestSquareAllFields(TestSquareBase):
                 # verify by values, that we replicated the expected records
                 for actual_record in actual_records:
                     # Array data types need sorted for a proper comparison # TODO Determine if this will be needed
-                    # for key, value in actual_record.items():
-                    #     self.sort_array_type(actual_record, key, value)
+                    self.sort_record_recur(actual_record)
                     if not actual_record in expected_records.get(stream):
                         print("\nDATA DISCREPANCY STREAM: {}".format(stream))
                         print("Actual: {}".format(actual_record))
