@@ -136,11 +136,29 @@ class TestClient(SquareClient):
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
+        elif stream == 'refunds':
+            return self.create_refunds().body.get('objects')
+        elif stream == 'payments':
+            return self.create_payments().body.get('objects')
         else:
             raise NotImplementedError
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
+
+    def create_refunds(self): # TODO
+        body = {'batches': [{'objects': [{'id': self.make_id('refund'),
+                                          'type': 'REFUND',
+                                          'item_data': {'name': self.make_id('item')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_payments(self): # TODO 
+        body = {'batches': [{'objects': [{'id': self.make_id('payment'),
+                                          'type': 'PAYMENT',
+                                          'item_data': {'name': self.make_id('item')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
 
     def create_item(self):
         body = {'batches': [{'objects': [{'id': self.make_id('item'),

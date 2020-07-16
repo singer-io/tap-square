@@ -16,19 +16,21 @@ if __name__ == "__main__":
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
     test_updates = False  # To test updates, must also test creates
-    test_gets = False
+    test_gets = True
     test_deletes = False  # To test updates, must also test creates
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - 
+        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        'payments',  # GET - DONE | CREATE -  | UPDATE -  | DELETE -
+        'refunds',  # GET - DONE | CREATE -  | UPDATE -  | DELETE -
     ]
 
     print("********** Testing basic functions of test client **********")
