@@ -21,7 +21,8 @@ class TestSquareStartDate(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'locations',  # Requires proper permissions
-                'refunds'
+                'refunds',
+                'payments'
             }
         )
 

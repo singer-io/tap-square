@@ -105,6 +105,11 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'created_at'}
             },
+            "payments": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):

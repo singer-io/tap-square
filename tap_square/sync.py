@@ -48,6 +48,7 @@ def sync(config, state, catalog):
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
                     state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
                     singer.write_state(state)
+
             else:
                 for page, cursor in stream_obj.sync(client, bookmarked_cursor):
                     for record in page:
