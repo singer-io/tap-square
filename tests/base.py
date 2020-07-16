@@ -263,18 +263,6 @@ class TestSquareBase(unittest.TestCase):
                 else:
                     self.align_date_type(expected_record, key, value)
 
-    # def modify_expected_record(self, expected_record):
-    #     if type(expected_records) == list: # Modify a list of records
-    #         for record in expected_records:
-    #             for key, value in record.items():
-    #                 self.align_date_type(record, key, value)
-    #                 self.sort_array_type(record, key, value)
-    #         return
-
-    #     for key, value in expected_records.items(): # Modify a single record
-    #         self.align_date_type(expected_records, key, value)
-    #         self.sort_array_type(expected_records, key, value)
-
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
         if isinstance(value, str) and isinstance(self.parse_date(value), dt):
