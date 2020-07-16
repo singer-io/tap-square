@@ -24,7 +24,8 @@ class TestSquareStartDate(TestSquareBase):
                 'locations',  # Requires proper permissions
                 'refunds',
                 'payments',
-                'modifier_lists'
+                'modifier_lists',
+                'bank_accounts'
             }
         )
 
@@ -165,7 +166,9 @@ class TestSquareStartDate(TestSquareBase):
         print("discovered schemas are kosher")
 
         # Select all available streams and their fields
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 

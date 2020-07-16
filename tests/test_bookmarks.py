@@ -20,7 +20,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'employees', # Requires production environment to create records
                 'refunds',
                 'payments',
-                'modifier_lists'
+                'modifier_lists',
+                'bank_accounts'
             }
         )
     @classmethod

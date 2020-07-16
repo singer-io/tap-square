@@ -20,7 +20,8 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'employees'
+                'employees',
+                'bank_accounts'
             }
         )
     def testable_streams_static(self):
