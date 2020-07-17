@@ -230,19 +230,22 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
+    # TODO Determine if sorting is even a valid modifier for our expectations
     def sort_records_recur(self, records):
-        for record in records:
-            self.sort_record_recur(record)
+        pass
+        # for record in records:
+        #     self.sort_record_recur(record)
 
     def sort_record_recur(self, record):
-        if isinstance(record, dict):
-            for key, value in record.items():
-                if type(value) == dict:
-                    self.sort_record_recur(value)
-                elif type(value) == list:
-                    for rec in value:
-                        self.sort_record_recur(rec)
-                    self.sort_array_type(record, key, value)
+        pass
+        # if isinstance(record, dict):
+        #     for key, value in record.items():
+        #         if type(value) == dict:
+        #             self.sort_record_recur(value)
+        #         elif type(value) == list:
+        #             for rec in value:
+        #                 self.sort_record_recur(rec)
+        #             self.sort_array_type(record, key, value)
             
 
     def modify_expected_records(self, records):
