@@ -116,6 +116,30 @@ class SquareClient():
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
 
+    def get_inventories(self, variation_ids, start_time):
+        with singer.http_request_timer('GET inventories'):
+            result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                "catalog_object_ids": variation_ids
+            })
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('counts', []), result.body.get('cursor'))
+
+        # Not sure if the pagination works like this. I expect this to fail like payments and refunds did
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET inventories'):
+                result = self._client.inventorie.batch_retrieve_inventory_counts(body={
+                    "catalog_object_ids": variation_ids,
+                    "cursor": result.body.get('cursor'),
+                })
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('counts', []), result.body.get('cursor'))
+
     def get_refunds(self, object_type, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)

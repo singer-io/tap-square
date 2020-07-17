@@ -8,6 +8,7 @@ from datetime import datetime
 import singer
 
 from tap_square.client import SquareClient
+from tap_square.streams import Inventories
 
 LOGGER = singer.get_logger()
 
@@ -68,6 +69,9 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
+        elif stream == 'inventories':
+            inventories = Inventories()
+            return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError
 

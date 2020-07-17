@@ -106,6 +106,25 @@ class Payments():
             yield page, cursor
 
 
+class Inventories:
+    tap_stream_id = 'inventories'
+    key_properties = ['id']
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        items = Items()
+        all_variation_ids = set()
+        for page, _ in items.sync(client, start_time, bookmarked_cursor):
+            for item in page:
+                for item_data_variation in item['item_data'].get('variations', list()):
+                    all_variation_ids.add(item_data_variation['id'])
+                
+        for page, cursor in client.get_inventories(all_variation_ids, start_time):
+            yield page, cursor
+    
+
 STREAMS = {
     'items': Items,
     'categories': Categories,
