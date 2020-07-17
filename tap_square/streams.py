@@ -120,10 +120,10 @@ class Inventories:
             for item in page:
                 for item_data_variation in item['item_data'].get('variations', list()):
                     all_variation_ids.add(item_data_variation['id'])
-                
+
         for page, cursor in client.get_inventories(all_variation_ids, start_time):
             yield page, cursor
-    
+
 
 STREAMS = {
     'items': Items,
