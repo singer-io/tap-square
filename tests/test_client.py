@@ -1,4 +1,5 @@
 import uuid
+import random
 import json
 import os
 import random
@@ -139,7 +140,7 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return self.create_refunds().body.get('objects')
         elif stream == 'payments':
-            return self.create_payments().body.get('objects')
+            return [self.create_payments().body.get('payment')]
         else:
             raise NotImplementedError
 
@@ -153,12 +154,23 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def create_payments(self): # TODO 
-        body = {'batches': [{'objects': [{'id': self.make_id('payment'),
-                                          'type': 'PAYMENT',
-                                          'item_data': {'name': self.make_id('item')}}]}],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+    def create_payments(self):
+        body ={'id': self.make_id('payment'),
+               'idempotency_key': str(uuid.uuid4()),
+               'amount_money': {'amount': random.randint(100,10000), # in cents
+                               'currency': 'USD'},
+               'source_id': random.choice(['cnon:card-nonce-ok',  # card
+                                           'cnon:card-nonce-ok',  # card on file
+                                           'cnon:gift-card-nonce-ok'  # Square gift card
+               ]),
+               # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money
+               'autocomplete': False,
+               # 'customer_id': 'VDKXEEKPJN48QDG3BGGFAK05P8',
+               # 'location_id': 'XK3DBG77NJBFX',
+               # 'reference_id': '123456',
+               'note': self.make_id('payment'),
+        }
+        return self._client.payments.create_payment(body)
 
     def create_item(self):
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
@@ -232,6 +244,8 @@ class TestClient(SquareClient):
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
+        elif stream == 'payments':
+            return [self.update_payment(obj_id).body.get('payment')]
         else:
             raise NotImplementedError
 
@@ -242,6 +256,15 @@ class TestClient(SquareClient):
                                           'version': version}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
+
+    def update_payment(self, obj_id):
+        """Cancel or a Complete an APPROVED payment"""
+        body = {'payment_id': obj_id}
+        action = random.choice([ 'complete', 'cancel' ])
+        print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
+        if action == 'cancel':
+            return self._client.payments.cancel_payment(obj_id)
+        return self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,

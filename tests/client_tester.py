@@ -29,8 +29,8 @@ if __name__ == "__main__":
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
-        'payments',  # GET - DONE | CREATE -  | UPDATE -  | DELETE -
-        'refunds',  # GET - DONE | CREATE -  | UPDATE -  | DELETE -
+        'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'refunds',  # GET - DONE | CREATE -  | UPDATE -  | DELETE -
     ]
 
     print("********** Testing basic functions of test client **********")
