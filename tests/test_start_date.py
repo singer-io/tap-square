@@ -23,6 +23,7 @@ class TestSquareStartDate(TestSquareBase):
                 'employees', # Requires production environment to create records
                 'locations',  # Requires proper permissions
                 'refunds',
+                'payments', # BUG |
                 'modifier_lists'
             }
         )
@@ -164,7 +165,10 @@ class TestSquareStartDate(TestSquareBase):
         print("discovered schemas are kosher")
 
         # Select all available streams and their fields
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs)
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
