@@ -50,6 +50,12 @@
         "string"
       ]
     },
+    "note": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "delay_duration": {
       "type": [
         "null",
