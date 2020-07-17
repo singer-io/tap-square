@@ -3,6 +3,9 @@ from square.client import Client
 from singer import utils
 import singer
 
+LOGGER = singer.get_logger()
+
+
 class SquareClient():
     def __init__(self, config):
         self._refresh_token = config['refresh_token']
@@ -28,7 +31,8 @@ class SquareClient():
             result = client.o_auth.obtain_token(body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            error_message = result.errors if result.errors else result.body
+            raise Exception(error_message)
 
         return result.body['access_token']
 
@@ -66,7 +70,6 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('objects', []), result.body.get('cursor'))
-
 
     def get_employees(self, bookmarked_cursor):
 
@@ -113,7 +116,7 @@ class SquareClient():
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
 
-    def get_refunds(self, object_type, start_time, bookmarked_cursor): # TODO:check sort_order input
+    def get_refunds(self, object_type, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
@@ -143,7 +146,6 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
-
 
     def get_payments(self, object_type, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
