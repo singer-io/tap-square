@@ -9,7 +9,6 @@ class CatalogStream:
             yield page, cursor
 
 
-
 class Items(CatalogStream):
     tap_stream_id = 'items'
     key_properties = ['id']
@@ -45,6 +44,7 @@ class Taxes(CatalogStream):
     replication_key = 'updated_at'
     object_type = 'TAX'
 
+
 class Employees():
     tap_stream_id = 'employees'
     key_properties = ['id']
@@ -57,6 +57,7 @@ class Employees():
         for page, cursor in client.get_employees(bookmarked_cursor):
             yield page, cursor
 
+
 class ModifierLists(CatalogStream):
     tap_stream_id = 'modifier_lists'
     key_properties = ['id']
@@ -64,6 +65,7 @@ class ModifierLists(CatalogStream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
     object_type = 'MODIFIER_LIST'
+
 
 class Locations():
     tap_stream_id = 'locations'
@@ -77,6 +79,7 @@ class Locations():
         for page, cursor in client.get_locations():
             yield page, cursor
 
+
 class Refunds():
     tap_stream_id = 'refunds'
     key_properties = ['id']
@@ -89,6 +92,7 @@ class Refunds():
         for page, cursor in client.get_refunds(client, start_time, bookmarked_cursor):
             yield page, cursor
 
+
 class Payments():
     tap_stream_id = 'payments'
     key_properties = ['id']
@@ -98,8 +102,9 @@ class Payments():
     object_type = 'DISCOUNT'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
-        for page, cursor in client.get_payments(client, start_time, bookmarked_cursor):
+        for page, cursor in client.get_payments(self.object_type, start_time, bookmarked_cursor):
             yield page, cursor
+
 
 STREAMS = {
     'items': Items,
