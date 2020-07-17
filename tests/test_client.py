@@ -26,6 +26,8 @@ class TestClient(SquareClient):
     Client used to perfrom GET, CREATE and UPDATE on streams.
         NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
     """
+    PAYMENTS = [] # We need to track state of records due to a dependency in the `refunds` stream
+
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
                   'item_data': {'name': 'tap_tester_item_data'}},
@@ -66,7 +68,9 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds('REFUND', start_date, None) for obj in page]
         elif stream == 'payments':
-            return [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
+            if not self.PAYMENTS:
+                self.PAYMENTS += [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
+            return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         else:
@@ -124,7 +128,7 @@ class TestClient(SquareClient):
             LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
-    def create(self, stream):
+    def create(self, stream, ext_obj=None, start_date=None):
         if stream == 'items':
             return self.create_item().body.get('objects')
         elif stream == 'categories':
@@ -138,7 +142,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'refunds':
-            return self.create_refunds().body.get('objects')
+            return [self.create_refunds(ext_obj, start_date).body.get('refund')]
         elif stream == 'payments':
             return [self.create_payments().body.get('payment')]
         else:
@@ -147,12 +151,40 @@ class TestClient(SquareClient):
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
-    def create_refunds(self): # TODO
-        body = {'batches': [{'objects': [{'id': self.make_id('refund'),
-                                          'type': 'REFUND',
-                                          'item_data': {'name': self.make_id('item')}}]}],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+    def create_refunds(self, payment_obj=None, start_date=None): # IN_PROGRESS
+        """This depends on an exisitng payment_obj, and will act as an UPDATE for a payment record."""
+        if payment_obj is None:
+            if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
+                self.get_all('payments', start_date=start_date)#, start_date=start_date)
+
+            for payment in self.PAYMENTS: # Find a payment with status: COMPLETED
+               if payment.get('status') != "COMPLETED" or payment.get('refund_ids'):
+                   continue
+               payment_obj = payment
+               break
+        if payment_obj is None:
+            raise Exception(
+                "The are currently no payments in the test data set with status " + \
+                "COMPLETED and cannot make a refund.")
+
+        payment_id = payment_obj.get('id')
+        payment_amount = payment_obj.get('amount_money').get('amount')
+        upper_limit = 200 if 200 < payment_amount else payment_amount
+        amount = random.randint(100, upper_limit)
+        status = payment_obj.get('status')
+        if status != "COMPLETED": # Just a sanity check that the for loop above is working
+            raise Exception("You cannot refund a payment with status: {}".format(status))
+        body = {'id': self.make_id('refund'),
+                'payment_id': payment_id,
+                'amount_money': {'amount': amount, # in cents
+                                 'currency': 'USD'},
+                'idempotency_key': str(uuid.uuid4()),
+                'reason': 'Becuase you are worth it'}
+        refund = self._client.refunds.refund_payment(body)
+        if refund.is_error(): # Debugging
+            print("body: {}".format(body))
+            print("response: {}".format(refund))
+        return refund
 
     def create_payments(self):
         body ={'id': self.make_id('payment'),
@@ -163,10 +195,10 @@ class TestClient(SquareClient):
                                            'cnon:card-nonce-ok',  # card on file
                                            'cnon:gift-card-nonce-ok'  # Square gift card
                ]),
-               # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money
+               # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money?
                'autocomplete': False,
-               # 'customer_id': 'VDKXEEKPJN48QDG3BGGFAK05P8',
-               # 'location_id': 'XK3DBG77NJBFX',
+               # 'customer_id': '',
+               # 'location_id': '',
                # 'reference_id': '123456',
                'note': self.make_id('payment'),
         }
@@ -276,7 +308,7 @@ class TestClient(SquareClient):
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
-                                          'type': 'DISCOUNT',
+                                         'type': 'DISCOUNT',
                                           'version': version,
                                           'discount_data': {'name': self.make_id('discount'),
                                                             'discount_type': 'FIXED_AMOUNT',
