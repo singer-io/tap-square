@@ -19,7 +19,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'refunds',
-                'payments',
                 'modifier_lists'
             }
         )
@@ -229,6 +228,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # For incremental streams we should see only 2 records
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_2.get(stream)
+                if stream == 'payments': # BUG | https://stitchdata.atlassian.net/browse/SRCE-3579
+                    continue # SKIP TESTS DUE TO BUG
                 self.assertEqual(len(expected_records), len(second_sync_data),
                                  msg="Expected number of records do not match actual for 2nd sync.\n" +
                                  "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
