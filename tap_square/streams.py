@@ -17,6 +17,13 @@ class Items(CatalogStream):
     replication_key = 'updated_at'
     object_type = 'ITEM'
 
+    def get_all_variation_ids(self, client, start_time, bookmarked_cursor):
+        for page, _ in self.sync(client, start_time, bookmarked_cursor):
+            for item in page:
+                for item_data_variation in item['item_data'].get('variations', list()):
+                    yield item_data_variation['id']
+
+
 
 class Categories(CatalogStream):
     tap_stream_id = 'categories'
@@ -115,11 +122,7 @@ class Inventories:
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         items = Items()
-        all_variation_ids = set()
-        for page, _ in items.sync(client, start_time, bookmarked_cursor):
-            for item in page:
-                for item_data_variation in item['item_data'].get('variations', list()):
-                    all_variation_ids.add(item_data_variation['id'])
+        all_variation_ids = {variation_id for variation_id in items.get_all_variation_ids(client, start_time, bookmarked_cursor)}
 
         for page, cursor in client.get_inventories(all_variation_ids, start_time):
             yield page, cursor
