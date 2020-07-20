@@ -96,7 +96,7 @@ class Refunds():
     object_type = 'REFUND'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
-        for page, cursor in client.get_refunds(client, start_time, bookmarked_cursor):
+        for page, cursor in client.get_refunds(start_time, bookmarked_cursor):
             yield page, cursor
 
 
@@ -109,7 +109,7 @@ class Payments():
     object_type = 'DISCOUNT'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
-        for page, cursor in client.get_payments(self.object_type, start_time, bookmarked_cursor):
+        for page, cursor in client.get_payments(start_time, bookmarked_cursor):
             yield page, cursor
 
 

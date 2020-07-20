@@ -64,9 +64,9 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'refunds':
-            return [obj for page, _ in self.get_refunds('REFUND', start_date, None) for obj in page]
+            return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            return [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
+            return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':

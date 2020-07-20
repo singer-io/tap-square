@@ -31,6 +31,9 @@ class TestSquareBase(unittest.TestCase):
         if missing_envs:
             raise Exception("Missing environment variables: {}".format(missing_envs))
 
+        # Allows diffs in asserts to print more
+        self.maxDiff = None
+
     @staticmethod
     def get_type():
         return "platform.square"
