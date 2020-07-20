@@ -59,7 +59,7 @@ class Employees():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
 
         for page, cursor in client.get_employees(bookmarked_cursor):
             yield page, cursor
@@ -81,7 +81,7 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
 
         for page, cursor in client.get_locations():
             yield page, cursor
