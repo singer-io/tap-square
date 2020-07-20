@@ -52,6 +52,10 @@ class TestClient(SquareClient):
 
         super().__init__(config)
 
+    ##########################################################################
+    ### GETs
+    ##########################################################################
+
     def get_all(self, stream, start_date=None, end_date=None):
         if stream == 'items':
             return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
@@ -76,27 +80,13 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError
 
-    def post_location(self, body):
-        """
-        body looks like
+    def get_a_payment(self, payment_id):
+        payment = self._client.payments.get_payment(payment_id=payment_id)
+        return [payment.body.get('payment')]
 
-        {'location': {'address': {'address_line_1': '1234 Peachtree St. NE',
-                                  'administrative_district_level_1': 'GA',
-                                  'locality': 'Atlanta',
-                                  'postal_code': '30309'},
-                      'description': 'My new location.',
-                      'name': 'New location name'}}
-
-        where `address` and `description` are optional, but `name` is required
-        """
-        resp = self._client.locations.create_location(body)
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        location_id = resp.body.get('location', {}).get('id')
-        location_name = resp.body.get('location', {}).get('name')
-        LOGGER.info('Created location with id %s and name %s', location_id, location_name)
-        return resp
-
+    ##########################################################################
+    ### CREATEs
+    ##########################################################################
 
     def post_category(self, body):
         """
@@ -144,7 +134,7 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [self.create_refunds(ext_obj, start_date).body.get('refund')]
         elif stream == 'payments':
-            return [self.create_payments().body.get('payment')]
+            return [self.create_payments()]
         else:
             raise NotImplementedError
 
@@ -152,57 +142,99 @@ class TestClient(SquareClient):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
     def create_refunds(self, payment_obj=None, start_date=None): # IN_PROGRESS
-        """This depends on an exisitng payment_obj, and will act as an UPDATE for a payment record."""
+        """
+        Create a refund object. This depends on an exisitng payment record, and will
+        act as an UPDATE for a payment record. We can only refund payments whose status is 
+        COMPLETED and who have not been refunded previously. In some cases we will need to
+        CREATE a new payment to achieve a refund.
+
+        : param payment_obj: payment record is needed to reference 'id', 'status', and 'amount'
+        : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
+        """
+        # SETUP 
         if payment_obj is None:
             if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
-                self.get_all('payments', start_date=start_date)#, start_date=start_date)
+                self.PAYMENTS = self.get_all('payments', start_date=start_date)
 
-            for payment in self.PAYMENTS: # Find a payment with status: COMPLETED
+            for payment in self.PAYMENTS: # Find a COMPLETED payment that has not been refunded before
                if payment.get('status') != "COMPLETED" or payment.get('refund_ids'):
                    continue
-               payment_obj = payment
+               payment_obj = payment  # grab the first payment that satisfies ^ and move on
                break
-        if payment_obj is None:
-            raise Exception(
-                "The are currently no payments in the test data set with status " + \
-                "COMPLETED and cannot make a refund.")
+
+        if payment_obj is None: 
+            print("The are currently no payments in the test data set with a status " + \
+                  "of COMPLETED and without existing refunds, so we must generate a new payment.")
+            payment_obj = self.create_payments(autocomplete=True, source_key="card")
+            self.PAYMENTS += [payment_obj]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
-        upper_limit = 200 if 200 < payment_amount else payment_amount
-        amount = random.randint(100, upper_limit)
+        upper_limit = 10 if 10 < payment_amount else payment_amount
+        amount = random.randint(1, upper_limit)  # we must be careful not to refund more than the charge
         status = payment_obj.get('status')
-        if status != "COMPLETED": # Just a sanity check that the for loop above is working
+
+        if status != "COMPLETED": # Just a sanity check that logic above is working
             raise Exception("You cannot refund a payment with status: {}".format(status))
+
+        # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
                 'amount_money': {'amount': amount, # in cents
                                  'currency': 'USD'},
                 'idempotency_key': str(uuid.uuid4()),
                 'reason': 'Becuase you are worth it'}
+
         refund = self._client.refunds.refund_payment(body)
-        if refund.is_error(): # Debugging
+        if refund.is_error(): 
             print("body: {}".format(body))
             print("response: {}".format(refund))
+
+            if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
+                payment = self.update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
+
+                body['idempotency_key'] = str(uuid.uuid4())
+                body['id'] = self.make_id('refund')
+
+                refund = self._client.refunds.refund_payment(body)
+                if refund.is_error(): # Debugging
+                    print("body: {}".format(body))
+                    print("response: {}".format(refund))
         return refund
 
-    def create_payments(self):
+    def create_payments(self, autocomplete=False, source_key=None):
+        """
+        Generate a pyament object
+        : param autocomplete: boolean
+        : param source_key: must be a key to the source dict below
+        """
+        source = {'card': 'cnon:card-nonce-ok',
+                  'card_on_file': 'cnon:card-nonce-ok',
+                  'gift_card': 'cnon:gift-card-nonce-ok'}
+
+        if source_key:
+            source_id = source.get(source_key)
+        else:
+            source_id = random.choice(list(source.values()))
         body ={'id': self.make_id('payment'),
                'idempotency_key': str(uuid.uuid4()),
                'amount_money': {'amount': random.randint(100,10000), # in cents
                                'currency': 'USD'},
-               'source_id': random.choice(['cnon:card-nonce-ok',  # card
-                                           'cnon:card-nonce-ok',  # card on file
-                                           'cnon:gift-card-nonce-ok'  # Square gift card
-               ]),
+               'source_id': source_id,
                # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money?
-               'autocomplete': False,
+               'autocomplete': autocomplete,
                # 'customer_id': '',
                # 'location_id': '',
                # 'reference_id': '123456',
-               'note': self.make_id('payment'),
-        }
-        return self._client.payments.create_payment(body)
+               'note': self.make_id('payment'),}
+        new_payment = self._client.payments.create_payment(body)
+        if new_payment.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(new_payment))
+
+        response = new_payment.body.get('payment')
+        self.PAYMENTS += [response]
+        return response
 
     def create_item(self):
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
@@ -235,6 +267,27 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
+    def post_location(self, body):
+        """
+        body looks like
+
+        {'location': {'address': {'address_line_1': '1234 Peachtree St. NE',
+                                  'administrative_district_level_1': 'GA',
+                                  'locality': 'Atlanta',
+                                  'postal_code': '30309'},
+                      'description': 'My new location.',
+                      'name': 'New location name'}}
+
+        where `address` and `description` are optional, but `name` is required
+        """
+        resp = self._client.locations.create_location(body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        location_id = resp.body.get('location', {}).get('id')
+        location_name = resp.body.get('location', {}).get('name')
+        LOGGER.info('Created location with id %s and name %s', location_id, location_name)
+        return resp
+
     def create_locations(self):
         body = {'location': {'name': self.make_id('location')}}
         return self.post_location(body)
@@ -258,6 +311,21 @@ class TestClient(SquareClient):
         #     import pdb; pdb.set_trace()
         # return response.json()
         return None
+
+    def create_batch_post(self, stream, num_records):
+        recs_to_create = []
+        for i in range(num_records):
+            # Use dict() to make a copy so you don't get a list of the same object
+            obj = dict(self.stream_to_data_schema[stream])
+            obj['id'] = '#' + stream + str(i)
+            recs_to_create.append(obj)
+        body = {'idempotency_key': str(uuid.uuid4()),
+                'batches': [{'objects': recs_to_create}]}
+        return self.post_category(body)
+
+    ##########################################################################
+    ### UPDATEs
+    ##########################################################################
 
     def update(self, stream, obj_id, version):
         """For `stream` update `obj_id` with a new name
@@ -289,10 +357,11 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_payment(self, obj_id):
+    def update_payment(self, obj_id, action=None):
         """Cancel or a Complete an APPROVED payment"""
         body = {'payment_id': obj_id}
-        action = random.choice([ 'complete', 'cancel' ])
+        if not action:
+            action = random.choice([ 'complete', 'cancel' ])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             return self._client.payments.cancel_payment(obj_id)
@@ -329,17 +398,10 @@ class TestClient(SquareClient):
         body = {'location': {'name': self.make_id('location')}}
         return self._client.locations.update_location(obj_id, body)
 
+    ##########################################################################
+    ### DELETEs
+    ##########################################################################
+
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
         return self._client.catalog.batch_delete_catalog_objects(body)
-
-    def create_batch_post(self, stream, num_records):
-        recs_to_create = []
-        for i in range(num_records):
-            # Use dict() to make a copy so you don't get a list of the same object
-            obj = dict(self.stream_to_data_schema[stream])
-            obj['id'] = '#' + stream + str(i)
-            recs_to_create.append(obj)
-        body = {'idempotency_key': str(uuid.uuid4()),
-                'batches': [{'objects': recs_to_create}]}
-        return self.post_category(body)
