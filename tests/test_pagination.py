@@ -32,7 +32,8 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-                'payments' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3581
+                'payments',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3581
+                'refunds'  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3584
             }
         )
 
@@ -107,6 +108,13 @@ class TestSquarePagination(TestSquareBase):
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
+
+        # TODO  finish implementing this block once `payments` and `refunds bugs are addressed
+        # # ensure our expectations include any creates that were not explicityly called
+        # stream = 'payments'
+        # rec_count =  len(expected_records.get(stream))
+        # expected_records[stream] = self.client.PAYMENTS
+        # print("Adding {} untracked records to {}".format(len(expected_records.get(stream)) - rec_count, stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False)
