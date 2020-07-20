@@ -21,7 +21,10 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
-                'payments' # TODO PUT BACK
+                'modifier_lists',
+                'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3586
+                'refunds',  # TODO Put back once BUG addressed (see pagination)
+                'payments' # TODO Put back once BUG addressed (see pagination)
             }
         )
     def testable_streams_static(self):
@@ -180,30 +183,32 @@ class TestSquareAllFields(TestSquareBase):
                                  msg="Number of actual records do match expectations. " +\
                                  "We probably have duplicate records.")
 
-                # verify by values, that we replicated the expected records
+                # Test by values, that we replicated the expected records
+
+                # Verify that actual records were in our expectations
                 for actual_record in actual_records:
-                    # Array data types need sorted for a proper comparison # TODO Determine if this will be needed
-                    # self.sort_record_recur(actual_record)
                     if not actual_record in expected_records.get(stream):
                         print("\nDATA DISCREPANCY STREAM: {}".format(stream))
                         print("Actual: {}".format(actual_record))
                         e_record = [record for record in expected_records.get(stream)
-                                    if actual_record.get('eid') == record.get('eid')]
+                                    if actual_record.get('id') == record.get('id')]
                         print("Expected: {}".format(e_record))
                         for key in schema_keys:
                             e_val = e_record[0].get(key)
                             val = actual_record.get(key)
                             if e_val != val:
-                                print("\nDISCREPANCEY | KEY {}: ACTUAL: {} EXPECTED {}".format(key, val, e_val))
+                                print("\nDISCREPANCEY | KEY {}\n\tACTUAL: {}\n\tEXPECTED {}".format(key, val, e_val))
                     self.assertTrue(actual_record in expected_records.get(stream),
                                     msg="Actual record missing from expectations.\n" +
                                     "ACTUAL {}".format(actual_record))
+
+                # Verify that our expected records were replicated by the tap
                 for expected_record in expected_records.get(stream):
                     if not expected_record in actual_records:
                         print("DATA DISCREPANCY")
                         print("Expected: {}".format(expected_record))
                         a_record = [record for record in actual_records
-                                    if expected_record.get('eid') == record.get('eid')]
+                                    if expected_record.get('id') == record.get('id')]
                         print("Actual: {}".format(a_record))
                     self.assertTrue(expected_record in actual_records,
                                     msg="Expected record missing from target.\n" +
