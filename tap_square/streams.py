@@ -115,7 +115,7 @@ class Payments():
 
 class Inventories:
     tap_stream_id = 'inventories'
-    key_properties = ['id']
+    key_properties = []
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None
@@ -137,5 +137,6 @@ STREAMS = {
     'locations': Locations,
     'refunds': Refunds,
     'payments': Payments,
-    'modifier_lists': ModifierLists
+    'modifier_lists': ModifierLists,
+    'inventories': Inventories,
 }
