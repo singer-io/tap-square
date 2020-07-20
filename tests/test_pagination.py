@@ -22,7 +22,8 @@ class TestSquarePagination(TestSquareBase):
                 'employees', # Requires production environment to create records
                 'refunds',
                 'payments',
-                'modifier_lists'
+                'modifier_lists',
+                'bank_accounts'
             }
         )
 

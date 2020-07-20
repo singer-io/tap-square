@@ -23,8 +23,9 @@ class TestSquareStartDate(TestSquareBase):
                 'employees', # Requires production environment to create records
                 'locations',  # Requires proper permissions
                 'refunds',
-                'payments', # BUG |
-                'modifier_lists'
+                'payments', # BUG
+                'modifier_lists',
+                'bank_accounts'
             }
         )
 
