@@ -32,7 +32,7 @@ if __name__ == "__main__":
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
-        'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA??  | DELETE -
+        'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
     ]
 
     print("********** Testing basic functions of test client **********")
