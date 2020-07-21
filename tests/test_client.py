@@ -170,6 +170,7 @@ class TestClient(SquareClient):
             print("The are currently no payments in the test data set with a status " + \
                   "of COMPLETED and without existing refunds, so we must generate a new payment.")
             payment_obj = self.create_payments(autocomplete=True, source_key="card")
+            payment_obj = self.get_a_payment(payment_id=payment_obj.get('id'))[0]
             self.PAYMENTS += [payment_obj]
 
         payment_id = payment_obj.get('id')
@@ -194,7 +195,9 @@ class TestClient(SquareClient):
             print("Refund error, Updating payment status and retrying refund process.")
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
-                payment = self.update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
+                payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
+                payment_obj = self.get_a_payment(payment_id=payment.get('id'))[0]
+                self.PAYMENTS += [payment_obj]
 
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')
