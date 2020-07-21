@@ -165,6 +165,12 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def expected_replication_keys(self):
+        incremental_streams = self.expected_incremental_streams()
+        return {table: properties.get(self.REPLICATION_KEYS, set())
+                for table, properties
+                in self.expected_metadata().items() if table in incremental_streams}
+
     def expected_automatic_fields(self):
         auto_fields = {}
         for k, v in self.expected_metadata().items():
