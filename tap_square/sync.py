@@ -6,6 +6,7 @@ from .streams import STREAMS
 
 LOGGER = singer.get_logger()
 
+
 def sync(config, state, catalog):
     client = SquareClient(config)
 
@@ -50,7 +51,7 @@ def sync(config, state, catalog):
                     singer.write_state(state)
 
             else:
-                for page, cursor in stream_obj.sync(client, bookmarked_cursor):
+                for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
                     for record in page:
                         singer.write_record(
                             tap_stream_id,

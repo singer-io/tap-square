@@ -31,6 +31,9 @@ class TestSquareBase(unittest.TestCase):
         if missing_envs:
             raise Exception("Missing environment variables: {}".format(missing_envs))
 
+        # Allows diffs in asserts to print more
+        self.maxDiff = None
+
     @staticmethod
     def get_type():
         return "platform.square"
@@ -98,6 +101,10 @@ class TestSquareBase(unittest.TestCase):
             },
             "locations": {
                 self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            },
+            "inventories": {
+                self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
             },
             "refunds": {

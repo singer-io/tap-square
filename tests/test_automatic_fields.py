@@ -18,6 +18,7 @@ class TestAutomaticFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
+                'modifier_lists',
             }
         )
 
