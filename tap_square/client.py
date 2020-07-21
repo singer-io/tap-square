@@ -115,6 +115,50 @@ class SquareClient():
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
 
+    def get_orders(self, location_ids, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "date_time_filter": {
+                            "updated_at": {
+                                "start_at": start_time
+                            }
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        body['location_ids'] = location_ids
+
+        with singer.http_request_timer('GET orders'):
+            result = self._client.orders.search_orders(body=body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('orders', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET orders'):
+                result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                    "location_ids": location_ids,
+                    "cursor": result.body.get('cursor'),
+                })
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('orders', []), result.body.get('cursor'))
+
     def get_inventories(self, variation_ids, start_time):
         with singer.http_request_timer('GET inventories'):
             result = self._client.inventory.batch_retrieve_inventory_counts(body={
@@ -127,7 +171,6 @@ class SquareClient():
 
         yield (result.body.get('counts', []), result.body.get('cursor'))
 
-        # Not sure if the pagination works like this. I expect this to fail like payments and refunds did
         while result.body.get('cursor'):
             with singer.http_request_timer('GET inventories'):
                 result = self._client.inventory.batch_retrieve_inventory_counts(body={

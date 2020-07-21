@@ -9,6 +9,7 @@ import singer
 
 from tap_square.client import SquareClient
 from tap_square.streams import Inventories
+from tap_square.streams import Orders
 
 LOGGER = singer.get_logger()
 
@@ -72,6 +73,9 @@ class TestClient(SquareClient):
         elif stream == 'inventories':
             inventories = Inventories()
             return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
+        elif stream == 'orders':
+            orders = Orders()
+            return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError
 
