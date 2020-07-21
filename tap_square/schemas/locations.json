@@ -171,25 +171,39 @@
         "object"
       ],
       "properties": {
-        "day_of_week": {
+        "periods": {
           "type": [
             "null",
-            "string"
-          ]
-        },
-        "start_local_time": {
-          "type": [
-            "null",
-            "string"
+            "array"
           ],
-          "format": "date-time"
-        },
-        "end_local_time": {
-          "type": [
-            "null",
-            "string"
-          ],
-          "format": "date-time"
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "day_of_week": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "start_local_time": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
+              "end_local_time": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              }
+            }
+          }
         }
       }
     }
