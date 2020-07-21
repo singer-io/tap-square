@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "updated_at": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    }
+  }
+}
