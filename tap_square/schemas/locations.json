@@ -34,7 +34,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "language_code": {
       "type": [
