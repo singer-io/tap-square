@@ -24,7 +24,8 @@ class TestSquareStartDate(TestSquareBase):
                 'locations',  # Requires proper permissions
                 'refunds',
                 'payments', # BUG |
-                'modifier_lists'
+                'modifier_lists',
+                'inventories',
             }
         )
 

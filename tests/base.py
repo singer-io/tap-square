@@ -31,6 +31,9 @@ class TestSquareBase(unittest.TestCase):
         if missing_envs:
             raise Exception("Missing environment variables: {}".format(missing_envs))
 
+        # Allows diffs in asserts to print more
+        self.maxDiff = None
+
     @staticmethod
     def get_type():
         return "platform.square"
@@ -98,6 +101,10 @@ class TestSquareBase(unittest.TestCase):
             },
             "locations": {
                 self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            },
+            "inventories": {
+                self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
             },
             "refunds": {
@@ -279,12 +286,13 @@ class TestSquareBase(unittest.TestCase):
         List values are returned by square as unordered arrays.
         In order to accurately compare expected and actual records, we must sort all lists.
         """
-        try:
-            if isinstance(value, list) and value:
-                if isinstance(value[0], dict) and "id" in value[0].keys():
-                    record[key] = sorted(value, key=lambda x: x['id'])
-                else:
-                    record[key] = sorted(value)
-        except Exception as ex:
-            print("Could not sort array at key: {}, value: {}".format(key, value))
-            raise
+        pass
+        # try:
+        #     if isinstance(value, list) and value:
+        #         if isinstance(value[0], dict) and "id" in value[0].keys():
+        #             record[key] = sorted(value, key=lambda x: x['id'])
+        #         else:
+        #             record[key] = sorted(value)
+        # except Exception as ex:
+        #     print("Could not sort array at key: {}, value: {}".format(key, value))
+        #     raise

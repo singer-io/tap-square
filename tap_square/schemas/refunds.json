@@ -10,6 +10,12 @@
         "string"
       ]
     },
+    "reason": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "status": {
       "type": [
         "null",

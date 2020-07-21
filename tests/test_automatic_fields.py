@@ -18,8 +18,8 @@ class TestAutomaticFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
-                'refunds',  # TODO Put back once BUG addressed (see pagination)
-                'modifier_lists' # TODO must be added once creates and updates are available
+                'modifier_lists', # TODO must be added once creates and updates are available
+                'inventories', # TODO Exception: [{'code': 'INSUFFICIENT_SCOPES': INVENTORY_READ'
             }
         )
 

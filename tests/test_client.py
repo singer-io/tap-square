@@ -9,6 +9,7 @@ from datetime import datetime
 import singer
 
 from tap_square.client import SquareClient
+from tap_square.streams import Inventories
 
 LOGGER = singer.get_logger()
 
@@ -70,13 +71,16 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'refunds':
-            return [obj for page, _ in self.get_refunds('REFUND', start_date, None) for obj in page]
+            return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
             if not self.PAYMENTS:
-                self.PAYMENTS += [obj for page, _ in self.get_payments('PAYMENT', start_date, None) for obj in page]
+                return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
+        elif stream == 'inventories':
+            inventories = Inventories()
+            return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError
 
@@ -141,7 +145,7 @@ class TestClient(SquareClient):
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
-    def create_refunds(self, payment_obj=None, start_date=None): # IN_PROGRESS
+    def create_refunds(self, payment_obj=None, start_date=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is 
@@ -187,8 +191,7 @@ class TestClient(SquareClient):
 
         refund = self._client.refunds.refund_payment(body)
         if refund.is_error(): 
-            print("body: {}".format(body))
-            print("response: {}".format(refund))
+            print("Refund error, Updating payment status and retrying refund process.")
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
                 payment = self.update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending

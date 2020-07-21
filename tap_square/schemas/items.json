@@ -72,6 +72,12 @@
                             "null",
                             "string"
                           ]
+                        },
+                        "track_inventory": {
+                          "type": [
+                            "null",
+                            "boolean"
+                          ]
                         }
                       },
                       "type": [
