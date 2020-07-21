@@ -190,7 +190,7 @@
             "string"
           ],
           "format": "date-time"
-        },
+        }
       }
     }
   },
