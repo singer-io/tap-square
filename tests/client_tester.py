@@ -23,7 +23,8 @@ if __name__ == "__main__":
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        #'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA

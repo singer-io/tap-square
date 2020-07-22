@@ -132,6 +132,8 @@ class TestClient(SquareClient):
             return self.create_discounts().body.get('objects')
         elif stream == 'taxes':
             return self.create_taxes().body.get('objects')
+        elif stream == 'modifier_lists':
+            return self.create_modifier_list().body.get('objects')
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
@@ -142,10 +144,58 @@ class TestClient(SquareClient):
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
+    # TODO Go through each stream and ensure we are creating as many fiedls within records as possible
     def create_item(self):
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
                                           'type': 'ITEM',
                                           'item_data': {'name': self.make_id('item')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_modifier_list(self):
+        made_id = self.make_id('modifier_lists')
+        body = {'batches': [{'objects': [{'id': made_id,
+                                          'type': 'MODIFIER_LIST',
+                                          'item_data': {'name': made_id},
+                                          'custom_attribute_values': {
+                                              'custom_attribute_values-0': {},
+                                              'custom_attribute_values-1': {},
+                                          },
+                                          # 'catalog_v1_ids': [{}],
+                                          # 'absent_at_location_ids': [],
+                                          'category_data': {'name': made_id},
+                                          # 'item_variation_data': {},
+                                          # 'tax_data': {},
+                                          # 'discount_data': {'amount_money': {}},
+                                          'modifier_list_data': {},
+                                          'modifier_data':  {'name': made_id,
+                                                             'selection_type': random.choice(['SINGLE', 'MULTIPLE']),},
+                                          'present_at_all_locations': random.choice([True, False]),
+                                          # 'time_period_data': {},
+                                          # 'product_set_data': {},
+                                          # 'pricing_rule_data': {},
+                                          # 'image_data': {},
+                                          # 'measurement_unit_data': {},
+                                          # 'item_option_data': {},
+                                          # 'item_option_value_data': {},
+                                          'custom_attribute_definition_data': {
+                                              'type': random.choice(['STRING', 'BOOLEAN', 'NUMBER', 'SELECTION']),
+                                              'name': made_id,
+                                              'key': made_id[1:],  # .pyField must match ^[a-zA-Z0-9_-]*$'}]
+                                              'description': 'Custom Attribute Description.',
+                                              # 'source_application': {},
+                                              'allowed_object_types': [
+                                                  'ITEM',
+                                                  # DISCOUNT,  not an allowed object type on a custom attribute definition
+                                                  # CATEGORY,  not an allowed object type on a custom attribute definition
+                                                  ]
+                                              # 'string_config': {},
+                                              # 'number_config': {},
+                                              # 'selection_config': {}
+                                          },
+                                          'quick_amounts_settings_data': {
+                                              'option': random.choice(['DISABLED', 'MANUAL', 'AUTO']),
+                                          },}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -212,6 +262,8 @@ class TestClient(SquareClient):
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
+        elif stream == 'modifier_lists':
+            return self.update_modifier_list(obj_id, version).body.get('objects')
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         else:
@@ -232,6 +284,12 @@ class TestClient(SquareClient):
                                           'category_data': {'name': self.make_id('category')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
+
+    def update_modifier_list(self, obj_id, version):
+        modifier = random.choice(['modifier_lists_to_endable', 'modifier_lists_to_disable'])
+        body = {'item_ids': [obj_id],
+                modifier: [obj_id],}
+        return self._client.catalog.update_item_modifier_lists(body)
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,

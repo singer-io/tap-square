@@ -169,7 +169,7 @@ class TestAutomaticFields(TestSquareBase):
                         print("\n==== DATA DISCREPANCY ====\n")
                         print("Expected: {}\n".format(actual_record))
                         e_record = [record for record in expected_records.get(stream)
-                                    if actual_record.get('eid') == record.get('eid')]
+                                    if actual_record.get('id') == record.get('id')]
                         print("Actual: {}\n".format(e_record))
                         for key in schema_keys:
                             e_val = e_record[0].get(key)
@@ -183,7 +183,7 @@ class TestAutomaticFields(TestSquareBase):
                         print("\n==== DATA DISCREPANCY ====\n")
                         print("Expected: {}\n".format(expected_record))
                         a_record = [record for record in actual_records
-                                    if expected_record.get('eid') == record.get('eid')]
+                                    if expected_record.get('id') == record.get('id')]
                         print("Actual: {}\n".format(a_record))
                     self.assertTrue(expected_record in actual_records,
                                     msg="Expected record missing from target.")
