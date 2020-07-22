@@ -162,7 +162,8 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
-            return self.create_order().body.get('orders')
+            location_id = [location['id'] for location in self.get_all('locations')][0]
+            return [self.create_order(location_id).body.get('order')]
         else:
             raise NotImplementedError
 
@@ -246,6 +247,9 @@ class TestClient(SquareClient):
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
+        elif stream == 'orders':
+            location_id = [location['id'] for location in self.get_all('locations')][0]
+            return [self.update_order(location_id, obj_id, version).body.get('order')]
         else:
             raise NotImplementedError
 
@@ -287,6 +291,12 @@ class TestClient(SquareClient):
     def update_locations(self, obj_id):
         body = {'location': {'name': self.make_id('location')}}
         return self._client.locations.update_location(obj_id, body)
+
+    def update_order(self, location_id, obj_id, version):
+        body = {'order': {'note': self.make_id('order'),
+                          'version': version},
+                'idempotency_key': str(uuid.uuid4())}
+        return self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
