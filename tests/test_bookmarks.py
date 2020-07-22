@@ -118,6 +118,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
         created_records = {x: [] for x in self.expected_streams()}
         updated_records = {x: [] for x in self.expected_streams()}
         expected_records_2 = {x: [] for x in self.expected_streams()}
+
+        for order in first_sync_records['orders']['messages']:
+            if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
+                expected_records_2['orders'].append(order['data'])
+
         for stream in self.testable_streams():
             # Create
             new_record = self.client.create(stream)
