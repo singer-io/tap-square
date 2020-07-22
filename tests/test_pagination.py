@@ -154,6 +154,10 @@ class TestSquarePagination(TestSquareBase):
                     self.assertEqual(auto_fields.difference(actual_keys),
                                      set(), msg="A paginated synced stream has a record that is missing expected fields.")
 
+                # TODO ADD CHECK ON IDS
+                # Verify by pks that the data replicated matches what we expect
+
+
         print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
             self.expected_streams().difference(self.TESTABLE_STREAMS))
         )

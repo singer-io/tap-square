@@ -39,12 +39,12 @@ class TestClient(SquareClient):
                   'tax_data': {'name': 'tap_tester_tax_data'}},
     }
 
-    def __init__(self):
+    def __init__(self, env):
         config = {
-            'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
-            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
-            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
-            'sandbox': 'true'
+            'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
+            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
+            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+            'sandbox' : 'true' if env  == 'sandbox' else 'false',
         }
 
         super().__init__(config)
@@ -62,6 +62,8 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_employees(None) for obj in page]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
+        elif stream == 'bank_accounts':
+            return [obj for page, _ in self.get_bank_accounts() for obj in page]
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds('REFUND', start_date, None) for obj in page]
         elif stream == 'payments':
