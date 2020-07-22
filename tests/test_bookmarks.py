@@ -160,7 +160,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # ensure validity of expected_records_2
         for stream in self.testable_streams():
             if stream in self.expected_incremental_streams():
-                assert len(expected_records_2.get(stream)) == 2, "Expectations are invalid for" + \
+                assert len(expected_records_2.get(stream)) >= 2, "Expectations are invalid for" + \
                     " incremental stream {}".format(stream)
             if stream in self.expected_full_table_streams():
                 assert len(expected_records_2.get(stream)) ==  len(expected_records_1.get(stream)) + 1, "Expectations are " + \
@@ -209,9 +209,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
                     for record in second_sync_data:
                         date_value = record["updated_at"]
-                        self.assertGreater(date_value,
-                                           first_sync_bookmark,
-                                           msg="First sync bookmark is not less than 2nd sync record's replication-key")
+                        self.assertGreaterEqual(date_value,
+                                                first_sync_bookmark,
+                                                msg="First sync bookmark is not less than 2nd sync record's replication-key")
 
                 elif stream in self.expected_full_table_streams():
 
