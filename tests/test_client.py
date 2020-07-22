@@ -131,6 +131,23 @@ class TestClient(SquareClient):
             LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
+    def post_order(self, body, location_id):
+        """
+        body: {
+          "order": {
+            "location_id": None,
+          },
+          "idempotency_key": str(uuid.uuid4())
+        }
+        """
+        resp = self._client.orders.create_order(location_id=location_id, body=body)
+
+        if resp.is_error():
+            stream_name = body['batches'][0]['objects'][0]['type']
+            raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
+        LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
+        return resp
+
     def create(self, stream):
         if stream == 'items':
             return self.create_item().body.get('objects')
@@ -144,6 +161,8 @@ class TestClient(SquareClient):
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
+        elif stream == 'orders':
+            return self.create_order().body.get('orders')
         else:
             raise NotImplementedError
 
@@ -204,6 +223,11 @@ class TestClient(SquareClient):
         #     import pdb; pdb.set_trace()
         # return response.json()
         return None
+
+    def create_order(self, location_id):
+        body = {'order': {'location_id': None},
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_order(body, location_id)
 
     def update(self, stream, obj_id, version):
         """For `stream` update `obj_id` with a new name

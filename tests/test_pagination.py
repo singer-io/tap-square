@@ -74,8 +74,15 @@ class TestSquarePagination(TestSquareBase):
             if len(existing_objects) <= self.API_LIMIT:
                 num_to_post = self.API_LIMIT + 1 - len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
-                new_objects = self.client.create_batch_post(stream, num_to_post)
-                expected_records[stream] += new_objects.body.get('objects', [])
+                if stream == 'orders':
+                    new_objects = []
+                    location_id = [location['id'] for location in self.get_all('locations')][0]
+                    for i in range(num_to_post):
+                        new_objects.append(self.client.create_order(location_id))
+                    expected_records[stream] += new_objects
+                else:
+                    new_objects = self.client.create_batch_post(stream, num_to_post)
+                    expected_records[stream] += new_objects.body.get('objects', [])
                 print('{}: Created {} records'.format(stream, num_to_post))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
