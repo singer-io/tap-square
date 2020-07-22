@@ -81,7 +81,7 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def _chunks(self, lst, n):
+    def _chunks(self, lst, n): #pylint: disable=no-self-use
         """Yield successive n-sized chunks from lst."""
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
