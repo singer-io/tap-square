@@ -11,7 +11,11 @@ from base import TestSquareBase
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
-    API_LIMIT = 1000
+    def get_api_limit(self, stream):
+        if stream == 'orders':
+            return 500
+        else:
+            return 1000
 
     def name(self):
         return "tap_tester_square_pagination_test"
@@ -66,13 +70,14 @@ class TestSquarePagination(TestSquareBase):
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
+            API_LIMIT = self.get_api_limit(stream)
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if len(existing_objects) == 0:
                print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
-            if len(existing_objects) <= self.API_LIMIT:
-                num_to_post = self.API_LIMIT + 1 - len(existing_objects)
+            if len(existing_objects) <= API_LIMIT:
+                num_to_post = API_LIMIT + 1 - len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
                 if stream == 'orders':
                     new_objects = []
@@ -91,8 +96,8 @@ class TestSquarePagination(TestSquareBase):
         for stream in self.TESTABLE_STREAMS:
             record_count = len(expected_records[stream])
             print("Verifying data is sufficient for stream {}. ".format(stream) +
-                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT))
-            self.assertGreater(record_count, self.API_LIMIT,
+                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.get_api_limit(stream)))
+            self.assertGreater(record_count, self.get_api_limit(stream),
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
 
@@ -144,7 +149,7 @@ class TestSquarePagination(TestSquareBase):
             with self.subTest(stream=stream):
 
                 # Verify we are paginating for testable synced streams
-                self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT,
+                self.assertGreater(record_count_by_stream.get(stream, -1), self.get_api_limit(stream),
                                    msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
 
                 data = synced_records.get(stream, [])
