@@ -103,6 +103,11 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
+            "orders": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
             "inventories": {
                 self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
