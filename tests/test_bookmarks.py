@@ -274,7 +274,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 for primary_key in primary_keys:
 
                     # Verify that the inserted records are replicated by the 2nd sync and match our expectations
-                    set(self.expected_schema_keys(stream))
                     for created_record in created_records.get(stream):
                         # # BUG | https://stitchdata.atlassian.net/browse/SRCE-3532
                         sync_records = [record for record in second_sync_data
