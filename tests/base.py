@@ -109,8 +109,7 @@ class TestSquareBase(unittest.TestCase):
             },
             "refunds": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'created_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "payments": {
                 self.PRIMARY_KEYS: {'id'},
