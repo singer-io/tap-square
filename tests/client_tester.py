@@ -3,6 +3,8 @@ This is used for testing basic functionality of the test client.
 To run change the desired flags below and use the following command from the tap-tester repo:
   'python ../tap-adroll/tests/client_tester.py'
 """
+from datetime import datetime
+
 from test_client import TestClient
 
 
@@ -11,7 +13,7 @@ from test_client import TestClient
 ##########################################################################
 if __name__ == "__main__":
     client = TestClient()
-    START_DATE = '2020-06-24T00:00:00Z'
+    START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
@@ -23,7 +25,8 @@ if __name__ == "__main__":
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
@@ -47,8 +50,8 @@ if __name__ == "__main__":
     if test_creates:
         for obj in objects_to_test:
             print("Testing CREATE: {}".format(obj))
-            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
-            created_obj = client.create(obj)
+            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            created_obj = client.create(obj, START_DATE)
             if not created_obj:
                 print("FAILED")
                 continue

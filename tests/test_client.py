@@ -3,7 +3,7 @@ import json
 import os
 import random
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import singer
 
@@ -40,6 +40,7 @@ class TestClient(SquareClient):
                   'tax_data': {'name': 'tap_tester_tax_data'}},
     }
 
+    ITEMS = []
     def __init__(self):
         config = {
             'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
@@ -50,9 +51,11 @@ class TestClient(SquareClient):
 
         super().__init__(config)
 
-    def get_all(self, stream, start_date=None, end_date=None):
+    def get_all(self, stream, start_date=None):
         if stream == 'items':
-            return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
+            if not self.ITEMS:
+                self.ITEMS = [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
+            return self.ITEMS
         elif stream == 'categories':
             return [obj for page, _ in self.get_catalog('CATEGORY', start_date, None) for obj in page]
         elif stream == 'discounts':
@@ -70,7 +73,7 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':
-            inventories = Inventories()
+            inventories = Inventories() # TODO seems bad to be importing streams from the tap
             return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError
@@ -127,7 +130,7 @@ class TestClient(SquareClient):
             LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
-    def create(self, stream):
+    def create(self, stream, start_date=None):
         if stream == 'items':
             return self.create_item().body.get('objects')
         elif stream == 'categories':
@@ -138,6 +141,8 @@ class TestClient(SquareClient):
             return self.create_taxes().body.get('objects')
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
+        elif stream == 'inventories':
+            return self.create_inventory_adjustment(start_date=start_date).body.get('counts')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         else:
@@ -145,6 +150,82 @@ class TestClient(SquareClient):
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
+
+    def get_catalog_object(self, obj_id):
+        response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
+        if response.is_error():
+            print(response.body.get('errrors'))
+        return response.body.get('object')
+
+    def create_inventory_adjustment(self, catalog_obj=None, start_date=None):
+        if catalog_obj is None:
+            if self.ITEMS:
+                catalog_obj = random.choice([self.ITEMS])
+            else:
+                catalogs = self.get_all('items', start_date=start_date)
+                catalog_obj = random.choice(catalogs)
+        # catalog_obj_id = 'V22COYDDG7Q7GYOBBTLB4R2B' # TODO get from catalog
+        # loc_id = 'VEN5D4KBE9GTT' # TODO get from catalog
+        # from_state = 'IN_STOCK' # TODO get from catalog
+        import pdb; pdb.set_trace()
+        catalog_obj_id = catalog_obj.get('id')
+        inventory_obj = self.get_catalog_object(catalog_obj_id)
+        loc_id = inventory_obj.get('location_id')
+        from_state = inventory_obj.get('state')
+
+        made_id = self.make_id('inventory')
+        if from_state == 'IN_STOCK':
+            states = ['SOLD', 'SOLD_ONLINE', 'WASTE']
+        else:
+            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+        to_state = random.choice(states)
+        occurred_at = datetime.strftime(
+            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+        changes = {
+            # 'TRANSFER': {'transfer': {}}, # Not currently supported
+            'ADJUSTMENT': {
+                'adjustment': {
+                    # 'id': made_id,
+                    # 'from_state': random.choice(states),
+                    'from_state': from_state,
+                    'to_state': to_state,
+                    'location_id': loc_id,
+                    'occurred_at': occurred_at,
+                    # 'employee_id': 'asdasd',
+                    'catalog_object_id': catalog_obj_id,
+                    # 'catalog_object_type': 'ITEM_VARIATION',
+                    'quantity': '1.0',
+                    # 'total_price_money': {
+                    #     'amount': random.randint(1, 10000),
+                    #     'currency': random.choice(['JPY', 'USD', 'GBP', 'CAD', 'AUD']),
+                    # } if to_state == 'SOLD' else {},
+                    'source': {
+                        'product': random.choice([
+                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
+            'PHYSICAL_COUNT': {
+                'physical_count': {},
+            },
+        }
+        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
+        key = [k for k in changes.get(change_type).keys()][0]
+        value = [v for v in changes.get(change_type).values()][0]
+
+        body = {
+            'changes': [{'type': change_type,
+                         key: value}],
+            'ignore_unchanged_counts': random.choice([True, False]),
+            'idempotency_key': str(uuid.uuid4())
+        }
+        import pdb; pdb.set_trace()
+        response = self._client.inventory.batch_change_inventory(body)
+        if response.is_error():
+            print(response.body.get('errors'))
+            raise
+        return response
 
     def create_item(self):
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
