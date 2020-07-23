@@ -226,6 +226,23 @@ class TestSquareBase(unittest.TestCase):
         return schemas
 
     def parse_date(self, date_value):
+        """
+        Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
+        """        try:
+            date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            return date_stripped
+        except ValueError:
+            try:
+                date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+                return date_stripped
+            except ValueError:
+                raise NotImplementedError("We are not accounting for dates of this format: {}".format(date_value))
+
+    def date_check_and_parse(self, date_value):
+        """
+        Pass in any value and return that value. If the value is a string-formatted-datetime, parse
+        the value and return it as an unformatted datetime object.
+        """
         try:
             date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
             return date_stripped
@@ -281,9 +298,9 @@ class TestSquareBase(unittest.TestCase):
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        if isinstance(value, str) and isinstance(self.parse_date(value), dt):
+        if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
             # key in ['updated_at', 'created_at']:
-            raw_date = self.parse_date(value)
+            raw_date = self.date_check_and_parse(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
