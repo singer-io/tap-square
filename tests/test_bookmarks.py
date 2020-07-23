@@ -19,15 +19,20 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'refunds', # BUG https://stitchdata.atlassian.net/browse/SRCE-3591
                 'payments', # BUG https://stitchdata.atlassian.net/browse/SRCE-3579
                 'modifier_lists',
                 'inventories',
             }
         )
+
     def cannot_update_streams(self):
         return {
             'refunds',  # Does not have an endpoint for updating records
+        }
+
+    def streams_with_record_differences_after_create(self):
+        return {
+            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario 
         }
 
     @classmethod
@@ -273,7 +278,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 for primary_key in primary_keys:
 
                     # Verify that the inserted records are replicated by the 2nd sync and match our expectations
-                    schema_keys = set(self.expected_schema_keys(stream))
                     for created_record in created_records.get(stream):
                         # # BUG | https://stitchdata.atlassian.net/browse/SRCE-3532
                         sync_records = [record for record in second_sync_data
@@ -283,7 +287,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         self.assertEqual(len(sync_records), 1,
                                          msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                         sync_record = sync_records[0]
-                        self.assertDictEqual(created_record, sync_record)
+                        if stream not in self.streams_with_record_differences_after_create():
+                            self.assertDictEqual(created_record, sync_record)
 
                     # Verify that the updated records are replicated by the 2nd sync and match our expectations
                     for updated_record in updated_records.get(stream):

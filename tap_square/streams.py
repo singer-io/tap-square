@@ -101,9 +101,9 @@ class BankAccounts():
 class Refunds():
     tap_stream_id = 'refunds'
     key_properties = ['id']
-    replication_method = 'INCREMENTAL'
-    valid_replication_keys = ['created_at']
-    replication_key = 'created_at'
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
     object_type = 'REFUND'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
