@@ -34,7 +34,7 @@ class TestSquarePagination(TestSquareBase):
                 'refunds',
                 'payments',
                 'modifier_lists',
-                'bank_accounts'
+
                 'inventories',
             }
         )
@@ -42,12 +42,15 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'  # Only 300 locations can be created, and 300 are returned in a single request
+                'locations',  # Only 300 locations can be created, and 300 are returned in a single request
+                'bank_accounts', # Cannot create a record, also PROD ONLY
             }
         )
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(self.SQUARE_ENVIRONMENT))
+
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams()
@@ -58,6 +61,8 @@ class TestSquarePagination(TestSquareBase):
         # self.START_DATE = self.STATIC_START_DATE
         # self.TESTABLE_STREAMS = self.testable_streams_static()
         # self.pagination_test()
+
+        # TODO implement PRODUCTION
 
     def pagination_test(self):
         """

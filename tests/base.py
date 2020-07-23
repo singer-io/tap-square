@@ -30,12 +30,8 @@ class TestSquareBase(unittest.TestCase):
             "TAP_SQUARE_REFRESH_TOKEN",
             "TAP_SQUARE_APPLICATION_ID",
             "TAP_SQUARE_APPLICATION_SECRET",
-            "SQUARE_ENVIRONMENT"
         ] if os.getenv(x) is None]
         if missing_envs:
-            if "SQUARE_ENVIRONMENT" in missing_envs:
-                print("\n\tMUST SET ENV VAR [ SQUARE_ENVRIONMENT ] MANNUALY.")
-                print("\t\tVALID VALUES INCLUDE: ['production', 'sandbox']\t RECCOMMENDED: 'sandbox'\n")
             raise Exception("Missing environment variables: {}".format(missing_envs))
 
         # Allows diffs in asserts to print more

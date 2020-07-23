@@ -18,7 +18,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'bank_accounts' # Can't create a record
                 'refunds', # BUG https://stitchdata.atlassian.net/browse/SRCE-3591
                 'payments', # BUG https://stitchdata.atlassian.net/browse/SRCE-3579
                 'modifier_lists',
@@ -65,6 +64,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(self.SQUARE_ENVIRONMENT))
+        # TODO implement PRODUCTION if necessary
+
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Instatiate default start date
