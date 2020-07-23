@@ -3,6 +3,8 @@ This is used for testing basic functionality of the test client.
 To run change the desired flags below and use the following command from the tap-tester repo:
   'python ../tap-adroll/tests/client_tester.py'
 """
+import random
+
 from test_client import TestClient
 
 
@@ -16,26 +18,28 @@ if __name__ == "__main__":
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
     test_updates = False  # To test updates, must also test creates
-    test_gets = False
+    test_gets = True
     test_deletes = False  # To test updates, must also test creates
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - 
+        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
     ]
 
     print("********** Testing basic functions of test client **********")
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")
@@ -48,13 +52,20 @@ if __name__ == "__main__":
         for obj in objects_to_test:
             print("Testing CREATE: {}".format(obj))
             # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
-            created_obj = client.create(obj)
+            ext_obj = None
+            # if obj == 'refunds':
+            #     status = ""
+            #     payments = client.get_all('payments', start_date=START_DATE)
+            #     while status != "COMPLETED":
+            #         ext_obj = random.choice(payments)
+            #         status = ext_obj.get('status')
+            created_obj = client.create(obj, ext_obj)
             if not created_obj:
                 print("FAILED")
                 continue
             print("SUCCESS")
             if print_objects:
-                    print("{}\n".format(created_obj))
+                print("{}\n".format(created_obj))
 
             if test_updates: # Need to reference specific attr from an obj to update
                 print("Testing UPDATE: {}".format(obj))
