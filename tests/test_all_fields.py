@@ -21,6 +21,7 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
+                # 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3586
                 'inventories',
                 'modifier_lists',
             }
@@ -180,14 +181,30 @@ class TestSquareAllFields(TestSquareBase):
                 self.assertEqual(stream_expected_record_ids,
                                  stream_actual_record_ids)
 
-                # verify by values, that we replicated the expected records
+                # Test by keys and values, that we replicated the expected records and nothing else
+
+                # Verify that actual records were in our expectations
                 for actual_record in actual_records:
-                    self.sort_record_recur(actual_record)
                     stream_expected_records = [record for record in expected_records.get(stream)
                                                if actual_record.get('id') == record.get('id')]
-                    self.assertTrue(len(stream_expected_records), 1)
+                    self.assertTrue(len(stream_expected_records),
+                                    msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+                    self.assertEqual(len(stream_expected_records), 1,
+                                     msg="A duplicate record was found in our expectations for {}.".format(stream))
                     stream_expected_record = stream_expected_records[0]
                     self.assertDictEqual(actual_record, stream_expected_record)
+
+
+                # Verify that our expected records were replicated by the tap
+                for expected_record in expected_records.get(stream):
+                    stream_actual_records = [record for record in actual_records
+                                             if expected_record.get('id') == record.get('id')]
+                    self.assertTrue(len(stream_actual_records),
+                                    msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+                    self.assertEqual(len(stream_actual_records), 1,
+                                     msg="A duplicate record was found in the sync for {}.".format(stream))
+                    stream_actual_record = stream_actual_records[0]
+                    self.assertDictEqual(expected_record, stream_actual_record)
 
 
 if __name__ == '__main__':
