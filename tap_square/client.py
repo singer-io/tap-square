@@ -73,7 +73,6 @@ class SquareClient():
             yield (result.body.get('objects', []), result.body.get('cursor'))
 
     def get_employees(self, bookmarked_cursor):
-
         body = {
             'limit': 50,
         }
@@ -140,7 +139,33 @@ class SquareClient():
 
             yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
 
-    def get_refunds(self, object_type, start_time, bookmarked_cursor): # TODO:check sort_order input
+    def get_inventories(self, variation_ids, start_time):
+        with singer.http_request_timer('GET inventories'):
+            result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                "catalog_object_ids": variation_ids,
+                "updated_after": start_time,
+            })
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('counts', []), result.body.get('cursor'))
+
+        # Not sure if the pagination works like this. I expect this to fail like payments and refunds did
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET inventories'):
+                result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                    "catalog_object_ids": variation_ids,
+                    "updated_after": start_time,
+                    "cursor": result.body.get('cursor'),
+                })
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('counts', []), result.body.get('cursor'))
+
+    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
@@ -163,7 +188,7 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET ' + object_type):
+            with singer.http_request_timer('GET refunds'):
                 result = self._client.refunds.list_payment_refunds(**body)
 
             if result.is_error():
@@ -171,7 +196,7 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
-    def get_payments(self, object_type, start_time, bookmarked_cursor):
+    def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
@@ -194,7 +219,7 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET ' + object_type):
+            with singer.http_request_timer('GET payments'):
                 result = self._client.payments.list_payments(**body)
 
             if result.is_error():

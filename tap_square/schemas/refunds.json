@@ -10,6 +10,12 @@
         "string"
       ]
     },
+    "reason": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "status": {
       "type": [
         "null",
@@ -77,7 +83,8 @@
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "format": "date-time"
           },
           "type": {
             "type": [

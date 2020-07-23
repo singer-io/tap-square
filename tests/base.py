@@ -38,6 +38,9 @@ class TestSquareBase(unittest.TestCase):
                 print("\t\tVALID VALUES INCLUDE: ['production', 'sandbox']\t RECCOMMENDED: 'sandbox'\n")
             raise Exception("Missing environment variables: {}".format(missing_envs))
 
+        # Allows diffs in asserts to print more
+        self.maxDiff = None
+
     @staticmethod
     def get_type():
         return "platform.square"
@@ -128,6 +131,10 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
+            "inventories": {
+                self.PRIMARY_KEYS: set(),
+                self.REPLICATION_METHOD: self.FULL,
+            },
             "refunds": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -200,6 +207,12 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def expected_replication_keys(self):
+        incremental_streams = self.expected_incremental_streams()
+        return {table: properties.get(self.REPLICATION_KEYS, set())
+                for table, properties
+                in self.expected_metadata().items() if table in incremental_streams}
+
     def expected_automatic_fields(self):
         auto_fields = {}
         for k, v in self.expected_metadata().items():
@@ -255,6 +268,9 @@ class TestSquareBase(unittest.TestCase):
         return schemas
 
     def parse_date(self, date_value):
+        """
+        Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
+        """
         try:
             date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
             return date_stripped
@@ -263,7 +279,22 @@ class TestSquareBase(unittest.TestCase):
                 date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
                 return date_stripped
             except ValueError:
-                raise NotImplementedError
+                raise NotImplementedError("We are not accounting for dates of this format: {}".format(date_value))
+
+    def date_check_and_parse(self, date_value):
+        """
+        Pass in any value and return that value. If the value is a string-formatted-datetime, parse
+        the value and return it as an unformatted datetime object.
+        """
+        try:
+            date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            return date_stripped
+        except ValueError:
+            try:
+                date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+                return date_stripped
+            except ValueError:
+                return date_value
 
     def expected_schema_keys(self, stream):
 
@@ -272,19 +303,22 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
+    # TODO Determine if sorting is even a valid modifier for our expectations
     def sort_records_recur(self, records):
-        for record in records:
-            self.sort_record_recur(record)
+        pass
+        # for record in records:
+        #     self.sort_record_recur(record)
 
     def sort_record_recur(self, record):
-        if isinstance(record, dict):
-            for key, value in record.items():
-                if type(value) == dict:
-                    self.sort_record_recur(value)
-                elif type(value) == list:
-                    for rec in value:
-                        self.sort_record_recur(rec)
-                    self.sort_array_type(record, key, value)
+        pass
+        # if isinstance(record, dict):
+        #     for key, value in record.items():
+        #         if type(value) == dict:
+        #             self.sort_record_recur(value)
+        #         elif type(value) == list:
+        #             for rec in value:
+        #                 self.sort_record_recur(rec)
+        #             self.sort_array_type(record, key, value)
             
 
     def modify_expected_records(self, records):
@@ -305,12 +339,11 @@ class TestSquareBase(unittest.TestCase):
                 else:
                     self.align_date_type(expected_record, key, value)
 
-
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        # TODO update this to execute fo all datetime objects
-        if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
-            raw_date = self.parse_date(value)
+        if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
+            # key in ['updated_at', 'created_at']:
+            raw_date = self.date_check_and_parse(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
@@ -319,12 +352,13 @@ class TestSquareBase(unittest.TestCase):
         List values are returned by square as unordered arrays.
         In order to accurately compare expected and actual records, we must sort all lists.
         """
-        try:
-            if isinstance(value, list) and value:
-                if isinstance(value[0], dict) and "id" in value[0].keys():
-                    record[key] = sorted(value, key=lambda x: x['id'])
-                else:
-                    record[key] = sorted(value)
-        except Exception as ex:
-            print("Could not sort array at key: {}, value: {}".format(key, value))
-            raise
+        pass
+        # try:
+        #     if isinstance(value, list) and value:
+        #         if isinstance(value[0], dict) and "id" in value[0].keys():
+        #             record[key] = sorted(value, key=lambda x: x['id'])
+        #         else:
+        #             record[key] = sorted(value)
+        # except Exception as ex:
+        #     print("Could not sort array at key: {}, value: {}".format(key, value))
+        #     raise

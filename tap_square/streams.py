@@ -17,6 +17,13 @@ class Items(CatalogStream):
     replication_key = 'updated_at'
     object_type = 'ITEM'
 
+    def get_all_variation_ids(self, client, start_time, bookmarked_cursor):
+        for page, _ in self.sync(client, start_time, bookmarked_cursor):
+            for item in page:
+                for item_data_variation in item['item_data'].get('variations', list()):
+                    yield item_data_variation['id']
+
+
 
 class Categories(CatalogStream):
     tap_stream_id = 'categories'
@@ -52,7 +59,7 @@ class Employees():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use,unused-argument
 
         for page, cursor in client.get_employees(bookmarked_cursor):
             yield page, cursor
@@ -74,7 +81,7 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
 
         for page, cursor in client.get_locations():
             yield page, cursor
@@ -100,7 +107,7 @@ class Refunds():
     object_type = 'REFUND'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
-        for page, cursor in client.get_refunds(client, start_time, bookmarked_cursor):
+        for page, cursor in client.get_refunds(start_time, bookmarked_cursor):
             yield page, cursor
 
 
@@ -113,7 +120,22 @@ class Payments():
     object_type = 'DISCOUNT'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
-        for page, cursor in client.get_payments(self.object_type, start_time, bookmarked_cursor):
+        for page, cursor in client.get_payments(start_time, bookmarked_cursor):
+            yield page, cursor
+
+
+class Inventories:
+    tap_stream_id = 'inventories'
+    key_properties = []
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        items = Items()
+        all_variation_ids = set(items.get_all_variation_ids(client, start_time, bookmarked_cursor))
+
+        for page, cursor in client.get_inventories(all_variation_ids, start_time):
             yield page, cursor
 
 
@@ -127,5 +149,6 @@ STREAMS = {
     'bank_accounts': BankAccounts,
     'refunds': Refunds,
     'payments': Payments,
-    'modifier_lists': ModifierLists
+    'modifier_lists': ModifierLists,
+    'inventories': Inventories,
 }

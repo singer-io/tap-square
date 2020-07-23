@@ -11,7 +11,18 @@ from base import TestSquareBase
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
-    API_LIMIT = 1000
+    BATCH_LIMIT = 1000
+    API_LIMIT = {
+        'items': BATCH_LIMIT,
+        'categories': BATCH_LIMIT,
+        'discounts': BATCH_LIMIT,
+        'taxes': BATCH_LIMIT,
+        'employees': 50,
+        'locations': None, # TODO
+        'refunds': 100,
+        'payments': 100,
+        'modifier_lists': None # TODO
+    }
 
     def name(self):
         return "tap_tester_square_pagination_test"
@@ -24,6 +35,7 @@ class TestSquarePagination(TestSquareBase):
                 'payments',
                 'modifier_lists',
                 'bank_accounts'
+                'inventories',
             }
         )
 
@@ -71,11 +83,21 @@ class TestSquarePagination(TestSquareBase):
                print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
-            if len(existing_objects) <= self.API_LIMIT:
-                num_to_post = self.API_LIMIT + 1 - len(existing_objects)
+            if len(existing_objects) <= self.API_LIMIT.get(stream):
+                num_to_post = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
-                new_objects = self.client.create_batch_post(stream, num_to_post)
-                expected_records[stream] += new_objects.body.get('objects', [])
+                if self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
+                    new_objects = []
+                    for n in range(num_to_post):
+                        print('{}: Created {} records'.format(stream, n))
+                        start_date = self.START_DATE if stream == 'refunds' else None
+                        new_object = self.client.create(stream, start_date=start_date)
+                        assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
+                        new_objects += new_object
+
+                else: # hit batch endpoint if it exists
+                    new_objects = self.client.create_batch_post(stream, num_to_post).body.get('objects', [])
+                expected_records[stream] += new_objects
                 print('{}: Created {} records'.format(stream, num_to_post))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
@@ -84,10 +106,18 @@ class TestSquarePagination(TestSquareBase):
         for stream in self.TESTABLE_STREAMS:
             record_count = len(expected_records[stream])
             print("Verifying data is sufficient for stream {}. ".format(stream) +
-                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT))
-            self.assertGreater(record_count, self.API_LIMIT,
+                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
+            self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
+
+        # ensure our expectations include any creates that were not explicityly called
+        stream = 'payments'
+        previous_record_count =  len(expected_records.get(stream))
+        if previous_record_count < len(self.client.PAYMENTS):
+            expected_records[stream] = self.client.PAYMENTS
+            added_record_count = previous_record_count - len(expected_records.get(stream))
+            print("Adding {} untracked records to {}".format(added_record_count, stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False)
@@ -137,7 +167,7 @@ class TestSquarePagination(TestSquareBase):
             with self.subTest(stream=stream):
 
                 # Verify we are paginating for testable synced streams
-                self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT,
+                self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
                                    msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
 
                 data = synced_records.get(stream, [])
