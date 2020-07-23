@@ -228,7 +228,8 @@ class TestSquareBase(unittest.TestCase):
     def parse_date(self, date_value):
         """
         Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
-        """        try:
+        """
+        try:
             date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
             return date_stripped
         except ValueError:

@@ -76,6 +76,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             if len(existing_objects) == 0:
                 # TODO change from 'failure you need data' to 'create data then so we can test'
+                # This can be implemented at the end of testing once all streams can be created consistently
                 assert None, "NO DATA EXISTS FOR {}, SOMETHING HAS GONE TERRIBLY WRONG".format(stream)
 
             expected_records_1[stream] += existing_objects
@@ -230,12 +231,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         )
 
                         # Verify that all data of the 2nd sync is >= the bookmark from the first sync
-                        # first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
-                        # for record in second_sync_data:
-                        #     date_value = record[replication_key]
-                        #     self.assertGreater(date_value,
-                        #                        first_sync_bookmark,
-                        #                        msg="First sync bookmark is not less than 2nd sync record's replication-key")
+                        first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
+                        for record in second_sync_data:
+                            date_value = record[replication_key]
+                            self.assertGreater(date_value,
+                                               first_sync_bookmark,
+                                               msg="First sync bookmark is not less than 2nd sync record's replication-key")
 
                 elif stream in self.expected_full_table_streams():
 
@@ -260,10 +261,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_2.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
-                # self.assertEqual(len(expected_records), len(second_sync_data),
-                #                  msg="Expected number of records do not match actual for 2nd sync.\n" +
-                #                  "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                # )
+                self.assertEqual(len(expected_records), len(second_sync_data),
+                                 msg="Expected number of records do not match actual for 2nd sync.\n" +
+                                 "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                )
 
                 for primary_key in primary_keys:
 

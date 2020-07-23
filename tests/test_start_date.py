@@ -20,10 +20,10 @@ class TestSquareStartDate(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'employees', # Requires production environment to create records
-                'locations',  # Requires proper permissions
-                'refunds',
-                'payments', # BUG |
+                'employees', # TODO Requires production environment to create records
+                'locations',  # TODO Requires proper permissions
+                'refunds', # BUG see bookmarks test
+                'payments', # BUG see bookmarks test
                 'modifier_lists',
                 'inventories',
             }
@@ -239,13 +239,13 @@ class TestSquareStartDate(TestSquareBase):
 
 
                     # Verify that each stream has less records in 2nd sync than the 1st.
-                    # self.assertLess(record_count_2, record_count_1,
-                    #                 msg="\nStream '{}' is {}\n".format(stream, self.INCREMENTAL) +
-                    #                  "Record count 2 should be less than 2, but is not\n" +
-                    #                  "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                    #                  "Sync 1 record_count: {}\n".format(record_count_1) +
-                    #                  "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                    #                  "Sync 2 record_count: {}".format(record_count_2))
+                    self.assertLess(record_count_2, record_count_1,
+                                    msg="\nStream '{}' is {}\n".format(stream, self.INCREMENTAL) +
+                                     "Record count 2 should be less than 2, but is not\n" +
+                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                     "Sync 1 record_count: {}\n".format(record_count_1) +
+                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                     "Sync 2 record_count: {}".format(record_count_2))
 
                     # Verify all data from first sync has bookmark values >= start_date .
                     records_from_sync_1 = set(row.get('data').get('updated_at')
