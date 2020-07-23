@@ -114,10 +114,10 @@ class Refunds():
 class Payments():
     tap_stream_id = 'payments'
     key_properties = ['id']
-    replication_method = 'INCREMENTAL'
-    valid_replication_keys = ['updated_at']
-    replication_key = 'updated_at'
-    object_type = 'DISCOUNT'
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
+    object_type = 'PAYMENT'
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         for page, cursor in client.get_payments(start_time, bookmarked_cursor):

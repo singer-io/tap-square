@@ -19,7 +19,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'payments', # BUG https://stitchdata.atlassian.net/browse/SRCE-3579
                 'modifier_lists',
                 'inventories',
             }
