@@ -48,19 +48,20 @@ class TestSquareBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("\n\nTEST SETUP\n")
-        cls.client = TestClient(env='sandbox')
+        env = 'sandbox' # We always want the tests to start in sandbox
+        cls.client = TestClient(env=env)
 
     def set_environment(self, env):
         """
         Change the Square App Environmnet.
         Requires re-instatiating TestClient and setting env var.
         """
-        os.environ['SQUARE_ENVIRONMENT'] = env
+        os.environ['TAP_SQUARE_ENVIRONMENT'] = env
         self.client = TestClient(env=env)
         self.SQUARE_ENVIRONMENT = env
 
     def get_environment(self):
-        return os.environ['SQUARE_ENVIRONMENT']
+        return os.environ['TAP_SQUARE_ENVIRONMENT']
 
     def get_properties(self, original = True):
         # Default values
@@ -80,7 +81,7 @@ class TestSquareBase(unittest.TestCase):
 
     @staticmethod
     def get_credentials():
-        environment = os.getenv('SQUARE_ENVIRONMENT')
+        environment = os.getenv('TAP_SQUARE_ENVIRONMENT')
         if environment in ['sandbox', 'production']:
             creds =  {
                 'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
