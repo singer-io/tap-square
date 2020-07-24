@@ -1,13 +1,15 @@
 import os
 import unittest
-import simplejson
+
+import singer
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBase
-from test_client import TestClient
+
+LOGGER = singer.get_logger()
 
 
 class TestSquareIncrementalReplication(TestSquareBase):
@@ -137,6 +139,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             new_record = self.client.create(stream, start_date=self.START_DATE)
             assert len(new_record) > 0, "Failed to create a {} record".format(stream)
             assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
+
             expected_records_2[stream] += new_record
             created_records[stream] += new_record
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
@@ -145,11 +148,24 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 updated_records['payments'] += self.client.get_a_payment(payment_id)
                 # a CREATE for refunds could also result in a new payments object
                 if len(self.client.PAYMENTS) > len(created_records['payments']) + len(expected_records_1['payments']):
-                    created_records['payments'] += self.client.PAYMENTS[-1]
+                    created_records['payments'].append(self.client.PAYMENTS[-1])
+                    expected_records_2['payments'].append(self.client.PAYMENTS[-1])
 
         for stream in self.testable_streams().difference(self.cannot_update_streams()):
             # Update
-            first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
+
+            if stream == 'payments':
+                # Payments which have already completed/cancelled can't be done so again so much find first APPROVED payment
+                first_rec = dict()
+                for message in first_sync_records.get(stream).get('messages'):
+                    if message.get('data')['status'] == 'APPROVED':
+                        first_rec = message.get('data')
+                        break
+
+                if not first_rec:
+                    raise RuntimeError("Unable to find any any payment with status APPROVED")
+            else:
+                first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
             updated_record = self.client.update(stream, first_rec_id, first_rec_version)
@@ -177,19 +193,14 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # ensure validity of expected_records_2
         for stream in self.testable_streams():
             if stream in self.expected_incremental_streams():
-                if stream == 'payments':  # We need to loosen restrictions for this stream (see test_client.create_refunds())
-                    self.assertGreaterEqual(len(expected_records_2.get(stream)), 2,
-                                            msg= "Expectations are invalid for incremental stream {}".format(stream))
-                    self.assertLessEqual(len(expected_records_2.get(stream)), 3,
-                                         msg="Expectations are invalid for incremental stream {}".format(stream))
-                elif stream in self.cannot_update_streams():
+                if stream in self.cannot_update_streams():
                     self.assertEqual(len(expected_records_2.get(stream)), 1,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 else:  # Most streams will have 2 records from the Update and Insert
                     self.assertEqual(len(expected_records_2.get(stream)), 2,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
-                self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + 1,
+                self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
         # Run a second sync job using orchestrator
@@ -273,7 +284,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                  msg="Expected number of records do not match actual for 2nd sync.\n" +
                                  "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                 )
-
                 for primary_key in primary_keys:
 
                     # Verify that the inserted records are replicated by the 2nd sync and match our expectations
