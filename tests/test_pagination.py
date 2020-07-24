@@ -1,3 +1,5 @@
+import os
+
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -31,6 +33,8 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
+                'refunds',
+                'payments',
                 'modifier_lists',
                 'inventories',
             }
@@ -39,12 +43,15 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'  # Only 300 locations can be created, and 300 are returned in a single request
+                'locations',  # Only 300 locations can be created, and 300 are returned in a single request
+                'bank_accounts', # Cannot create a record, also PROD ONLY
             }
         )
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams()
@@ -55,6 +62,8 @@ class TestSquarePagination(TestSquareBase):
         # self.START_DATE = self.STATIC_START_DATE
         # self.TESTABLE_STREAMS = self.testable_streams_static()
         # self.pagination_test()
+
+        # TODO implement PRODUCTION
 
     def pagination_test(self):
         """
@@ -180,6 +189,10 @@ class TestSquarePagination(TestSquareBase):
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
                     self.assertEqual(auto_fields.difference(actual_keys),
                                      set(), msg="A paginated synced stream has a record that is missing expected fields.")
+
+                # TODO ADD CHECK ON IDS
+                # Verify by pks that the data replicated matches what we expect
+
 
         print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
             self.expected_streams().difference(self.TESTABLE_STREAMS))

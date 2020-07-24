@@ -38,13 +38,12 @@ def sync(config, state, catalog):
                 max_record_value = start_time
                 for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
                     for record in page:
+                        transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                         singer.write_record(
                             tap_stream_id,
-                            transformer.transform(
-                                record, stream_schema, stream_metadata,
-                            ))
+                            transformed_record)
                         if record[replication_key] > max_record_value:
-                            max_record_value = record[replication_key]
+                            max_record_value = transformed_record[replication_key]
 
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
                     state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
