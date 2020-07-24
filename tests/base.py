@@ -347,11 +347,7 @@ class TestSquareBase(unittest.TestCase):
     def align_number_type(self, record, key, value):
         """float values must conform to json number formatting so we convert to Decimal"""
         if isinstance(value, float) and key in ['latitude', 'longitude']:
-            try:
-                record[key] = str(value)
-            except Exception as ex:
-                print("Failed to convert {} from type float to string".format(value))
-                raise
+            record[key] = str(value)
 
     def sort_array_type(self, record, key, value):
         """
