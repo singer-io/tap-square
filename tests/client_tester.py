@@ -30,11 +30,10 @@ if __name__ == "__main__":
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
-        'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
+        # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
     ]
-
     print("********** Testing basic functions of test client **********")
     if test_gets:
         for obj in objects_to_test:
@@ -49,10 +48,10 @@ if __name__ == "__main__":
             print("FAILED")
 
     if test_creates:
-        for _ in range(10):
+        for _ in range(1):
             for obj in objects_to_test:
                 print("Testing CREATE: {}".format(obj))
-                # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+                import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                 ext_obj = None
                 if obj == 'refunds':
                     payments = client.get_all('payments', start_date=START_DATE)

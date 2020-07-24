@@ -296,6 +296,7 @@ class TestSquareBase(unittest.TestCase):
                     self.sort_array_type(expected_record, key, value)
                 else:
                     self.align_date_type(expected_record, key, value)
+                    self.align_number_type(expected_record, key, value)
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
@@ -304,6 +305,15 @@ class TestSquareBase(unittest.TestCase):
             raw_date = self.date_check_and_parse(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
+
+    def align_number_type(self, record, key, value):
+        """float values must conform to json number formatting so we convert to Decimal"""
+        if isinstance(value, float) and key in ['latitude', 'longitude']:
+            try:
+                record[key] = str(value)
+            except Exception as ex:
+                print("Failed to convert {} from type float to string".format(value))
+                raise
 
     def sort_array_type(self, record, key, value):
         """
