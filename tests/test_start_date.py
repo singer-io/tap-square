@@ -32,7 +32,6 @@ class TestSquareStartDate(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations',  # TODO Requires proper permissions
                 'bank_accounts', # Cannot create a record, also PROD ONLY
             }
         )

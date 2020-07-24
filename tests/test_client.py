@@ -76,7 +76,7 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
             if not self.PAYMENTS:
-                return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
+                self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
@@ -157,7 +157,7 @@ class TestClient(SquareClient):
         : param payment_obj: payment record is needed to reference 'id', 'status', and 'amount'
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
-        # SETUP 
+        # SETUP
         if payment_obj is None:
             if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
                 self.PAYMENTS = self.get_all('payments', start_date=start_date)
@@ -297,8 +297,55 @@ class TestClient(SquareClient):
         return resp
 
     def create_locations(self):
-        body = {'location': {'name': self.make_id('location')}}
-        return self.post_location(body)
+        made_id = self.make_id('location')
+        website =  'https://get.stitchdata.com/stitch?utm_source=google' + \
+            '&utm_medium=cpc&utm_campaign=stitch_ga_nam_en_dg_search_brand&utm_content' + \
+            '=&utm_device=c&campaignid=10338160950&adgroupid=102105232759&gclid=' + \
+            'EAIaIQobChMIivPt7f3j6gIVuwiICR1O_g6VEAAYAyAAEgJ2F_D_BwE'
+        body = {'location': {'name': made_id,
+                             'timezone': 'UTC',
+                             'status': 'ACTIVE', # 'INACTIVE'
+                             'language_code': 'en-US',
+                             'phone_number': '9999999999',
+                             'business_name': made_id,
+                             'type': random.choice(['PHYSICAL', 'MOBILE']),
+                             'business_hours': {
+                               'periods': [{'day_of_week': 'SUN',
+                                            'start_local_time': '10:00:00',
+                                            'end_local_time': '15:00:00',},
+                                           {'day_of_week': 'MON',
+                                            'start_local_time': '09:00:00',
+                                            'end_local_time': '17:00:00',},
+                                           {'day_of_week': 'TUE',
+                                            'start_local_time': '09:00:00',
+                                            'end_local_time': '17:00:00',},
+                                           {'day_of_week': 'WED',
+                                            'start_local_time': '09:00:00',
+                                            'end_local_time': '17:00:00',},
+                                           {'day_of_week': 'THU',
+                                            'start_local_time': '09:00:00',
+                                            'end_local_time': '17:00:00',},
+                                           {'day_of_week': 'FRI',
+                                            'start_local_time': '09:00:00',
+                                            'end_local_time': '17:00:00',},
+                                           {'day_of_week': 'SAT',
+                                            'start_local_time': '10:00:00',
+                                            'end_local_time': '15:00:00',},]
+                             },
+                             'business_email': 'fake_business@sttichdata.com',
+                             'description': 'This is a descriptino',
+                             'twitter_username': 'twitteruser',
+                             'instagram_username': 'iguser',
+                             'website_url': website,
+                             'coordinates': {
+                                 'latitude': 39.951130,
+                                 'longitude': -75.163120}}
+        }
+        response =  self.post_location(body)
+        if response.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(new_payment))
+        return response
 
     def create_employees(self):
         # # TODO Either remove this or make every other stream refernce production

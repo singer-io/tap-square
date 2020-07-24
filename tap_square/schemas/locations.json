@@ -4,6 +4,70 @@
     "object"
   ],
   "properties": {
+    "timezone": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "type": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "currency": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "coordinates": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "latitude": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "singer-decimal"
+        },
+        "longitude": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "singer-decimal"
+        }
+      }
+    },
+    "phone_number": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "name": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "business_email": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "address": {
       "type": [
         "null",
@@ -11,6 +75,18 @@
       ],
       "properties": {
         "address_line_1": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "postal_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "locality": {
           "type": [
             "null",
             "string"
@@ -27,38 +103,26 @@
             "null",
             "string"
           ]
-        },
-        "locality": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "postal_code": {
-          "type": [
-            "null",
-            "string"
-          ]
         }
       }
     },
-    "business_name": {
+    "instagram_username": {
       "type": [
         "null",
         "string"
       ]
     },
-    "capabilities": {
+    "description": {
       "type": [
         "null",
-        "array"
-      ],
-      "items": {
-        "type": [
-          "null",
-          "string"
-        ]
-      }
+        "string"
+      ]
+    },
+    "website_url": {
+      "type": [
+        "null",
+        "string"
+      ]
     },
     "country": {
       "type": [
@@ -66,31 +130,7 @@
         "string"
       ]
     },
-    "created_at": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "currency": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "id": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "language_code": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "mcc": {
+    "twitter_username": {
       "type": [
         "null",
         "string"
@@ -102,29 +142,94 @@
         "string"
       ]
     },
-    "name": {
+    "capabilities": {
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      },
+      "type": [
+        "null",
+        "array"
+      ]
+    },
+    "business_name": {
       "type": [
         "null",
         "string"
       ]
     },
-    "status": {
+    "mcc": {
       "type": [
         "null",
         "string"
       ]
     },
-    "timezone": {
+    "language_code": {
       "type": [
         "null",
         "string"
       ]
     },
-    "type": {
+    "business_hours": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "periods": {
+          "items": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "start_local_time": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "end_local_time": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "day_of_week": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
+            }
+          },
+          "type": [
+            "null",
+            "array"
+          ]
+        }
+      }
+    },
+    "id": {
       "type": [
         "null",
         "string"
       ]
+    },
+    "facebook_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created_at": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
     }
   }
 }
