@@ -164,16 +164,6 @@ class TestClient(SquareClient):
         """
         # SETUP
         if payment_obj is None:
-            if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
-                self.PAYMENTS = self.get_all('payments', start_date=start_date)
-
-            for payment in self.PAYMENTS: # Find a COMPLETED payment that has not been refunded before
-               if payment.get('status') != "COMPLETED" or payment.get('refund_ids'):
-                   continue
-               payment_obj = payment  # grab the first payment that satisfies ^ and move on
-               break
-
-        if payment_obj is None:
             print("The are currently no payments in the test data set with a status " + \
                   "of COMPLETED and without existing refunds, so we must generate a new payment.")
             payment_obj = self.create_payments(autocomplete=True, source_key="card")
@@ -188,7 +178,6 @@ class TestClient(SquareClient):
 
         if status != "COMPLETED": # Just a sanity check that logic above is working
             raise Exception("You cannot refund a payment with status: {}".format(status))
-
         # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
@@ -204,7 +193,8 @@ class TestClient(SquareClient):
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
                 payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
                 payment_obj = self.get_a_payment(payment_id=payment.get('id'))[0]
-                self.PAYMENTS += [payment_obj]
+                self.PAYMENTS = None # Force refresh of the cache since we updated one
+                self.get_all('payments', start_date)
 
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')

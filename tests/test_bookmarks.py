@@ -146,16 +146,15 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 refund = created_records[stream][0]
                 payment_id = refund.get('payment_id')
                 updated_records['payments'] += self.client.get_a_payment(payment_id)
-                # a CREATE for refunds could also result in a new payments object
-                if len(self.client.PAYMENTS) > len(created_records['payments']) + len(expected_records_1['payments']):
-                    created_records['payments'].append(self.client.PAYMENTS[-1])
-                    expected_records_2['payments'].append(self.client.PAYMENTS[-1])
+                # a CREATE for refunds will result in a new payments object
+                created_records['payments'].append(self.client.PAYMENTS[-1])
+                expected_records_2['payments'].append(self.client.PAYMENTS[-1])
 
         for stream in self.testable_streams().difference(self.cannot_update_streams()):
             # Update
 
             if stream == 'payments':
-                # Payments which have already completed/cancelled can't be done so again so much find first APPROVED payment
+                # Payments which have already completed/cancelled can't be done so again so find first APPROVED payment
                 first_rec = dict()
                 for message in first_sync_records.get(stream).get('messages'):
                     if message.get('data')['status'] == 'APPROVED':
@@ -200,6 +199,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     self.assertEqual(len(expected_records_2.get(stream)), 2,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
+                if len(expected_records_2.get(stream)) != len(expected_records_1.get(stream)) + len(created_records[stream]):
+                    import ipdb; ipdb.set_trace()
+                    1+1
                 self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
