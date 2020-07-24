@@ -218,6 +218,12 @@
         "string"
       ]
     },
+    "facebook_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "created_at": {
       "type": [
         "null",
