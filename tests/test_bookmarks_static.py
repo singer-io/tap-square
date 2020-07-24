@@ -1,3 +1,4 @@
+import os
 import unittest
 import simplejson
 
@@ -16,7 +17,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams(self):
-        return self.static_data_streams()
+        return self.static_data_streams().difference(
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'bank_accounts', # Cannot create a record, also PROD ONLY
+            }
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -53,6 +58,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # TODO implement PRODUCTION
+
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Instatiate static start date

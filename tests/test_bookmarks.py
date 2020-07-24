@@ -1,3 +1,4 @@
+import os
 import unittest
 import simplejson
 
@@ -69,6 +70,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # TODO implement PRODUCTION if necessary
+
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Instatiate default start date

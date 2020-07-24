@@ -29,14 +29,10 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+                'locations',  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+                'bank_accounts', # Cannot create a record, also PROD ONLY
             }
         )
-
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
 
     @classmethod
     def tearDownClass(cls):
@@ -44,6 +40,7 @@ class TestSquareAllFields(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams()
@@ -53,6 +50,8 @@ class TestSquareAllFields(TestSquareBase):
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static()
         self.all_fields_test()
+
+        # TODO implement PRODUCTION
 
     def all_fields_test(self):
         """

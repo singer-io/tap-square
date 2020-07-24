@@ -11,6 +11,9 @@ from test_client import TestClient
 
 
 class TestSquareBase(unittest.TestCase):
+    PRODUCTION = "production"
+    SANDBOX = "sandbox"
+    SQUARE_ENVIRONMENT = SANDBOX
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
@@ -45,28 +48,50 @@ class TestSquareBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
+        env = 'sandbox' # We always want the tests to start in sandbox
+        cls.client = TestClient(env=env)
+
+    def set_environment(self, env):
+        """
+        Change the Square App Environmnet.
+        Requires re-instatiating TestClient and setting env var.
+        """
+        os.environ['TAP_SQUARE_ENVIRONMENT'] = env
+        self.client = TestClient(env=env)
+        self.SQUARE_ENVIRONMENT = env
+
+    def get_environment(self):
+        return os.environ['TAP_SQUARE_ENVIRONMENT']
 
     def get_properties(self, original = True):
         # Default values
         return_value = {
             'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
-            'sandbox' : 'true'
+            'sandbox' : 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
+        if self.get_environment() == self.PRODUCTION:
+            self.SQUARE_ENVIRONMENT = self.PRODUCTION
 
         if original:
             return return_value
 
         return_value['start_date'] = self.START_DATE
+
         return return_value
 
     @staticmethod
     def get_credentials():
-        return {
-            'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
-            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
-            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
-        }
+        environment = os.getenv('TAP_SQUARE_ENVIRONMENT')
+        if environment in ['sandbox', 'production']:
+            creds =  {
+                'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
+                'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
+                'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                }
+        else:
+            raise Exception("Square Environment: {} is not supported.".format(environment))
+
+        return creds
 
     def expected_check_streams(self):
         return set(self.expected_metadata().keys()).difference(set())
@@ -121,6 +146,10 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
+            "bank_accounts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            }
         }
 
     def expected_replication_method(self):
@@ -129,6 +158,15 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def production_streams(self):
+        """Some streams can only have data on the production app. We must test these separately"""
+        return {
+            'bank_accounts'
+        }
+
+    def sandbox_streams(self):
+        """By default we will be testing streams in the sandbox"""
+        return self.expected_streams().difference(self.production_streams())
 
     def static_data_streams(self):
         """
@@ -137,6 +175,7 @@ class TestSquareBase(unittest.TestCase):
         """
         return {
             'locations',  # Limit 300 objects, DELETES not supported
+            'bank_accounts',  # No endpoints for CREATE or UPDATE
         }
 
     def dynamic_data_streams(self):

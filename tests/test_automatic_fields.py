@@ -1,4 +1,4 @@
-from collections import defaultdict
+import os
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
@@ -25,20 +25,31 @@ class TestAutomaticFields(TestSquareBase):
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(
-            set() # STREAMS THAT CANNOT CURRENTLY BE TESTED
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'bank_accounts'
+            }
         )
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams()
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.auto_fields_test()
 
         print("\n\nTESTING WITH STATIC DATA")
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.auto_fields_test()
+
+        # TODO PRODUCTION is not fully configured
+        # self.set_environment(self.PRODUCTION)
+        # print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # print("\n\nTESTING WITH STATIC DATA")
+        # self.START_DATE = self.get_properties().get('start_date')
+        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
+        # self.auto_fields_test()
 
     def auto_fields_test(self):
         """
