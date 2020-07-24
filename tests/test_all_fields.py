@@ -29,7 +29,7 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+                # 'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
             }
         )
 

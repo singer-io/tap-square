@@ -74,7 +74,7 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
             if not self.PAYMENTS:
-                return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
+                self.PAYMENTS += [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
@@ -155,10 +155,10 @@ class TestClient(SquareClient):
         : param payment_obj: payment record is needed to reference 'id', 'status', and 'amount'
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
-        # SETUP 
+        # SETUP
         if payment_obj is None:
             if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
-                self.PAYMENTS = self.get_all('payments', start_date=start_date)
+                self.PAYMENTS += self.get_all('payments', start_date=start_date)
 
             for payment in self.PAYMENTS: # Find a COMPLETED payment that has not been refunded before
                if payment.get('status') != "COMPLETED" or payment.get('refund_ids'):
