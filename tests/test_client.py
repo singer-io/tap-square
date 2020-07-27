@@ -75,8 +75,8 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            if not self.PAYMENTS:
-                self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
+            #if not self.PAYMENTS:
+            self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
@@ -86,9 +86,18 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError
 
-    def get_a_payment(self, payment_id):
-        payment = self._client.payments.get_payment(payment_id=payment_id)
-        return [payment.body.get('payment')]
+    def get_a_payment(self, payment_id, start_date):
+        self.PAYMENTS = None
+        return_value = []
+        while not return_value:
+            LOGGER.info('get_a_payment: Calling API')
+            all_payments = self.get_all('payments', start_date)
+            return_value = [payment for payment in all_payments if payment['id'] == payment_id]
+
+            return_value = None if len(return_value) > 0 and return_value[0].get('status') == 'APPROVED' else return_value
+
+        LOGGER.info('get_a_payment: %s', str(return_value))
+        return return_value
 
     ##########################################################################
     ### CREATEs
@@ -150,7 +159,7 @@ class TestClient(SquareClient):
     def create_refunds(self, payment_obj=None, start_date=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
-        act as an UPDATE for a payment record. We can only refund payments whose status is 
+        act as an UPDATE for a payment record. We can only refund payments whose status is
         COMPLETED and who have not been refunded previously. In some cases we will need to
         CREATE a new payment to achieve a refund.
 
@@ -159,21 +168,10 @@ class TestClient(SquareClient):
         """
         # SETUP
         if payment_obj is None:
-            if not self.PAYMENTS: # if we have not called get_all on payments prior to this method call
-                self.PAYMENTS = self.get_all('payments', start_date=start_date)
-
-            for payment in self.PAYMENTS: # Find a COMPLETED payment that has not been refunded before
-               if payment.get('status') != "COMPLETED" or payment.get('refund_ids'):
-                   continue
-               payment_obj = payment  # grab the first payment that satisfies ^ and move on
-               break
-
-        if payment_obj is None: 
             print("The are currently no payments in the test data set with a status " + \
                   "of COMPLETED and without existing refunds, so we must generate a new payment.")
-            payment_obj = self.create_payments(autocomplete=True, source_key="card")
-            payment_obj = self.get_a_payment(payment_id=payment_obj.get('id'))[0]
-            self.PAYMENTS += [payment_obj]
+            payment_response = self.create_payments(autocomplete=True, source_key="card")
+            payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -183,7 +181,6 @@ class TestClient(SquareClient):
 
         if status != "COMPLETED": # Just a sanity check that logic above is working
             raise Exception("You cannot refund a payment with status: {}".format(status))
-
         # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
@@ -193,14 +190,11 @@ class TestClient(SquareClient):
                 'reason': 'Becuase you are worth it'}
 
         refund = self._client.refunds.refund_payment(body)
-        if refund.is_error(): 
+        if refund.is_error():
             print("Refund error, Updating payment status and retrying refund process.")
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
                 payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
-                payment_obj = self.get_a_payment(payment_id=payment.get('id'))[0]
-                self.PAYMENTS += [payment_obj]
-
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')
 
@@ -208,6 +202,14 @@ class TestClient(SquareClient):
                 if refund.is_error(): # Debugging
                     print("body: {}".format(body))
                     print("response: {}".format(refund))
+                    print("payment attempted to be refunded: {}".format(payment))
+                    raise RuntimeError(refund.errors)
+            else:
+                raise RuntimeError(refund.errors)
+
+        # Update Payments
+        self.PAYMENTS = None # Force refresh of the cache since we updated one
+        self.get_all('payments', start_date)
         return refund
 
     def create_payments(self, autocomplete=False, source_key=None):
@@ -239,6 +241,7 @@ class TestClient(SquareClient):
         if new_payment.is_error():
             print("body: {}".format(body))
             print("response: {}".format(new_payment))
+            raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
         self.PAYMENTS += [response]
@@ -387,6 +390,9 @@ class TestClient(SquareClient):
 
         We found that you have to send the same `obj_id` and `version` for the update to work
         """
+        if not obj_id:
+            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+
         if stream == 'items':
             return self.update_item(obj_id, version).body.get('objects')
         elif stream == 'categories':
@@ -405,6 +411,8 @@ class TestClient(SquareClient):
             raise NotImplementedError
 
     def update_item(self, obj_id, version):
+        if not obj_id:
+            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'ITEM',
                                           'item_data': {'name': self.make_id('item')},
@@ -412,15 +420,27 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_payment(self, obj_id, action=None):
+    def update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""
-        body = {'payment_id': obj_id}
+        if not obj_id:
+            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+
         if not action:
             action = random.choice([ 'complete', 'cancel' ])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
-            return self._client.payments.cancel_payment(obj_id)
-        return self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
+            resp = self._client.payments.cancel_payment(obj_id)
+            if resp.is_error():
+                raise RuntimeError(resp.errors)
+            return resp
+        elif action == 'complete':
+            body = {'payment_id': obj_id}
+            resp = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
+            if resp.is_error():
+                raise RuntimeError(resp.errors)
+            return resp
+        else:
+            raise NotImplementedError('action {} not supported'.format(action))
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -451,7 +471,10 @@ class TestClient(SquareClient):
 
     def update_locations(self, obj_id):
         body = {'location': {'name': self.make_id('location')}}
-        return self._client.locations.update_location(obj_id, body)
+        resp = self._client.locations.update_location(obj_id, body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp
 
     ##########################################################################
     ### DELETEs
@@ -459,4 +482,7 @@ class TestClient(SquareClient):
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
-        return self._client.catalog.batch_delete_catalog_objects(body)
+        resp = self._client.catalog.batch_delete_catalog_objects(body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp

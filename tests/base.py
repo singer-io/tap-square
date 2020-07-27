@@ -138,8 +138,7 @@ class TestSquareBase(unittest.TestCase):
             },
             "payments": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "modifier_lists": {
                 self.PRIMARY_KEYS: {'id'},
