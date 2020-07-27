@@ -203,7 +203,7 @@ class TestClient(SquareClient):
                 if refund.is_error(): # Debugging
                     print("body: {}".format(body))
                     print("response: {}".format(refund))
-                    print("payment attempted to be refunded: {}", payment_obj)
+                    print("payment attempted to be refunded: {}".format(payment))
                     raise RuntimeError(refund.errors)
             else:
                 raise RuntimeError(refund.errors)
