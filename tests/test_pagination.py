@@ -23,7 +23,8 @@ class TestSquarePagination(TestSquareBase):
         'locations': None, # TODO
         'refunds': 100,
         'payments': 100,
-        'modifier_lists': None # TODO
+        'modifier_lists': None, # TODO
+        'orders': 500
     }
 
     def name(self):
@@ -89,21 +90,27 @@ class TestSquarePagination(TestSquareBase):
                print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
+
             if len(existing_objects) <= self.API_LIMIT.get(stream):
                 num_to_post = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
                 print('{}: Will create {} records'.format(stream, num_to_post))
-                if self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
-                    new_objects = []
+                new_objects = []
+                if stream == 'orders':
+                    location_id = [location['id'] for location in self.client.get_all('locations')][0]
+                    for i in range(num_to_post):
+                        new_objects.append(self.client.create_order(location_id))
+                elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
                         start_date = self.START_DATE if stream == 'refunds' else None
                         new_object = self.client.create(stream, start_date=start_date)
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
                         new_objects += new_object
-
-                else: # hit batch endpoint if it exists
+                else:
                     new_objects = self.client.create_batch_post(stream, num_to_post).body.get('objects', [])
+
                 expected_records[stream] += new_objects
+
                 print('{}: Created {} records'.format(stream, num_to_post))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
