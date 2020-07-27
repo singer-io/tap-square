@@ -33,7 +33,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
     def streams_with_record_differences_after_create(self):
         return {
-            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario 
+            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario
         }
 
     @classmethod
@@ -200,9 +200,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     self.assertEqual(len(expected_records_2.get(stream)), 2,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
-                if len(expected_records_2.get(stream)) != len(expected_records_1.get(stream)) + len(created_records[stream]):
-                    import ipdb; ipdb.set_trace()
-                    1+1
                 self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
