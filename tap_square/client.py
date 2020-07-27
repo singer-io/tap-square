@@ -17,6 +17,7 @@ class SquareClient():
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
+
     def _get_access_token(self):
         body = {
             'client_id': self._client_id,
@@ -98,6 +99,7 @@ class SquareClient():
             yield (result.body.get('employees', []), result.body.get('cursor'))
 
     def get_locations(self):
+        body = {}
         with singer.http_request_timer('GET locations'):
             result = self._client.locations.list_locations()
 
@@ -107,13 +109,35 @@ class SquareClient():
         yield (result.body.get('locations', []), result.body.get('cursor'))
 
         while result.body.get('cursor'):
+            body['cursor'] = result.body.get('cursor')
             with singer.http_request_timer('GET locations'):
-                result = self._client.locations.list_locations()
+                result = self._client.locations.list_locations(**body)
 
             if result.is_error():
                 raise Exception(result.errors)
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
+
+    def get_bank_accounts(self):
+        body = {}
+
+        with singer.http_request_timer('GET bank accounts'):
+            result = self._client.bank_accounts.list_bank_accounts()
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET bank accounts'):
+                result = self._client.bank_accounts.list_bank_accounts(**body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
 
     def get_orders(self, location_ids, start_time, bookmarked_cursor):
         if bookmarked_cursor:
@@ -156,6 +180,7 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('orders', []), result.body.get('cursor'))
+
 
     def get_inventories(self, variation_ids, start_time):
         with singer.http_request_timer('GET inventories'):

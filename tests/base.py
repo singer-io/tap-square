@@ -11,6 +11,9 @@ from test_client import TestClient
 
 
 class TestSquareBase(unittest.TestCase):
+    PRODUCTION = "production"
+    SANDBOX = "sandbox"
+    SQUARE_ENVIRONMENT = SANDBOX
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
@@ -45,28 +48,50 @@ class TestSquareBase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
+        env = 'sandbox' # We always want the tests to start in sandbox
+        cls.client = TestClient(env=env)
+
+    def set_environment(self, env):
+        """
+        Change the Square App Environmnet.
+        Requires re-instatiating TestClient and setting env var.
+        """
+        os.environ['TAP_SQUARE_ENVIRONMENT'] = env
+        self.client = TestClient(env=env)
+        self.SQUARE_ENVIRONMENT = env
+
+    def get_environment(self):
+        return os.environ['TAP_SQUARE_ENVIRONMENT']
 
     def get_properties(self, original = True):
         # Default values
         return_value = {
             'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
-            'sandbox' : 'true'
+            'sandbox' : 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
+        if self.get_environment() == self.PRODUCTION:
+            self.SQUARE_ENVIRONMENT = self.PRODUCTION
 
         if original:
             return return_value
 
         return_value['start_date'] = self.START_DATE
+
         return return_value
 
     @staticmethod
     def get_credentials():
-        return {
-            'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN'),
-            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
-            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
-        }
+        environment = os.getenv('TAP_SQUARE_ENVIRONMENT')
+        if environment in ['sandbox', 'production']:
+            creds =  {
+                'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
+                'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
+                'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                }
+        else:
+            raise Exception("Square Environment: {} is not supported.".format(environment))
+
+        return creds
 
     def expected_check_streams(self):
         return set(self.expected_metadata().keys()).difference(set())
@@ -114,19 +139,21 @@ class TestSquareBase(unittest.TestCase):
             },
             "refunds": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'created_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "payments": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "modifier_lists": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
+            "bank_accounts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            }
         }
 
     def expected_replication_method(self):
@@ -135,6 +162,15 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def production_streams(self):
+        """Some streams can only have data on the production app. We must test these separately"""
+        return {
+            'bank_accounts'
+        }
+
+    def sandbox_streams(self):
+        """By default we will be testing streams in the sandbox"""
+        return self.expected_streams().difference(self.production_streams())
 
     def static_data_streams(self):
         """
@@ -143,6 +179,7 @@ class TestSquareBase(unittest.TestCase):
         """
         return {
             'locations',  # Limit 300 objects, DELETES not supported
+            'bank_accounts',  # No endpoints for CREATE or UPDATE
         }
 
     def dynamic_data_streams(self):
@@ -169,6 +206,12 @@ class TestSquareBase(unittest.TestCase):
         return {table: properties.get(self.PRIMARY_KEYS, set())
                 for table, properties
                 in self.expected_metadata().items()}
+
+    def expected_replication_keys(self):
+        incremental_streams = self.expected_incremental_streams()
+        return {table: properties.get(self.REPLICATION_KEYS, set())
+                for table, properties
+                in self.expected_metadata().items() if table in incremental_streams}
 
     def expected_automatic_fields(self):
         auto_fields = {}
@@ -225,6 +268,9 @@ class TestSquareBase(unittest.TestCase):
         return schemas
 
     def parse_date(self, date_value):
+        """
+        Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
+        """
         try:
             date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
             return date_stripped
@@ -233,7 +279,22 @@ class TestSquareBase(unittest.TestCase):
                 date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
                 return date_stripped
             except ValueError:
-                raise NotImplementedError
+                raise NotImplementedError("We are not accounting for dates of this format: {}".format(date_value))
+
+    def date_check_and_parse(self, date_value):
+        """
+        Pass in any value and return that value. If the value is a string-formatted-datetime, parse
+        the value and return it as an unformatted datetime object.
+        """
+        try:
+            date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%S.%fZ")
+            return date_stripped
+        except ValueError:
+            try:
+                date_stripped = dt.strptime(date_value, "%Y-%m-%dT%H:%M:%SZ")
+                return date_stripped
+            except ValueError:
+                return date_value
 
     def expected_schema_keys(self, stream):
 
@@ -242,19 +303,22 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
+    # TODO Determine if sorting is even a valid modifier for our expectations
     def sort_records_recur(self, records):
-        for record in records:
-            self.sort_record_recur(record)
+        pass
+        # for record in records:
+        #     self.sort_record_recur(record)
 
     def sort_record_recur(self, record):
-        if isinstance(record, dict):
-            for key, value in record.items():
-                if type(value) == dict:
-                    self.sort_record_recur(value)
-                elif type(value) == list:
-                    for rec in value:
-                        self.sort_record_recur(rec)
-                    self.sort_array_type(record, key, value)
+        pass
+        # if isinstance(record, dict):
+        #     for key, value in record.items():
+        #         if type(value) == dict:
+        #             self.sort_record_recur(value)
+        #         elif type(value) == list:
+        #             for rec in value:
+        #                 self.sort_record_recur(rec)
+        #             self.sort_array_type(record, key, value)
             
 
     def modify_expected_records(self, records):
@@ -274,27 +338,33 @@ class TestSquareBase(unittest.TestCase):
                     self.sort_array_type(expected_record, key, value)
                 else:
                     self.align_date_type(expected_record, key, value)
-
+                    self.align_number_type(expected_record, key, value)
 
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
-        # TODO update this to execute fo all datetime objects
-        if isinstance(value, str) and key in ['updated_at', 'created_at']:# TODO: update to reflect replication keys
-            raw_date = self.parse_date(value)
+        if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
+            # key in ['updated_at', 'created_at']:
+            raw_date = self.date_check_and_parse(value)
             iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
+
+    def align_number_type(self, record, key, value):
+        """float values must conform to json number formatting so we convert to Decimal"""
+        if isinstance(value, float) and key in ['latitude', 'longitude']:
+            record[key] = str(value)
 
     def sort_array_type(self, record, key, value):
         """
         List values are returned by square as unordered arrays.
         In order to accurately compare expected and actual records, we must sort all lists.
         """
-        try:
-            if isinstance(value, list) and value:
-                if isinstance(value[0], dict) and "id" in value[0].keys():
-                    record[key] = sorted(value, key=lambda x: x['id'])
-                else:
-                    record[key] = sorted(value)
-        except Exception as ex:
-            print("Could not sort array at key: {}, value: {}".format(key, value))
-            raise
+        pass
+        # try:
+        #     if isinstance(value, list) and value:
+        #         if isinstance(value[0], dict) and "id" in value[0].keys():
+        #             record[key] = sorted(value, key=lambda x: x['id'])
+        #         else:
+        #             record[key] = sorted(value)
+        # except Exception as ex:
+        #     print("Could not sort array at key: {}, value: {}".format(key, value))
+        #     raise
