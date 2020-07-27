@@ -10,6 +10,7 @@ import singer
 
 from tap_square.client import SquareClient
 from tap_square.streams import Inventories
+from tap_square.streams import Orders
 
 LOGGER = singer.get_logger()
 
@@ -75,7 +76,6 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            #if not self.PAYMENTS:
             self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
@@ -83,6 +83,9 @@ class TestClient(SquareClient):
         elif stream == 'inventories':
             inventories = Inventories()
             return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
+        elif stream == 'orders':
+            orders = Orders()
+            return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError
 
@@ -133,6 +136,23 @@ class TestClient(SquareClient):
             LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
+    def post_order(self, body, location_id):
+        """
+        body: {
+          "order": {
+            "location_id": None,
+          },
+          "idempotency_key": str(uuid.uuid4())
+        }
+        """
+        resp = self._client.orders.create_order(location_id=location_id, body=body)
+
+        if resp.is_error():
+            stream_name = body['batches'][0]['objects'][0]['type']
+            raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
+        LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
+        return resp
+
     def create(self, stream, ext_obj=None, start_date=None):
         if stream == 'items':
             return self.create_item().body.get('objects')
@@ -146,6 +166,9 @@ class TestClient(SquareClient):
             return self.create_employees().body.get('objects')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
+        elif stream == 'orders':
+            location_id = [location['id'] for location in self.get_all('locations')][0]
+            return [self.create_order(location_id).body.get('order')]
         elif stream == 'refunds':
             return [self.create_refunds(ext_obj, start_date).body.get('refund')]
         elif stream == 'payments':
@@ -370,6 +393,11 @@ class TestClient(SquareClient):
         # return response.json()
         return None
 
+    def create_order(self, location_id):
+        body = {'order': {'location_id': None},
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_order(body, location_id)
+
     def create_batch_post(self, stream, num_records):
         recs_to_create = []
         for i in range(num_records):
@@ -405,6 +433,9 @@ class TestClient(SquareClient):
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
+        elif stream == 'orders':
+            location_id = [location['id'] for location in self.get_all('locations')][0]
+            return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]
         else:
@@ -479,6 +510,12 @@ class TestClient(SquareClient):
     ##########################################################################
     ### DELETEs
     ##########################################################################
+
+    def update_order(self, location_id, obj_id, version):
+        body = {'order': {'note': self.make_id('order'),
+                          'version': version},
+                'idempotency_key': str(uuid.uuid4())}
+        return self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
