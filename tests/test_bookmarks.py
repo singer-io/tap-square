@@ -180,8 +180,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             updated_record = self.client.update(stream, first_rec_id, first_rec_version)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
             assert len(updated_record) == 1, "Updated too many {} records".format(stream)
-            # if stream == 'payments':
-            #     updated_record = self.client.get_a_payment(first_rec_id, self.START_DATE)
             expected_records_2[stream] += updated_record
             updated_records[stream] += updated_record
 
