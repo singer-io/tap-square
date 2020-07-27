@@ -96,7 +96,7 @@ class TestClient(SquareClient):
 
             return_value = None if len(return_value) > 0 and return_value[0].get('status') == 'APPROVED' else return_value
 
-        LOGGER.info('get_a_payment: {}', return_value)
+        LOGGER.info('get_a_payment: %s', str(return_value))
         return return_value
 
     ##########################################################################
