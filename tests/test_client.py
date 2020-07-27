@@ -86,14 +86,18 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError
 
-    def get_a_payment(self, payment_id):
-        payment_result = self._client.payments.get_payment(payment_id=payment_id)
+    def get_a_payment(self, payment_id, start_date):
+        self.PAYMENTS = None
+        return_value = []
+        while not return_value:
+            LOGGER.info('get_a_payment: Calling API')
+            all_payments = self.get_all('payments', start_date)
+            return_value = [payment for payment in all_payments if payment['id'] == payment_id]
 
-        if payment_result.is_error():
-            error_message = payment_result.errors if payment_result.errors else payment_result.body
-            raise RuntimeError(error_message)
+            return_value = None if len(return_value) > 0 and return_value[0].get('status') == 'APPROVED' else return_value
 
-        return [payment_result.body.get('payment')]
+        LOGGER.info('get_a_payment: {}', return_value)
+        return return_value
 
     ##########################################################################
     ### CREATEs
@@ -166,9 +170,8 @@ class TestClient(SquareClient):
         if payment_obj is None:
             print("The are currently no payments in the test data set with a status " + \
                   "of COMPLETED and without existing refunds, so we must generate a new payment.")
-            payment_obj = self.create_payments(autocomplete=True, source_key="card")
-            payment_obj = self.get_a_payment(payment_id=payment_obj.get('id'))[0]
-            self.PAYMENTS += [payment_obj]
+            payment_response = self.create_payments(autocomplete=True, source_key="card")
+            payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -192,10 +195,6 @@ class TestClient(SquareClient):
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
                 payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
-                payment_obj = self.get_a_payment(payment_id=payment.get('id'))[0]
-                self.PAYMENTS = None # Force refresh of the cache since we updated one
-                self.get_all('payments', start_date)
-
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')
 
@@ -208,6 +207,9 @@ class TestClient(SquareClient):
             else:
                 raise RuntimeError(refund.errors)
 
+        # Update Payments
+        self.PAYMENTS = None # Force refresh of the cache since we updated one
+        self.get_all('payments', start_date)
         return refund
 
     def create_payments(self, autocomplete=False, source_key=None):
