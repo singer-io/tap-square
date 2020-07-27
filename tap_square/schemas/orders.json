@@ -432,7 +432,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     },
     "total_tax_money": {
       "properties": {

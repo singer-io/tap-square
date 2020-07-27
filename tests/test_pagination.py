@@ -85,7 +85,6 @@ class TestSquarePagination(TestSquareBase):
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
-            API_LIMIT = self.get_api_limit(stream)
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if len(existing_objects) == 0:
                print("NO DATA EXISTS FOR STREAM {}".format(stream))
@@ -97,7 +96,7 @@ class TestSquarePagination(TestSquareBase):
                 print('{}: Will create {} records'.format(stream, num_to_post))
                 new_objects = []
                 if stream == 'orders':
-                    location_id = [location['id'] for location in self.get_all('locations')][0]
+                    location_id = [location['id'] for location in self.client.get_all('locations')][0]
                     for i in range(num_to_post):
                         new_objects.append(self.client.create_order(location_id))
                 elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
