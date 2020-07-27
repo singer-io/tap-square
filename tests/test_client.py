@@ -75,8 +75,8 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            if not self.PAYMENTS:
-                self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
+            #if not self.PAYMENTS:
+            self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
             return self.PAYMENTS
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
