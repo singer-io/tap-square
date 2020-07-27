@@ -21,6 +21,7 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
+                # 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3586
                 'inventories',
                 'modifier_lists',
             }
@@ -28,14 +29,9 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations'  # BUG https://stitchdata.atlassian.net/browse/SRCE-3532
+                'bank_accounts', # Cannot create a record, also PROD ONLY
             }
         )
-
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        cls.client = TestClient()
 
     @classmethod
     def tearDownClass(cls):
@@ -43,6 +39,7 @@ class TestSquareAllFields(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams()
@@ -52,6 +49,8 @@ class TestSquareAllFields(TestSquareBase):
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static()
         self.all_fields_test()
+
+        # TODO implement PRODUCTION
 
     def all_fields_test(self):
         """
@@ -180,14 +179,30 @@ class TestSquareAllFields(TestSquareBase):
                 self.assertEqual(stream_expected_record_ids,
                                  stream_actual_record_ids)
 
-                # verify by values, that we replicated the expected records
+                # Test by keys and values, that we replicated the expected records and nothing else
+
+                # Verify that actual records were in our expectations
                 for actual_record in actual_records:
-                    self.sort_record_recur(actual_record)
                     stream_expected_records = [record for record in expected_records.get(stream)
                                                if actual_record.get('id') == record.get('id')]
-                    self.assertTrue(len(stream_expected_records), 1)
+                    self.assertTrue(len(stream_expected_records),
+                                    msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+                    self.assertEqual(len(stream_expected_records), 1,
+                                     msg="A duplicate record was found in our expectations for {}.".format(stream))
                     stream_expected_record = stream_expected_records[0]
                     self.assertDictEqual(actual_record, stream_expected_record)
+
+
+                # Verify that our expected records were replicated by the tap
+                for expected_record in expected_records.get(stream):
+                    stream_actual_records = [record for record in actual_records
+                                             if expected_record.get('id') == record.get('id')]
+                    self.assertTrue(len(stream_actual_records),
+                                    msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+                    self.assertEqual(len(stream_actual_records), 1,
+                                     msg="A duplicate record was found in the sync for {}.".format(stream))
+                    stream_actual_record = stream_actual_records[0]
+                    self.assertDictEqual(expected_record, stream_actual_record)
 
 
 if __name__ == '__main__':
