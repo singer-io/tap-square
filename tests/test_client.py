@@ -157,25 +157,30 @@ class TestClient(SquareClient):
             print(response.body.get('errrors'))
         return response.body.get('object')
 
-    def create_inventory_adjustment(self, catalog_obj=None, start_date=None):
-        if catalog_obj is None:
-            if self.ITEMS:
-                catalog_obj = random.choice([self.ITEMS])
-            else:
-                catalogs = self.get_all('items', start_date=start_date)
-                catalog_obj = random.choice(catalogs)
-        # catalog_obj_id = 'V22COYDDG7Q7GYOBBTLB4R2B' # TODO get from catalog
-        # loc_id = 'VEN5D4KBE9GTT' # TODO get from catalog
-        # from_state = 'IN_STOCK' # TODO get from catalog
-        import pdb; pdb.set_trace()
-        catalog_obj_id = catalog_obj.get('id')
-        inventory_obj = self.get_catalog_object(catalog_obj_id)
-        loc_id = inventory_obj.get('location_id')
-        from_state = inventory_obj.get('state')
+    def get_an_inventory_adjustment(self, obj_id):
+        response = self._client.inventory.retrieve_inventory_changes(catalog_object_id=obj_id)
 
+        if response.is_error():
+            raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
+        return response
+
+    def create_inventory_adjustment(self, start_date=None):
+        # Create an item
+        item = self.create_item().body.get('objects')[0]
+
+        # Crate an item_variation and get it's ID
+        item_variation = self.create_item_variation(item.get('id')).body.get('catalog_object')
+        catalog_obj_id = item_variation.get('id')
+
+        # Get a random location
+        all_locations = self.get_all('locations')
+        loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+        from_state = 'IN_STOCK'  # inventory_obj.get('state')
+
+        # Adjustment logic
         made_id = self.make_id('inventory')
         if from_state == 'IN_STOCK':
-            states = ['SOLD', 'SOLD_ONLINE', 'WASTE']
+            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
         else:
             states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
                       'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
@@ -197,10 +202,6 @@ class TestClient(SquareClient):
                     'catalog_object_id': catalog_obj_id,
                     # 'catalog_object_type': 'ITEM_VARIATION',
                     'quantity': '1.0',
-                    # 'total_price_money': {
-                    #     'amount': random.randint(1, 10000),
-                    #     'currency': random.choice(['JPY', 'USD', 'GBP', 'CAD', 'AUD']),
-                    # } if to_state == 'SOLD' else {},
                     'source': {
                         'product': random.choice([
                             'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
@@ -220,11 +221,10 @@ class TestClient(SquareClient):
             'ignore_unchanged_counts': random.choice([True, False]),
             'idempotency_key': str(uuid.uuid4())
         }
-        import pdb; pdb.set_trace()
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
             print(response.body.get('errors'))
-            raise
+
         return response
 
     def create_item(self):
@@ -233,6 +233,59 @@ class TestClient(SquareClient):
                                           'item_data': {'name': self.make_id('item')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
+
+    def create_item_variation(self, item_id):
+        made_id = self.make_id('item_variation')
+        body = {
+            'idempotency_key': str(uuid.uuid4()),
+            'object': {
+                'id': made_id,
+                'type': 'ITEM_VARIATION',
+                'item_variation_data': {
+                  'item_id': item_id,
+                  'name': 'item data',
+                  'sku': 'sku ',
+                  'pricing_type': 'VARIABLE_PRICING',
+                  'track_inventory': True,
+                  'inventory_alert_type': 'LOW_QUANTITY',
+                  'user_data': 'user data'
+                },
+                'present_at_all_locations': random.choice([True, False]),
+                # 'custom_attribute_values': {
+                #     'Key': {
+                #         'name': 'Item Variation Custom Value',
+                #         'key': 'custom_val' + made_id,
+                #         'type': 'STRING',
+                #         'string_value': 'String value'
+                #     }
+                # },
+                # 'custom_attribute_definition_data': {
+                #     'type': 'STRING',
+                #     'name': made_id + 'Custom Attr',
+                #     'description': 'Description',
+                #     'allowed_object_types': [
+                #         'ITEM',
+                #         'ITEM_VARIATION'
+                #     ],
+                #     'seller_visibility': 'SELLER_VISIBILITY_READ_WRITE_VALUES',
+                #     'app_visibility': 'APP_VISIBILITY_READ_WRITE_VALUES',
+                #     'number_config': {
+                #         'precision': random.randint(0,5),
+                #     },
+                #     'selection_config': {
+                #         'max_allowed_selections': 100
+                #     },
+                #     'key': 'CustAttr{}'.format(made_id),
+                # },
+            }
+        }
+
+        response = self._client.catalog.upsert_catalog_object(body)
+
+        if response.is_error():
+            raise RuntimeError('Create ITEM_VARIATION: {}'.format(response.errors))
+        
+        return response
 
     def create_categories(self):
         body = {'batches': [{'objects': [{'id': self.make_id('category'),

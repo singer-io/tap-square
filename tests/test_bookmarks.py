@@ -21,7 +21,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'refunds',
                 'payments',
                 'modifier_lists',
-                'inventories',
+                # 'inventories',
             }
         )
     @classmethod
