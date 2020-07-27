@@ -145,7 +145,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
                 refund = created_records[stream][0]
                 payment_id = refund.get('payment_id')
-                updated_records['payments'] += self.client.get_a_payment(payment_id)
                 # a CREATE for refunds will result in a new payments object
                 created_records['payments'].append(self.client.PAYMENTS[-1])
                 expected_records_2['payments'].append(self.client.PAYMENTS[-1])
@@ -170,6 +169,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
             updated_record = self.client.update(stream, first_rec_id, first_rec_version)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
             assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+            if stream == 'payments':
+                updated_record = self.client.get_a_payment(first_rec_id, self.START_DATE)
             expected_records_2[stream] += updated_record
             updated_records[stream] += updated_record
 
