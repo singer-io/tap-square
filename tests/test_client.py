@@ -59,9 +59,7 @@ class TestClient(SquareClient):
 
     def get_all(self, stream, start_date=None, end_date=None):
         if stream == 'items':
-            if not self.ITEMS:
-                self.ITEMS = [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
-            return self.ITEMS
+            return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
         elif stream == 'categories':
             return [obj for page, _ in self.get_catalog('CATEGORY', start_date, None) for obj in page]
         elif stream == 'discounts':

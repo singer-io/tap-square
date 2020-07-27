@@ -22,7 +22,7 @@ class TestSquareAllFields(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
                 # 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3586
-                'inventories',
+                # 'inventories',
                 'modifier_lists',
             }
         )
