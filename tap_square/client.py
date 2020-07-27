@@ -174,7 +174,7 @@ class SquareClient():
         while result.body.get('cursor'):
             with singer.http_request_timer('GET orders'):
                 body['cursor'] = result.body.get('cursor')
-                result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
+                result = self._client.orders.search_orders(body=body)
 
             if result.is_error():
                 raise Exception(result.errors)
