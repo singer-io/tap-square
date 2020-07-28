@@ -24,6 +24,8 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
+    SHIFT_HOURS = 2
+
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
         NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
@@ -152,7 +154,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, ext_obj=None, start_date=None):
+    def create(self, stream, ext_obj=None, start_date=None, end_date=None):
         if stream == 'items':
             return self.create_item().body.get('objects')
         elif stream == 'categories':
@@ -175,7 +177,14 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return [self.create_payments()]
         elif stream == 'shifts':
-            pass
+            employee_id = [employee['id'] for employee in self.get_all('employees')][0]
+            location_id = [location['id'] for location in self.get_all('locations')][0]
+            if not end_date:
+                start_date_parsed = singer.utils.strptime_to_utc(start_date)
+                end_date_datetime = start_date_parsed + datetime.timedelta(hours = self.SHIFT_HOURS)
+                end_date = singer.utils.strftime(end_date_datetime)
+
+            return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
         else:
             raise NotImplementedError
 
@@ -529,6 +538,25 @@ class TestClient(SquareClient):
         body = {'order': {'location_id': None},
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_order(body, location_id)
+
+    def create_shift(self, employee_id, location_id, start_date, end_date):
+        body = {
+            'idempotency_key': str(uuid.uuid4()),
+            'shift': {
+                'employee_id': 'TMvfDDk-ICS5X0Gp', # This is the only employee we have on the sandbox
+                'location_id': 'LEGCPJWJ48776', # Should we vary this?
+                'start_at': '2020-07-26T09:00:00Z', # This can probably be derived from the test's start date
+                'end_at': '2020-07-26T10:00:00Z' # This can be some short time after the start time
+            }
+        }
+
+        resp = self._client.labor.create_shift(body=body)
+
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+
+        return resp
+
 
     def create_batch_post(self, stream, num_records):
         recs_to_create = []
