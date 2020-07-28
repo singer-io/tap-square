@@ -41,15 +41,20 @@ class TestSquareIncrementalReplication(TestSquareBase):
         print("\n\nTEST TEARDOWN\n\n")
 
     def poll_for_updated_record(self, rec_id, start_date):
+        from time import sleep
         all_payments = self.client.get_all('payments', self.START_DATE)
         temp_rec = [payment for payment in all_payments if payment['id'] == rec_id]
 
-        for i in range(3):
-            print("Polling payments for record: id={}".format(rec_id))
-            records = self.client.get_a_payment(rec_id, start_date)
+        for i in range(10):
+            print("Polling {} iteration of payments for record: id={}".format(i, rec_id))
+            sleep(10)
+            all_payments = self.client.get_all('payments', self.START_DATE)
+            records = [payment for payment in all_payments if payment['id'] == rec_id]
             assert len(records) == 1
             record = records[0]
             if len(temp_rec[0].keys()) < len(record.keys()):
+                print("Poll Successful after {} iterations.".format(i))
+                print(set(temp_rec[0].keys()).symmetric_difference(set(record.keys())))
                 break
 
         return records
