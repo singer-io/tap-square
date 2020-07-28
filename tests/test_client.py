@@ -174,6 +174,8 @@ class TestClient(SquareClient):
             return [self.create_refunds(ext_obj, start_date).body.get('refund')]
         elif stream == 'payments':
             return [self.create_payments()]
+        elif stream == 'shifts':
+            pass
         else:
             raise NotImplementedError
 
