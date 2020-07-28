@@ -206,7 +206,8 @@ class SquareClient():
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
-    def get_shifts(self, start_time):
+    # TODO: Use start_time in a later iteration, ignoring in pylint for now
+    def get_shifts(self, start_time): #pylint: disable=unused-argument
         body = {
             "query": {
                 "sort": {

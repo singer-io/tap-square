@@ -176,7 +176,7 @@ class Shifts:
     #     records after the bookmark
     replication_key = 'updated_at'
 
-    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use, unused-argument
         for page, cursor in client.get_shifts(start_time):
             yield page, cursor
 
