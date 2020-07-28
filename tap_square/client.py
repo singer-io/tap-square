@@ -182,10 +182,9 @@ class SquareClient():
             yield (result.body.get('orders', []), result.body.get('cursor'))
 
 
-    def get_inventories(self, variation_ids, start_time):
+    def get_inventories(self, start_time):
         with singer.http_request_timer('GET inventories'):
             result = self._client.inventory.batch_retrieve_inventory_counts(body={
-                # "catalog_object_ids": variation_ids,
                 "updated_after": start_time,
             })
 
@@ -197,7 +196,6 @@ class SquareClient():
         while result.body.get('cursor'):
             with singer.http_request_timer('GET inventories'):
                 result = self._client.inventory.batch_retrieve_inventory_counts(body={
-                    # "catalog_object_ids": variation_ids,
                     "updated_after": start_time,
                     "cursor": result.body.get('cursor'),
                 })

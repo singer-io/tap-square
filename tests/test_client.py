@@ -81,7 +81,7 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':
-            return [obj for page, _ in self.get_inventories(None, start_date) for obj in page]
+            return [obj for page, _ in self.get_inventories(start_date) for obj in page]
         elif stream == 'orders':
             orders = Orders()
             return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
