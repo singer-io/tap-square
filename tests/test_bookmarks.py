@@ -22,7 +22,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-                # 'inventories',
             }
         )
 
@@ -177,7 +176,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
             first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
-            updated_record = self.client.update(stream, first_rec_id, first_rec_version)
+            if stream == 'inventories':
+                updated_record = self.client.update(stream, obj_id=None, version=None, obj=first_rec)
+            else:
+                updated_record = self.client.update(stream, first_rec_id, first_rec_version)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
             assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_2[stream] += updated_record

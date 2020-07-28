@@ -13,7 +13,7 @@ from test_client import TestClient
 # Testing the TestCLient
 ##########################################################################
 if __name__ == "__main__":
-    client = TestClient()
+    client = TestClient(env='sandbox')
     START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES

@@ -16,6 +16,7 @@ class TestSquarePagination(TestSquareBase):
     BATCH_LIMIT = 1000
     API_LIMIT = {
         'items': BATCH_LIMIT,
+        'inventories': BATCH_LIMIT,
         'categories': BATCH_LIMIT,
         'discounts': BATCH_LIMIT,
         'taxes': BATCH_LIMIT,
@@ -37,7 +38,7 @@ class TestSquarePagination(TestSquareBase):
                 'refunds',
                 'payments',
                 'modifier_lists',
-                'inventories',
+
             }
         )
 
@@ -99,7 +100,7 @@ class TestSquarePagination(TestSquareBase):
                     location_id = [location['id'] for location in self.client.get_all('locations')][0]
                     for i in range(num_to_post):
                         new_objects.append(self.client.create_order(location_id))
-                elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
+                elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT or stream == 'inventories': # not all streams have batch endpoints
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
                         start_date = self.START_DATE if stream == 'refunds' else None
