@@ -641,7 +641,7 @@ class TestClient(SquareClient):
 
     def update_inventory_adjustment(self, catalog_obj):
         catalog_obj_id = catalog_obj.get('catalog_object_id')
-        loca_id = catalog_obj.get('location_id')
+        loc_id = catalog_obj.get('location_id')
 
         from_state = 'IN_STOCK'  # inventory_obj.get('state')
 

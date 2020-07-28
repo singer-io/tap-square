@@ -155,7 +155,7 @@ class Orders():
 
 class Inventories:
     tap_stream_id = 'inventories'
-    key_properties = ['catalog_object_id', 'location_id']
+    key_properties = []
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None

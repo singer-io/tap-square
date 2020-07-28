@@ -168,6 +168,7 @@ class TestAutomaticFields(TestSquareBase):
                 expected_keys = self.expected_automatic_fields().get(stream)
                 schema_keys = set(self.expected_schema_keys(stream))
                 primary_keys = self.expected_primary_keys().get(stream)
+                pk = list(primary_keys)[0] if primary_keys else None
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
@@ -185,39 +186,37 @@ class TestAutomaticFields(TestSquareBase):
 
                 # Test by keys and values, that we replicated the expected records and nothing else
 
-                # Verify that actual records were in our expectations
-                for actual_record in actual_records:
-                    if len(primary_keys) > 1:
-                        pk_1, pk_2 = primary_keys
-                        stream_expected_records = [record for record in expected_records.get(stream)
-                                                   if actual_record.get(pk_1) == record.get(pk_1) and
-                                                   actual_record.get(pk_2) == record.get(pk_2)]
-                    else:
-                        pk = list(primary_keys)[0]
+                if pk:  # If the stream has a pk we can compare exact records
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
                         stream_expected_records = [record for record in expected_records.get(stream)
                                                    if actual_record.get(pk) == record.get(pk)]
-                    self.assertTrue(len(stream_expected_records),
-                                    msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                    self.assertEqual(len(stream_expected_records), 1,
-                                     msg="A duplicate record was found in our expectations for {}.".format(stream))
-                    stream_expected_record = stream_expected_records[0]
-                    self.assertDictEqual(actual_record, stream_expected_record)
+                        self.assertTrue(len(stream_expected_records),
+                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+                        self.assertEqual(len(stream_expected_records), 1,
+                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
+                        stream_expected_record = stream_expected_records[0]
+                        self.assertDictEqual(actual_record, stream_expected_record)
 
 
-                # Verify that our expected records were replicated by the tap
-                for expected_record in expected_records.get(stream):
-                    if len(primary_keys) > 1:
-                        pk_1, pk_2 = primary_keys
-                        stream_actual_records = [record for record in actual_records
-                                                 if expected_record.get(pk_1) == record.get(pk_1) and
-                                                 expected_record.get(pk_2) == record.get(pk_2)]
-                    else:
-                        pk = list(primary_keys)[0]
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
                         stream_actual_records = [record for record in actual_records
                                                  if expected_record.get(pk) == record.get(pk)]
-                    self.assertTrue(len(stream_actual_records),
-                                    msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                    self.assertEqual(len(stream_actual_records), 1,
-                                     msg="A duplicate record was found in the sync for {}.".format(stream))
-                    stream_actual_record = stream_actual_records[0]
+                        self.assertTrue(len(stream_actual_records),
+                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+                        self.assertEqual(len(stream_actual_records), 1,
+                                         msg="A duplicate record was found in the sync for {}.".format(stream))
+                        stream_actual_record = stream_actual_records[0]
                     self.assertDictEqual(expected_record, stream_actual_record)
+
+                else:  # 'inventories' does not have a pk so our assertions aren't as clean
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        self.assertIn(actual_record, expected_records.get(stream))
+
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        self.assertIn(expected_record, actual_records)

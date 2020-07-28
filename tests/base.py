@@ -134,7 +134,7 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_KEYS: {'updated_at'}
             },
             "inventories": {
-                self.PRIMARY_KEYS: {'catalog_object_id', 'location_id'},
+                self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
             },
             "refunds": {
