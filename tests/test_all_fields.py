@@ -234,5 +234,6 @@ class TestSquareAllFields(TestSquareBase):
                     self.assertEqual(len(expected_records.get(stream)), len(actual_records),
                                      msg="Unexpected number of records synced.")
 
+
 if __name__ == '__main__':
     unittest.main()

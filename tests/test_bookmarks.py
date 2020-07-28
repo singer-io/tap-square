@@ -22,6 +22,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
+                'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
             }
         )
 
@@ -385,8 +386,28 @@ class TestSquareIncrementalReplication(TestSquareBase):
                             self.assertDictEqual(updated_record, sync_record)
 
                 else:  # 'inventories' does not have a pk so our assertions aren't as clean
-                    print("TODO Missing assertions for stream 'inventories'")
-                    pass
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        if actual_record not in expected_records.get(stream):
+                            print("DATA DISCREPANCY:\n\nACTUAL RECORD:\n{}\n".format(actual_record))
+                            for record in expected_records.get(stream):
+                                if record.get('catalog_object_id') == actual_record.get('catalog_object_id') and \
+                                   record.get('location_id') == actual_record.get('location_id'):
+                                    print("EXPECTED_RECORDS:")
+                                    print(str(record))
+                        self.assertIn(actual_record, expected_records.get(stream))
+
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        if expected_record not in actual_records:
+                            print("DATA DISCREPANCY:\n\nEXPECTED RECORD:\n{}\n".format(expected_record))
+                            for record in actual_records:
+                                if record.get('catalog_object_id') == expected_record.get('catalog_object_id') and \
+                                   record.get('location_id') == expected_record.get('location_id'):
+                                    print("ACTUAL_RECORDS:")
+                                    print(str(record))
+                        self.assertIn(expected_record, actual_records)
 
 
 if __name__ == '__main__':
