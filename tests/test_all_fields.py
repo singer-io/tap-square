@@ -21,8 +21,8 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees',
-                # 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3586
-                # 'inventories',
+                'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
+                'inventories',
                 'modifier_lists',
             }
         )

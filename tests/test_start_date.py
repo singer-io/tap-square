@@ -22,8 +22,6 @@ class TestSquareStartDate(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'employees', # TODO Requires production environment to create records
-                'refunds', # BUG see bookmarks test
-                'payments', # BUG see bookmarks test
                 'modifier_lists',
                 'inventories',
             }
@@ -81,9 +79,13 @@ class TestSquareStartDate(TestSquareBase):
             # If no objects exist since the 2nd start_date, create one
             data_in_range = False # TODO this can be cleaned up
             for obj in expected_records_1.get(stream):
-                created = obj.get('created_at') or obj.get('updated_at')
-
-                if self.parse_date(created) > self.parse_date(self.START_DATE_2):
+                rep_keys = self.expected_replication_keys().get(stream)
+                rep_key = list(rep_keys)[0] if rep_keys else None
+                if rep_key is None:
+                    key = obj.get('created_at')
+                else:
+                    key = obj.get(rep_key)
+                if self.parse_date(key) > self.parse_date(self.START_DATE_2):
                     data_in_range = True
                     break
             if not data_in_range:
@@ -215,33 +217,21 @@ class TestSquareStartDate(TestSquareBase):
                     self.assertTrue(state_2.get(stream) is None,
                                     msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
 
-                    # Verify that the 2nd sync includes the same number of records as the 1st sync.
-                    # -> Currently full table does not obey start_date, which makes this assertion valid
-                    self.assertEqual(record_count_2, record_count_1,
-                                     msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
-                                     "Record counts should be equal, but are not\n" +
-                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                     "Sync 1 record_count: {}\n".format(record_count_1) +
-                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                     "Sync 2 record_count: {}".format(record_count_2))
+                    # Verify that the 2nd sync resutls in less records than the 1st sync.
+                    self.assertLess(record_count_2, record_count_1,
+                                    msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
+                                    "Second sync should result in fewer records\n" +
+                                    "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                    "Sync 1 record_count: {}\n".format(record_count_1) +
+                                    "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                    "Sync 2 record_count: {}".format(record_count_2))
 
-
-                    # Verify all records in the 1st sync are included in the 2nd sync since
-                    # 2nd sync has a later start date.
-                    records_from_sync_1 = set(row.get('data').get('eid')
-                                              for row in synced_records_1.get(stream, []).get('messages', []))
-                    records_from_sync_2 = set(row.get('data').get('eid')
-                                              for row in synced_records_2.get(stream, []).get('messages', []))
-                    self.assertEqual(set(), records_from_sync_1.difference(records_from_sync_2),
-                                     msg="Sync 2 record(s) missing from Sync 1:\n{}".format(
-                                         records_from_sync_2.difference(records_from_sync_1))
-                    )
 
                 # Testing how INCREMENTAL streams handle start date
                 elif replication_type == self.INCREMENTAL:
 
                     # Verify 1st sync record count > 2nd sync record count since the 1st start date is older than the 2nd.
-                    # self.assertGreater(replicated_row_count_1, replicated_row_count_2, msg="Expected less records on 2nd sync.")
+                    self.assertGreater(replicated_row_count_1, replicated_row_count_2, msg="Expected less records on 2nd sync.")
 
 
                     # Verify that each stream has less records in 2nd sync than the 1st.

@@ -694,15 +694,18 @@ class TestClient(SquareClient):
 
         return response
 
-    ##########################################################################
-    ### DELETEs
-    ##########################################################################
-
     def update_order(self, location_id, obj_id, version):
         body = {'order': {'note': self.make_id('order'),
                           'version': version},
                 'idempotency_key': str(uuid.uuid4())}
-        return self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
+        resp = self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp
+
+    ##########################################################################
+    ### DELETEs
+    ##########################################################################
 
     def delete_catalog(self, ids_to_delete):
         body = {'object_ids': ids_to_delete}
