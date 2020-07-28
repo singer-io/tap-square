@@ -34,8 +34,6 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'refunds',
-                'payments',
                 'modifier_lists',
                 'inventories',
             }
@@ -123,14 +121,6 @@ class TestSquarePagination(TestSquareBase):
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
-
-        # ensure our expectations include any creates that were not explicityly called
-        stream = 'payments'
-        previous_record_count =  len(expected_records.get(stream))
-        if previous_record_count < len(self.client.PAYMENTS):
-            expected_records[stream] = self.client.PAYMENTS
-            added_record_count = previous_record_count - len(expected_records.get(stream))
-            print("Adding {} untracked records to {}".format(added_record_count, stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False)

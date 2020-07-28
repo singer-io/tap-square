@@ -41,15 +41,20 @@ class TestSquareIncrementalReplication(TestSquareBase):
         print("\n\nTEST TEARDOWN\n\n")
 
     def poll_for_updated_record(self, rec_id, start_date):
+        from time import sleep
         all_payments = self.client.get_all('payments', self.START_DATE)
         temp_rec = [payment for payment in all_payments if payment['id'] == rec_id]
 
-        for i in range(3):
-            print("Polling payments for record: id={}".format(rec_id))
-            records = self.client.get_a_payment(rec_id, start_date)
+        for i in range(10):
+            print("Polling {} iteration of payments for record: id={}".format(i, rec_id))
+            sleep(2)
+            all_payments = self.client.get_all('payments', self.START_DATE)
+            records = [payment for payment in all_payments if payment['id'] == rec_id]
             assert len(records) == 1
             record = records[0]
             if len(temp_rec[0].keys()) < len(record.keys()):
+                print("Poll Successful after {} iterations.".format(i))
+                print(set(temp_rec[0].keys()).symmetric_difference(set(record.keys())))
                 break
 
         return records
@@ -173,8 +178,16 @@ class TestSquareIncrementalReplication(TestSquareBase):
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
+            elif stream == 'orders':
+                for message in first_sync_records.get(stream).get('messages'):
+                    if message.get('data')['state'] != 'COMPLETED':
+                        first_rec = message.get('data')
+                        break
 
-            first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
+                if not first_rec:
+                    raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
+            else:
+                first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
             updated_record = self.client.update(stream, first_rec_id, first_rec_version)
@@ -332,7 +345,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                     # Verify that the inserted records are replicated by the 2nd sync and match our expectations
                     for created_record in created_records.get(stream):
-                        # # BUG | https://stitchdata.atlassian.net/browse/SRCE-3532
                         sync_records = [record for record in second_sync_data
                                         if created_record.get('id') == record.get('id')]
                         self.assertTrue(len(sync_records),
@@ -353,6 +365,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
                             self.assertEqual(len(sync_records), 1,
                                              msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
                             sync_record = sync_records[0]
+
+                            # TODO | TEST ISSUE | Address delayed fields in updated payments
+                            if stream == 'payments' and sync_record.get('processing_fee') and updated_record.get('processing_fee') is None:
+                                updated_record['processing_fee'] = updated_record.get('processing_fee')
+
                             self.assertDictEqual(updated_record, sync_record)
 
 
