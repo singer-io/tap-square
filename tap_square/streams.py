@@ -165,6 +165,22 @@ class Inventories:
             yield page, cursor
 
 
+class Shifts:
+    tap_stream_id = 'shifts'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL' # Maybe 'FULL_TABLE'
+    valid_replication_keys = []
+    # TODO We cannot query the API with an updated at
+    # - There's a `filter` in the `body` we can use, but that will filter on the start time of the shift
+    #   - Strategy 1: Always query with the start time for the tap config, ordering by `updated_at` and emit the
+    #     records after the bookmark
+    replication_key = 'updated_at'
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        for page, cursor in client.get_shifts(start_time):
+            yield page, cursor
+
+
 STREAMS = {
     'items': Items,
     'categories': Categories,
@@ -178,4 +194,5 @@ STREAMS = {
     'modifier_lists': ModifierLists,
     'inventories': Inventories,
     'orders': Orders,
+    'shifts': Shifts,
 }
