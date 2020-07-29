@@ -98,16 +98,18 @@ class TestSquarePagination(TestSquareBase):
                     location_id = [location['id'] for location in self.client.get_all('locations')][0]
                     for i in range(num_to_post):
                         new_objects.append(self.client.create_order(location_id))
-                elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT or stream == 'inventories': # not all streams have batch endpoints
+                elif stream in {'inventories','employees', 'refunds', 'payments'}: # non catalog objectsx
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
                         start_date = self.START_DATE if stream == 'refunds' else None
                         new_object = self.client.create(stream, start_date=start_date)
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
                         new_objects += new_object
-                else:
+                elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
                     new_objects = self.client.create_batch_post(stream, num_to_post).body.get('objects', [])
 
+                else:
+                    raise RuntimeError("The stream {} is missing from the setup.".format(stream))
                 expected_records[stream] += new_objects
 
                 print('{}: Created {} records'.format(stream, num_to_post))
