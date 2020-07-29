@@ -24,6 +24,8 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
+    # This is the duration of a shift, we make this constant so we can
+    # ensure the shifts don't overlap
     SHIFT_MINUTES = 2
 
     """
@@ -181,17 +183,13 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees')][0]
             location_id = [location['id'] for location in self.get_all('locations')][0]
-
-            if not end_date:
-                start_date_parsed = singer.utils.strptime_with_tz(start_date)
-                end_date_datetime = start_date_parsed + timedelta(minutes = self.SHIFT_MINUTES)
-                end_date = singer.utils.strftime(end_date_datetime)
-
             max_end_at = max([obj['end_at'] for obj in self.get_all('shifts')])
             if start_date < max_end_at:
                 LOGGER.warning('Tried to create a Shift that overlapped another shift')
                 # Readjust start date and end date
                 start_date = max_end_at
+
+            if not end_date:
                 start_date_parsed = singer.utils.strptime_with_tz(start_date)
                 end_date_datetime = start_date_parsed + timedelta(minutes = self.SHIFT_MINUTES)
                 end_date = singer.utils.strftime(end_date_datetime)
@@ -563,10 +561,10 @@ class TestClient(SquareClient):
         }
 
         resp = self._client.labor.create_shift(body=body)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+
         if resp.is_error():
             raise RuntimeError(resp.errors)
-
+        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
 
 
@@ -755,7 +753,7 @@ class TestClient(SquareClient):
 
         if resp.is_error():
             raise RuntimeError(resp.errors)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+        LOGGER.info('Updated a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
 
     def update_order(self, location_id, obj_id, version):
