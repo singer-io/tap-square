@@ -19,7 +19,6 @@ class TestAutomaticFields(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
                 'modifier_lists', # TODO must be added once creates and updates are available
-                'inventories', # TODO Exception: [{'code': 'INSUFFICIENT_SCOPES': INVENTORY_READ'
             }
         )
 
@@ -64,9 +63,16 @@ class TestAutomaticFields(TestSquareBase):
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
-            assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
-            print("Data exists for stream: {}".format(stream))
+            if not existing_objects:
+                print("Test data is not properly set for {}.".format(stream))
 
+                new_record = self.client.create(stream, start_date=self.START_DATE)
+                assert len(new_record) > 0, "Failed to create a {} record".format(stream)
+                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
+
+                expected_records[stream] += new_record
+
+            print("Data exists for stream: {}".format(stream))
             for obj in existing_objects:
                 expected_records[stream].append(
                     {field: obj.get(field)
@@ -161,6 +167,8 @@ class TestAutomaticFields(TestSquareBase):
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
                 schema_keys = set(self.expected_schema_keys(stream))
+                primary_keys = self.expected_primary_keys().get(stream)
+                pk = list(primary_keys)[0] if primary_keys else None
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
@@ -178,25 +186,37 @@ class TestAutomaticFields(TestSquareBase):
 
                 # Test by keys and values, that we replicated the expected records and nothing else
 
-                # Verify that actual records were in our expectations
-                for actual_record in actual_records:
-                    stream_expected_records = [record for record in expected_records.get(stream)
-                                               if actual_record.get('id') == record.get('id')]
-                    self.assertTrue(len(stream_expected_records),
-                                    msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                    self.assertEqual(len(stream_expected_records), 1,
-                                     msg="A duplicate record was found in our expectations for {}.".format(stream))
-                    stream_expected_record = stream_expected_records[0]
-                    self.assertDictEqual(actual_record, stream_expected_record)
+                if pk:  # If the stream has a pk we can compare exact records
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        stream_expected_records = [record for record in expected_records.get(stream)
+                                                   if actual_record.get(pk) == record.get(pk)]
+                        self.assertTrue(len(stream_expected_records),
+                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+                        self.assertEqual(len(stream_expected_records), 1,
+                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
+                        stream_expected_record = stream_expected_records[0]
+                        self.assertDictEqual(actual_record, stream_expected_record)
 
 
-                # Verify that our expected records were replicated by the tap
-                for expected_record in expected_records.get(stream):
-                    stream_actual_records = [record for record in actual_records
-                                             if expected_record.get('id') == record.get('id')]
-                    self.assertTrue(len(stream_actual_records),
-                                    msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                    self.assertEqual(len(stream_actual_records), 1,
-                                     msg="A duplicate record was found in the sync for {}.".format(stream))
-                    stream_actual_record = stream_actual_records[0]
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        stream_actual_records = [record for record in actual_records
+                                                 if expected_record.get(pk) == record.get(pk)]
+                        self.assertTrue(len(stream_actual_records),
+                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+                        self.assertEqual(len(stream_actual_records), 1,
+                                         msg="A duplicate record was found in the sync for {}.".format(stream))
+                        stream_actual_record = stream_actual_records[0]
                     self.assertDictEqual(expected_record, stream_actual_record)
+
+                else:  # 'inventories' does not have a pk so our assertions aren't as clean
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        self.assertIn(actual_record, expected_records.get(stream))
+
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        self.assertIn(expected_record, actual_records)

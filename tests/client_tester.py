@@ -3,6 +3,7 @@ This is used for testing basic functionality of the test client.
 To run change the desired flags below and use the following command from the tap-tester repo:
   'python ../tap-adroll/tests/client_tester.py'
 """
+from datetime import datetime
 import random
 
 from test_client import TestClient
@@ -13,7 +14,8 @@ from test_client import TestClient
 ##########################################################################
 if __name__ == "__main__":
     client = TestClient(env='sandbox')
-    START_DATE = '2020-06-24T00:00:00Z'
+    # START_DATE = '2020-06-24T00:00:00Z'
+    START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
@@ -26,12 +28,13 @@ if __name__ == "__main__":
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
         'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        #'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
     ]

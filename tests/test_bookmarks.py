@@ -22,7 +22,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-                'inventories',
+                'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
             }
         )
 
@@ -163,7 +163,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
             # Create
             new_record = self.client.create(stream, start_date=self.START_DATE)
             assert len(new_record) > 0, "Failed to create a {} record".format(stream)
-            assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
+            if stream != 'inventories':  # This stream may have multiple records as a result of a single create
+                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
 
             expected_records_2[stream] += new_record
             created_records[stream] += new_record
@@ -190,9 +191,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
-            updated_record = self.client.update(stream, first_rec_id, first_rec_version)
-            assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
-            assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+            if stream == 'inventories':
+                updated_record = self.client.update(stream, obj_id=None, version=None, obj=first_rec)
+                assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
+            else:
+                updated_record = self.client.update(stream, first_rec_id, first_rec_version)
+                assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
+                assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_2[stream] += updated_record
             updated_records[stream] += updated_record
 
@@ -222,11 +227,18 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
-            updated_ids = [record.get('id') for record in updated_records[stream]]
-            for record in expected_records_1.get(stream, []):
-                if record.get('id') in updated_ids:
-                    continue  # do not add the orginal of the updated record
-                expected_records_2[stream].append(record)
+            primary_keys = self.expected_primary_keys().get(stream)
+            pk = list(primary_keys)[0] if primary_keys else None
+            if pk:
+
+                updated_ids = [record.get(pk) for record in updated_records[stream]]
+                for record in expected_records_1.get(stream, []):
+                    if record.get(pk) in updated_ids:
+                        continue  # do not add the orginal of the updated record
+                    expected_records_2[stream].append(record)
+
+            else:  # since `inventories` has no pk add all records from 1st sync
+                expected_records_2[stream] += (expected_records_1.get(stream, []))
 
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),
@@ -335,18 +347,19 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_2.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
+                pk = list(primary_keys)[0] if primary_keys else None
                 if stream != 'orders':  # ORDERS has too many dependencies to track explicitly
                     self.assertEqual(len(expected_records), len(second_sync_data),
                                      msg="Expected number of records do not match actual for 2nd sync.\n" +
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                     )
 
-                for primary_key in primary_keys:
+                if pk:  # PKs are needed for comparing records
 
                     # Verify that the inserted records are replicated by the 2nd sync and match our expectations
                     for created_record in created_records.get(stream):
                         sync_records = [record for record in second_sync_data
-                                        if created_record.get('id') == record.get('id')]
+                                        if created_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(sync_records),
                                         msg="An inserted record is missing from our sync: \nRECORD: {}".format(created_record))
                         self.assertEqual(len(sync_records), 1,
@@ -359,7 +372,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     for updated_record in updated_records.get(stream):
                         if stream not in self.cannot_update_streams():
                             sync_records = [record for record in second_sync_data
-                                            if updated_record.get('id') == record.get('id')]
+                                            if updated_record.get(pk) == record.get(pk)]
                             self.assertTrue(len(sync_records),
                                             msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
                             self.assertEqual(len(sync_records), 1,
@@ -371,6 +384,30 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                 updated_record['processing_fee'] = sync_record.get('processing_fee')
 
                             self.assertDictEqual(updated_record, sync_record)
+
+                else:  # 'inventories' does not have a pk so our assertions aren't as clean
+
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        if actual_record not in expected_records.get(stream):
+                            print("DATA DISCREPANCY:\n\nACTUAL RECORD:\n{}\n".format(actual_record))
+                            for record in expected_records.get(stream):
+                                if record.get('catalog_object_id') == actual_record.get('catalog_object_id') and \
+                                   record.get('location_id') == actual_record.get('location_id'):
+                                    print("EXPECTED_RECORDS:")
+                                    print(str(record))
+                        self.assertIn(actual_record, expected_records.get(stream))
+
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        if expected_record not in actual_records:
+                            print("DATA DISCREPANCY:\n\nEXPECTED RECORD:\n{}\n".format(expected_record))
+                            for record in actual_records:
+                                if record.get('catalog_object_id') == expected_record.get('catalog_object_id') and \
+                                   record.get('location_id') == expected_record.get('location_id'):
+                                    print("ACTUAL_RECORDS:")
+                                    print(str(record))
+                        self.assertIn(expected_record, actual_records)
 
 
 if __name__ == '__main__':
