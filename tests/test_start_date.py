@@ -1,3 +1,4 @@
+import os
 from datetime import datetime as dt
 from datetime import timedelta
 
@@ -20,17 +21,17 @@ class TestSquareStartDate(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'employees', # Requires production environment to create records
-                'locations',  # Requires proper permissions
-                'refunds',
-                'payments',
-                'modifier_lists'
+                'employees', # TODO Requires production environment to create records
+                'modifier_lists',
+                'inventories',
             }
         )
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(
-            set()  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'bank_accounts', # Cannot create a record, also PROD ONLY
+            }
         )
 
     def timedelta_formatted(self, dtime, days=0):
@@ -45,19 +46,23 @@ class TestSquareStartDate(TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA")
+
         # Initialize start_date state to make assertions
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams()
         self.start_date_test()
 
-        print("\n\nTESTING WITH STATIC DATA")
-        self.START_DATE = self.STATIC_START_DATE
-        self.START_DATE_1 = self.STATIC_START_DATE
-        self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
-        self.TESTABLE_STREAMS = self.testable_streams_static()
-        self.start_date_test()
+        # print("\n\nTESTING WITH STATIC DATA") # TODO no static streams currently testable
+        # self.START_DATE = self.STATIC_START_DATE
+        # self.START_DATE_1 = self.STATIC_START_DATE
+        # self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
+        # self.TESTABLE_STREAMS = self.testable_streams_static()
+        # self.start_date_test()
+
+        # TODO implement PRODUCTION
 
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))
@@ -74,9 +79,13 @@ class TestSquareStartDate(TestSquareBase):
             # If no objects exist since the 2nd start_date, create one
             data_in_range = False # TODO this can be cleaned up
             for obj in expected_records_1.get(stream):
-                created = obj.get('created_at') or obj.get('updated_at')
-
-                if self.parse_date(created) > self.parse_date(self.START_DATE_2):
+                rep_keys = self.expected_replication_keys().get(stream)
+                rep_key = list(rep_keys)[0] if rep_keys else None
+                if rep_key is None:
+                    key = obj.get('created_at')
+                else:
+                    key = obj.get(rep_key)
+                if self.parse_date(key) > self.parse_date(self.START_DATE_2):
                     data_in_range = True
                     break
             if not data_in_range:
@@ -165,7 +174,10 @@ class TestSquareStartDate(TestSquareBase):
         print("discovered schemas are kosher")
 
         # Select all available streams and their fields
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs)
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
 
         catalogs = menagerie.get_catalogs(conn_id)
 
@@ -205,27 +217,15 @@ class TestSquareStartDate(TestSquareBase):
                     self.assertTrue(state_2.get(stream) is None,
                                     msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
 
-                    # Verify that the 2nd sync includes the same number of records as the 1st sync.
-                    # -> Currently full table does not obey start_date, which makes this assertion valid
-                    self.assertEqual(record_count_2, record_count_1,
-                                     msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
-                                     "Record counts should be equal, but are not\n" +
-                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                     "Sync 1 record_count: {}\n".format(record_count_1) +
-                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                     "Sync 2 record_count: {}".format(record_count_2))
+                    # Verify that the 2nd sync resutls in less records than the 1st sync.
+                    self.assertLess(record_count_2, record_count_1,
+                                    msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
+                                    "Second sync should result in fewer records\n" +
+                                    "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                    "Sync 1 record_count: {}\n".format(record_count_1) +
+                                    "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                    "Sync 2 record_count: {}".format(record_count_2))
 
-
-                    # Verify all records in the 1st sync are included in the 2nd sync since
-                    # 2nd sync has a later start date.
-                    records_from_sync_1 = set(row.get('data').get('eid')
-                                              for row in synced_records_1.get(stream, []).get('messages', []))
-                    records_from_sync_2 = set(row.get('data').get('eid')
-                                              for row in synced_records_2.get(stream, []).get('messages', []))
-                    self.assertEqual(set(), records_from_sync_1.difference(records_from_sync_2),
-                                     msg="Sync 2 record(s) missing from Sync 1:\n{}".format(
-                                         records_from_sync_2.difference(records_from_sync_1))
-                    )
 
                 # Testing how INCREMENTAL streams handle start date
                 elif replication_type == self.INCREMENTAL:

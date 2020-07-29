@@ -1,12 +1,15 @@
+import os
 import unittest
-import simplejson
+
+import singer
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBase
-from test_client import TestClient
+
+LOGGER = singer.get_logger()
 
 
 class TestSquareIncrementalReplication(TestSquareBase):
@@ -18,14 +21,43 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
-                'refunds',
-                'payments',
-                'modifier_lists'
+                'modifier_lists',
+                'inventories',
             }
         )
+
+    def cannot_update_streams(self):
+        return {
+            'refunds',  # Does not have an endpoint for updating records
+        }
+
+    def streams_with_record_differences_after_create(self):
+        return {
+            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario
+        }
+
     @classmethod
     def tearDownClass(cls):
         print("\n\nTEST TEARDOWN\n\n")
+
+    def poll_for_updated_record(self, rec_id, start_date):
+        from time import sleep
+        all_payments = self.client.get_all('payments', self.START_DATE)
+        temp_rec = [payment for payment in all_payments if payment['id'] == rec_id]
+
+        for i in range(10):
+            print("Polling {} iteration of payments for record: id={}".format(i, rec_id))
+            sleep(2)
+            all_payments = self.client.get_all('payments', self.START_DATE)
+            records = [payment for payment in all_payments if payment['id'] == rec_id]
+            assert len(records) == 1
+            record = records[0]
+            if len(temp_rec[0].keys()) < len(record.keys()):
+                print("Poll Successful after {} iterations.".format(i))
+                print(set(temp_rec[0].keys()).symmetric_difference(set(record.keys())))
+                break
+
+        return records
 
     def run_sync(self, conn_id):
         """
@@ -58,6 +90,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # TODO implement PRODUCTION if necessary
+
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Instatiate default start date
@@ -70,6 +105,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             if len(existing_objects) == 0:
                 # TODO change from 'failure you need data' to 'create data then so we can test'
+                # This can be implemented at the end of testing once all streams can be created consistently
                 assert None, "NO DATA EXISTS FOR {}, SOMETHING HAS GONE TERRIBLY WRONG".format(stream)
 
             expected_records_1[stream] += existing_objects
@@ -117,48 +153,104 @@ class TestSquareIncrementalReplication(TestSquareBase):
         created_records = {x: [] for x in self.expected_streams()}
         updated_records = {x: [] for x in self.expected_streams()}
         expected_records_2 = {x: [] for x in self.expected_streams()}
+
+        # We should expect any records with rep-keys equal to the bookmark from the first sync to be returned by the second
+        for order in first_sync_records['orders']['messages']:
+            if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
+                expected_records_2['orders'].append(order['data'])
+
         for stream in self.testable_streams():
             # Create
-            new_record = self.client.create(stream)
+            new_record = self.client.create(stream, start_date=self.START_DATE)
             assert len(new_record) > 0, "Failed to create a {} record".format(stream)
             assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
+
             expected_records_2[stream] += new_record
-            created_records[stream] = new_record.pop()
-            # Update
-            first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
+            created_records[stream] += new_record
+            if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
+                refund = created_records[stream][0]
+                payment_id = refund.get('payment_id')
+                # a CREATE for refunds will result in a new payments object
+                created_records['payments'].append(self.client.PAYMENTS[-1])
+                expected_records_2['payments'].append(self.client.PAYMENTS[-1])
+
+        for stream in self.testable_streams().difference(self.cannot_update_streams()):
+            # Update all streams (but save payments for last)
+            if stream == 'payments':
+                continue
+            elif stream == 'orders':
+                for message in first_sync_records.get(stream).get('messages'):
+                    if message.get('data')['state'] != 'COMPLETED':
+                        first_rec = message.get('data')
+                        break
+
+                if not first_rec:
+                    raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
+            else:
+                first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
             updated_record = self.client.update(stream, first_rec_id, first_rec_version)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
             assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_2[stream] += updated_record
-            updated_records[stream] = updated_record.pop()
+            updated_records[stream] += updated_record
+
+        # Update a Payment AFTER all other streams have been updated
+        # Payments which have already completed/cancelled can't be done so again so find first APPROVED payment
+        first_rec = dict()
+        for message in first_sync_records.get('payments').get('messages'):
+            if message.get('data')['status'] == 'APPROVED':
+                first_rec = message.get('data')
+                break
+
+        if not first_rec:
+            raise RuntimeError("Unable to find any any payment with status APPROVED")
+        first_rec_id = first_rec.get('id')
+        first_rec_version = first_rec.get('version')
+
+
+        updated_record = self.client.update('payments', first_rec_id, first_rec_version)
+        assert len(updated_record) > 0, "Failed to update a {} record".format('payments')
+        assert len(updated_record) == 1, "Updated too many {} records".format('payments')
+
+        updated_record = self.poll_for_updated_record(first_rec_id, self.START_DATE) #self.client.get_a_payment(first_rec_id, self.START_DATE)
+
+        expected_records_2['payments'] += updated_record
+        updated_records['payments'] += updated_record
+
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
+            updated_ids = [record.get('id') for record in updated_records[stream]]
             for record in expected_records_1.get(stream, []):
-                if record.get('id') == updated_records[stream].get('id'):
+                if record.get('id') in updated_ids:
                     continue  # do not add the orginal of the updated record
                 expected_records_2[stream].append(record)
 
         # Adjust expectations for datetime format
-        for record_set in [created_records, updated_records]:
-            for stream, expected_records in record_set.items():
-                print("Adjust expectations for stream: {}".format(stream))
-                self.modify_expected_record(expected_records)
-
-        for stream, expected_records in expected_records_2.items():
-                print("Adjust expectations for stream: {}".format(stream))
+        for record_desc, records in [("created", created_records), ("updated", updated_records),
+                                     ("2nd sync expected records", expected_records_2)]:
+            print("Adjusting epxectations for {} records".format(record_desc))
+            for stream, expected_records in records.items():
+                print("\tadjusting for stream: {}".format(stream))
                 self.modify_expected_records(expected_records)
 
         # ensure validity of expected_records_2
         for stream in self.testable_streams():
             if stream in self.expected_incremental_streams():
-                assert len(expected_records_2.get(stream)) == 2, "Expectations are invalid for" + \
-                    " incremental stream {}".format(stream)
+                if stream in self.cannot_update_streams():
+                    self.assertEqual(len(expected_records_2.get(stream)), 1,
+                                     msg="Expectations are invalid for incremental stream {}".format(stream))
+                elif stream == 'orders': # ORDERS are returned inclusive on the datetime queried
+                    self.assertEqual(len(expected_records_2.get(stream)), 3,
+                                     msg="Expectations are invalid for incremental stream {}".format(stream))
+                else:  # Most streams will have 2 records from the Update and Insert
+                    self.assertEqual(len(expected_records_2.get(stream)), 2,
+                                     msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
-                assert len(expected_records_2.get(stream)) ==  len(expected_records_1.get(stream)) + 1, "Expectations are " + \
-                    "invalid for full table stream {}".format(stream)
+                self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
+                                 msg="Expectations are invalid for full table stream {}".format(stream))
 
         # Run a second sync job using orchestrator
         second_sync_record_count = self.run_sync(conn_id)
@@ -174,19 +266,17 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 second_sync_data = [record.get("data") for record
                                     in second_sync_records.get(stream, {}).get("messages", {"data": {}})]
+                stream_replication_keys = self.expected_replication_keys()
+                stream_primary_keys = self.expected_primary_keys()
 
                 # TESTING INCREMENTAL STREAMS
                 if stream in self.expected_incremental_streams():
 
+                    replication_keys = stream_replication_keys.get(stream)
+
                     # Verify both syncs write / keep the same bookmark
                     self.assertEqual(set(first_sync_state.get('bookmarks', {}).keys()),
                                      set(second_sync_state.get('bookmarks', {}).keys()))
-
-                    # Verify second sync's bookmarks move past the first sync's
-                    self.assertGreater(
-                        second_sync_state.get('bookmarks', {stream: {}}).get(stream, {'updated_at': -1}).get('updated_at'),
-                        first_sync_state.get('bookmarks', {stream: {}}).get(stream, {'updated_at': -1}).get('updated_at')
-                    )
 
                     # verify that there is more than 1 record of data - setup necessary
                     self.assertGreater(first_sync_record_count.get(stream, 0), 1,
@@ -198,14 +288,29 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         second_sync_record_count.get(stream, 0),
                         msg="first sync didn't have more records, bookmark usage not verified")
 
-                    # Verify that all data of the 2nd sync is >= the bookmark from the first sync
-                    replication_key = next(iter(self.expected_metadata().get(stream).get(self.REPLICATION_KEYS)))
-                    first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
-                    for record in second_sync_data:
-                        date_value = record["updated_at"]
-                        self.assertGreater(date_value,
-                                           first_sync_bookmark,
-                                           msg="First sync bookmark is not less than 2nd sync record's replication-key")
+
+                    for replication_key in replication_keys:
+
+                        # Verify second sync's bookmarks move past the first sync's
+                        self.assertGreater(
+                            second_sync_state.get('bookmarks', {stream: {}}).get(
+                                stream, {replication_key: -1}).get(replication_key),
+                            first_sync_state.get('bookmarks', {stream: {}}).get(
+                                stream, {replication_key: -1}).get(replication_key)
+                        )
+
+                        # Verify that all data of the 2nd sync is >= the bookmark from the first sync
+                        first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
+                        for record in second_sync_data:
+                            date_value = record[replication_key]
+                            if stream == 'orders':
+                                self.assertGreaterEqual(date_value,
+                                                        first_sync_bookmark,
+                                                        msg="A 2nd sync record has a replication-key that is less than the 1st sync bookmark.")
+                            else:
+                                self.assertGreater(date_value,
+                                                   first_sync_bookmark,
+                                                   msg="A 2nd sync record has a replication-key that is less than or equal to the 1st sync bookmark.")
 
                 elif stream in self.expected_full_table_streams():
 
@@ -226,47 +331,46 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # TESTING APPLICABLE TO ALL STREAMS
 
                 # Verify that the expected records are replicated in the 2nd sync
-                # For incremental streams we should see only 2 records
+                # For incremental streams we should see only 2 records (a new record and an updated record)
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_2.get(stream)
-                self.assertEqual(len(expected_records), len(second_sync_data),
-                                 msg="Expected number of records do not match actual for 2nd sync.\n" +
-                                 "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                )
+                primary_keys = stream_primary_keys.get(stream)
+                if stream != 'orders':  # ORDERS has too many dependencies to track explicitly
+                    self.assertEqual(len(expected_records), len(second_sync_data),
+                                     msg="Expected number of records do not match actual for 2nd sync.\n" +
+                                     "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                    )
 
-                # Verify that the inserted records are replicated by the 2nd sync and match our expectations
-                schema_keys = set(self.expected_schema_keys(stream))
-                created_record = created_records.get(stream)
-                updated_record = updated_records.get(stream)
-                if not created_record in second_sync_data:
-                    print("\n\nDATA DISCREPANCY FOR CREATED RECORD: {}\n".format(stream))
-                    print("EXPECTED RECORD: {}\n".format(created_record))
-                    replicated_created_record = [record for record in second_sync_data
-                                                 if created_record.get('id') == record.get('id')]
-                    print("ACTUAL RECORD: {}".format(replicated_created_record))
-                    for key in schema_keys:
-                        val = replicated_created_record[0].get(key)
-                        e_val = created_record.get(key)
-                        if e_val != val:
-                            print("\nDISCREPANCEY | KEY {}: ACTUAL: {} EXPECTED {}".format(key, val, e_val))
-                # BUG | https://stitchdata.atlassian.net/browse/SRCE-3532
-                self.assertIn(created_record, second_sync_data,
-                              msg="Data discrepancy for the created record.")
+                for primary_key in primary_keys:
 
-                # Verify that the updated records are replicated by the 2nd sync and match our expectations
-                if not updated_record in second_sync_data:
-                    print("\n\nDATA DISCREPANCY FOR UPDATED RECORD: {}\n".format(stream))
-                    print("EXPECTED RECORD: {}\n".format(updated_record))
-                    replicated_updated_record = [record for record in second_sync_data
-                                                 if updated_record.get('id') == record.get('id')]
-                    print("ACTUAL RECORD: {}".format(replicated_updated_record[0]))
-                    for key in schema_keys:
-                        val = replicated_updated_record[0].get(key)
-                        e_val = updated_record.get(key)
-                        if e_val != val:
-                            print("\nDISCREPANCEY | KEY {}: ACTUAL: {} EXPECTED {}".format(key, val, e_val))
-                self.assertIn(updated_record, second_sync_data,
-                              msg="Data discrepancy for the updated record.")
+                    # Verify that the inserted records are replicated by the 2nd sync and match our expectations
+                    for created_record in created_records.get(stream):
+                        sync_records = [record for record in second_sync_data
+                                        if created_record.get('id') == record.get('id')]
+                        self.assertTrue(len(sync_records),
+                                        msg="An inserted record is missing from our sync: \nRECORD: {}".format(created_record))
+                        self.assertEqual(len(sync_records), 1,
+                                         msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
+                        sync_record = sync_records[0]
+                        if stream not in self.streams_with_record_differences_after_create():
+                            self.assertDictEqual(created_record, sync_record)
+
+                    # Verify that the updated records are replicated by the 2nd sync and match our expectations
+                    for updated_record in updated_records.get(stream):
+                        if stream not in self.cannot_update_streams():
+                            sync_records = [record for record in second_sync_data
+                                            if updated_record.get('id') == record.get('id')]
+                            self.assertTrue(len(sync_records),
+                                            msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
+                            self.assertEqual(len(sync_records), 1,
+                                             msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
+                            sync_record = sync_records[0]
+
+                            # TODO | TEST ISSUE | Address delayed fields in updated payments
+                            if stream == 'payments' and sync_record.get('processing_fee') and updated_record.get('processing_fee') is None:
+                                updated_record['processing_fee'] = sync_record.get('processing_fee')
+
+                            self.assertDictEqual(updated_record, sync_record)
 
 
 if __name__ == '__main__':

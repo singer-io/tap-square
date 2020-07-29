@@ -24,6 +24,12 @@
       ],
       "format": "date-time"
     },
+    "note": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "amount_money": {
       "type": [
         "null",
@@ -45,6 +51,12 @@
       }
     },
     "status": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "note": {
       "type": [
         "null",
         "string"
@@ -183,7 +195,8 @@
             "type": [
               "null",
               "string"
-            ]
+            ],
+            "format": "date-time"
           },
           "type": {
             "type": [
@@ -288,7 +301,8 @@
       "type": [
         "null",
         "string"
-      ]
+      ],
+      "format": "date-time"
     }
   }
 }

@@ -3,6 +3,9 @@ from square.client import Client
 from singer import utils
 import singer
 
+LOGGER = singer.get_logger()
+
+
 class SquareClient():
     def __init__(self, config):
         self._refresh_token = config['refresh_token']
@@ -13,6 +16,7 @@ class SquareClient():
 
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
+
 
     def _get_access_token(self):
         body = {
@@ -28,7 +32,8 @@ class SquareClient():
             result = client.o_auth.obtain_token(body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            error_message = result.errors if result.errors else result.body
+            raise Exception(error_message)
 
         return result.body['access_token']
 
@@ -67,9 +72,7 @@ class SquareClient():
 
             yield (result.body.get('objects', []), result.body.get('cursor'))
 
-
     def get_employees(self, bookmarked_cursor):
-
         body = {
             'limit': 50,
         }
@@ -96,6 +99,7 @@ class SquareClient():
             yield (result.body.get('employees', []), result.body.get('cursor'))
 
     def get_locations(self):
+        body = {}
         with singer.http_request_timer('GET locations'):
             result = self._client.locations.list_locations()
 
@@ -105,15 +109,105 @@ class SquareClient():
         yield (result.body.get('locations', []), result.body.get('cursor'))
 
         while result.body.get('cursor'):
+            body['cursor'] = result.body.get('cursor')
             with singer.http_request_timer('GET locations'):
-                result = self._client.locations.list_locations()
+                result = self._client.locations.list_locations(**body)
 
             if result.is_error():
                 raise Exception(result.errors)
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
 
-    def get_refunds(self, object_type, start_time, bookmarked_cursor): # TODO:check sort_order input
+    def get_bank_accounts(self):
+        body = {}
+
+        with singer.http_request_timer('GET bank accounts'):
+            result = self._client.bank_accounts.list_bank_accounts()
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body['cursor']
+            with singer.http_request_timer('GET bank accounts'):
+                result = self._client.bank_accounts.list_bank_accounts(**body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
+
+    def get_orders(self, location_ids, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "date_time_filter": {
+                            "updated_at": {
+                                "start_at": start_time
+                            }
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        body['location_ids'] = location_ids
+
+        with singer.http_request_timer('GET orders'):
+            result = self._client.orders.search_orders(body=body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('orders', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET orders'):
+                body['cursor'] = result.body.get('cursor')
+                result = self._client.orders.search_orders(body=body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('orders', []), result.body.get('cursor'))
+
+
+    def get_inventories(self, variation_ids, start_time):
+        with singer.http_request_timer('GET inventories'):
+            result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                "catalog_object_ids": variation_ids,
+                "updated_after": start_time,
+            })
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('counts', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET inventories'):
+                result = self._client.inventory.batch_retrieve_inventory_counts(body={
+                    "catalog_object_ids": variation_ids,
+                    "updated_after": start_time,
+                    "cursor": result.body.get('cursor'),
+                })
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('counts', []), result.body.get('cursor'))
+
+    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
@@ -136,7 +230,7 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET ' + object_type):
+            with singer.http_request_timer('GET refunds'):
                 result = self._client.refunds.list_payment_refunds(**body)
 
             if result.is_error():
@@ -144,8 +238,7 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
-
-    def get_payments(self, object_type, start_time, bookmarked_cursor):
+    def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
@@ -168,7 +261,7 @@ class SquareClient():
 
         while result.body.get('cursor'):
             body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET ' + object_type):
+            with singer.http_request_timer('GET payments'):
                 result = self._client.payments.list_payments(**body)
 
             if result.is_error():
