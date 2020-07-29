@@ -2,6 +2,7 @@
 Test tap discovery
 """
 import re
+import os
 
 from tap_tester import menagerie, connections, runner
 
@@ -24,6 +25,16 @@ class DiscoveryTest(TestSquareBase):
                 in self.expected_metadata().items()}
 
     def test_run(self):
+        """Instantiate start date according to the desired data set and run the test"""
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.discovery_test()
+
+        self.set_environment(self.PRODUCTION)
+        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.discovery_test()
+
+    def discovery_test(self):
         """
         Verify that discover creates the appropriate catalog, schema, metadata, etc.
 

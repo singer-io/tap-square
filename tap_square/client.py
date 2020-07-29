@@ -2,6 +2,11 @@ from datetime import timedelta
 from square.client import Client
 from singer import utils
 import singer
+import requests
+
+
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
 
 LOGGER = singer.get_logger()
 
@@ -272,18 +277,53 @@ class SquareClient():
             yield (result.body.get('payments', []), result.body.get('cursor'))
 
 
+    def get_batch_token(self, link):
+        if link:
+            url = link[link.find('<')+1:link.find('>')]
+            parsed = urlparse.urlparse(url)
+            batch_token = parse_qs(parsed.query)['batch_token'][0]
+            return int(batch_token)
+        return None
+            
     def get_employee_roles(self, start_time, bookmarked_cursor):
-        # sync data but only emit rows >= to the bookmark?
-
+#         # sync data but only emit rows >= to the bookmark?
+        headers={
+            'Authorization': 'Bearer ' + self._access_token,
+            'Content-Type': 'application/json'
+        }
+        params = {'limit': 1}
+        url='https://connect.squareup.com/v1/me/roles'
+        import ipdb; ipdb.set_trace()
+        1+1
         with singer.http_request_timer('GET payments'):
-            result = self._client.v1_employees.list_employee_roles(order='ASC', limit=200)
+            result = requests.get(url, headers=headers, params=params)
 
+        # if result.is_error():
+        #     raise Exception(result.errors)
+
+        batch_token = self.get_batch_token(result.headers.get('Link'))
+
+        yield (result.json(), batch_token)
         # the next page is in a Link header of the result.headers ApiResponse from square sdk?
-        yield (result.body.get('items', []), result.body.get('cursor'))
 
-        while result.headers.get('Link'):
-            # get the next link between <>
-            # go go go
+        while batch_token:
+            params['batch_token'] = batch_token
+            with singer.http_request_timer('GET payments'):
+                result = requests.get(url, headers=headers, params=params)
+                
+            # if result.is_error():
+            #     raise Exception(result.errors)
+            
+            batch_token = self.get_batch_token(result.headers.get('Link'))
+            
+            yield (result.json(), batch_token)
+            
+        
+
+# #        while result.headers.get('Link'):
+#             # get the next link between <>
+#             # go go go
+
 
 
 
