@@ -160,7 +160,7 @@ class Inventories:
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self,client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         # TODO: Need to pass in bookmarked_cursor into get_inventories
         for page, cursor in client.get_inventories(start_time, bookmarked_cursor):
             yield page, cursor
