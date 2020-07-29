@@ -381,7 +381,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                             # TODO | TEST ISSUE | Address delayed fields in updated payments
                             if stream == 'payments' and sync_record.get('processing_fee') and updated_record.get('processing_fee') is None:
-                                updated_record['processing_fee'] = updated_record.get('processing_fee')
+                                updated_record['processing_fee'] = sync_record.get('processing_fee')
 
                             self.assertDictEqual(updated_record, sync_record)
 
