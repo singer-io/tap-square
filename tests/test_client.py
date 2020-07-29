@@ -351,47 +351,40 @@ class TestClient(SquareClient):
         return response
 
     def create_item(self):
+        start_date = '2020-07-29T00:00:00Z'
+        mod_lists = self.get_all('modifier_lists', start_date)
+        mod_list_id = random.choice(mod_lists).get('id')
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
                                           'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item')}}]}],
+                                          'item_data': {'name': self.make_id('item'),
+                                                        'modifier_list_info':[{
+                                                            'modifier_list_id': mod_list_id,
+                                                            'enabled': True
+                                                        }]}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def create_modifier_list(self):
-        made_id = self.make_id('modifier_lists')
-        body = {'batches': [{'objects': [{'id': made_id,
+        mod_id = self.make_id('modifier')
+        list_id = self.make_id('modifier_lists')
+        body = {'batches': [{'objects': [{'id': list_id,
                                           'type': 'MODIFIER_LIST',
-                                          'item_data': {'name': made_id},
-                                          'custom_attribute_values': {
-                                              'custom_attribute_values-0': {},
-                                              'custom_attribute_values-1': {},
-                                          },
-                                          # 'catalog_v1_ids': [{}],
-                                          # 'absent_at_location_ids': [],
-                                          'category_data': {'name': made_id},
-                                          'modifier_list_data': {},
-                                          'modifier_data':  {'name': made_id,
-                                                             'selection_type': random.choice(['SINGLE', 'MULTIPLE']),},
-                                          'present_at_all_locations': random.choice([True, False]),
-                                          # 'measurement_unit_data': {},
-                                          'custom_attribute_definition_data': {
-                                              'type': random.choice(['STRING', 'BOOLEAN', 'NUMBER', 'SELECTION']),
-                                              'name': made_id,
-                                              'key': made_id[1:],  # .pyField must match ^[a-zA-Z0-9_-]*$'}]
-                                              'description': 'Custom Attribute Description.',
-                                              # 'source_application': {},
-                                              'allowed_object_types': [
-                                                  'ITEM',
-                                                  # DISCOUNT,  not an allowed object type on a custom attribute definition
-                                                  # CATEGORY,  not an allowed object type on a custom attribute definition
-                                                  ]
-                                              # 'string_config': {},
-                                              # 'number_config': {},
-                                              # 'selection_config': {}
-                                          },
-                                          'quick_amounts_settings_data': {
-                                              'option': random.choice(['DISABLED', 'MANUAL', 'AUTO']),
-                                          },}]}],
+                                          'modifier_list_data': {'name': list_id,
+                                                                 'ordinal': 1,
+                                                                 'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
+                                                                 "modifiers": [
+                                                                     {'id': mod_id,
+                                                                      'type': 'MODIFIER',
+                                                                      'modifier_data': {
+                                                                          'name': mod_id[1:],
+                                                                          'price_money': {
+                                                                              'amount': 300,
+                                                                              'currency': 'USD'},
+                                                                      },
+                                                                      'modifier_list_id': list_id,
+                                                                      'ordinal': 1}
+                                                                 ],}
+                                          }]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -603,7 +596,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'modifier_lists':
-            return self.update_modifier_list(obj_id, version).body.get('objects')
+            return self.update_modifier_list(obj_id).body
         elif stream == 'inventories':
             return self.update_inventory_adjustment(obj).body.get('counts')
         elif stream == 'locations':
@@ -644,6 +637,7 @@ class TestClient(SquareClient):
             resp = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
             if resp.is_error():
                 raise RuntimeError(resp.errors)
+
             return resp
         else:
             raise NotImplementedError('action {} not supported'.format(action))
@@ -656,11 +650,29 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_modifier_list(self, obj_id, version):
-        modifier = random.choice(['modifier_lists_to_endable', 'modifier_lists_to_disable'])
-        body = {'item_ids': [obj_id],
-                modifier: [obj_id],}
-        return self._client.catalog.update_item_modifier_lists(body)
+    def update_modifier_list(self, obj_id):
+        # Get all items
+        start_date = '2020-07-29T00:00:00Z'
+        items = self.get_all('items', start_date)
+
+        # Randomly select an item with an assigned modifier_list
+        items_with_mods = [i for i in items if i.get('item_data', {'modifier_list_info': False}).get('modifier_list_info')]
+        item = random.choice(items_with_mods)
+
+        # Set update base on existing data
+        item_data = item.get('item_data')
+        enabled = item_data.get('modifier_list_info')[0].get('enabled')
+        modifier_list_id = item_data.get('modifier_list_info')[0].get('modifier_list_id')
+        modifier = 'modifier_lists_to_disable' if enabled else 'modifier_lists_to_enable'
+
+        body = {'item_ids': [item.get('id')],
+                modifier: [modifier_list_id],
+        }
+
+        resp = self._client.catalog.update_item_modifier_lists(body)
+        if resp.is_error():
+            raise RuntimeError("Unable to UPDATE modifier_lists: {}".format(resp.errors))
+        return resp
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
