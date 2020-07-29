@@ -153,7 +153,12 @@ class TestSquareBase(unittest.TestCase):
             "bank_accounts": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
-            }
+            },
+            "shifts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):

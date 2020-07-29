@@ -209,11 +209,6 @@ class SquareClient():
     def get_shifts(self, start_time):
         body = {
             "query": {
-                "filter": {
-                    "start": {
-                        "start_at": start_time
-                    }
-                },
                 "sort": {
                     "field": "UPDATED_AT",
                     "order": "ASC"

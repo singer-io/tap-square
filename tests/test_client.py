@@ -24,7 +24,7 @@ typesToKeyMap = {
 
 
 class TestClient(SquareClient):
-    SHIFT_HOURS = 2
+    SHIFT_MINUTES = 2
 
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
@@ -87,6 +87,8 @@ class TestClient(SquareClient):
         elif stream == 'orders':
             orders = Orders()
             return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
+        elif stream == 'shifts':
+            return [obj for page, _ in self.get_shifts(start_date) for obj in page]
         else:
             raise NotImplementedError
 
@@ -179,9 +181,19 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees')][0]
             location_id = [location['id'] for location in self.get_all('locations')][0]
+
             if not end_date:
-                start_date_parsed = singer.utils.strptime_to_utc(start_date)
-                end_date_datetime = start_date_parsed + datetime.timedelta(hours = self.SHIFT_HOURS)
+                start_date_parsed = singer.utils.strptime_with_tz(start_date)
+                end_date_datetime = start_date_parsed + timedelta(minutes = self.SHIFT_MINUTES)
+                end_date = singer.utils.strftime(end_date_datetime)
+
+            max_end_at = max([obj['end_at'] for obj in self.get_all('shifts')])
+            if start_date < max_end_at:
+                LOGGER.warning('Tried to create a Shift that overlapped another shift')
+                # Readjust start date and end date
+                start_date = max_end_at
+                start_date_parsed = singer.utils.strptime_with_tz(start_date)
+                end_date_datetime = start_date_parsed + timedelta(minutes = self.SHIFT_MINUTES)
                 end_date = singer.utils.strftime(end_date_datetime)
 
             return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
@@ -544,14 +556,14 @@ class TestClient(SquareClient):
             'idempotency_key': str(uuid.uuid4()),
             'shift': {
                 'employee_id': 'TMvfDDk-ICS5X0Gp', # This is the only employee we have on the sandbox
-                'location_id': 'LEGCPJWJ48776', # Should we vary this?
-                'start_at': '2020-07-26T09:00:00Z', # This can probably be derived from the test's start date
-                'end_at': '2020-07-26T10:00:00Z' # This can be some short time after the start time
+                'location_id': location_id, # Should we vary this?
+                'start_at': start_date, # This can probably be derived from the test's start date
+                'end_at': end_date # This can be some short time after the start time
             }
         }
 
         resp = self._client.labor.create_shift(body=body)
-
+        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         if resp.is_error():
             raise RuntimeError(resp.errors)
 
@@ -600,6 +612,8 @@ class TestClient(SquareClient):
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]
+        elif stream == 'shifts':
+            return [self.update_shift(obj).body.get('shift')]
         else:
             raise NotImplementedError
 
@@ -723,6 +737,26 @@ class TestClient(SquareClient):
             print(response.body.get('errors'))
 
         return response
+
+    def update_shift(self, obj):
+        body = {
+            "shift": { # TODO: Can this be obj with the title updated?
+                "employee_id": obj['employee_id'],
+                "location_id": obj['location_id'],
+                "start_at": obj['start_at'],
+                "end_at": obj['end_at'],
+                "wage": {
+                    "title": self.make_id('shift'),
+                    "hourly_rate" : obj['wage']['hourly_rate']
+                }
+            }
+        }
+        resp = self._client.labor.update_shift(id=obj['id'], body=body)
+
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+        return resp
 
     def update_order(self, location_id, obj_id, version):
         body = {'order': {'note': self.make_id('order'),

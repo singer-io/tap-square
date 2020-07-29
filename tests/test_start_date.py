@@ -246,7 +246,7 @@ class TestSquareStartDate(TestSquareBase):
 
                     # Verify all data from second sync has bookmark values >= start_date 2.
                     records_from_sync_2 = set(row.get('data').get('updated_at')
-                                              for row in synced_records_2.get(stream, []).get('messages', []))
+                                              for row in synced_records_2.get(stream, {}).get('messages', []))
                     for record in records_from_sync_2:
                         self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
                                                 msg="Record was created prior to start date for 2nd sync.\n" +

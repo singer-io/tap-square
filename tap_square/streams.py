@@ -169,7 +169,7 @@ class Shifts:
     tap_stream_id = 'shifts'
     key_properties = ['id']
     replication_method = 'INCREMENTAL' # Maybe 'FULL_TABLE'
-    valid_replication_keys = []
+    valid_replication_keys = ['updated_at']
     # TODO We cannot query the API with an updated at
     # - There's a `filter` in the `body` we can use, but that will filter on the start time of the shift
     #   - Strategy 1: Always query with the start time for the tap config, ordering by `updated_at` and emit the

@@ -97,7 +97,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # Instatiate default start date
         self.START_DATE = self.get_properties().get('start_date')
-
         # Ensure tested streams have existing records
         expected_records_1 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
@@ -191,12 +190,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
-            if stream == 'inventories':
-                updated_record = self.client.update(stream, obj_id=None, version=None, obj=first_rec)
-                assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
-            else:
-                updated_record = self.client.update(stream, first_rec_id, first_rec_version)
-                assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
+
+            updated_record = self.client.update(stream, obj_id=None, version=None, obj=first_rec)
+            assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
+
+            if stream != 'inventories':
                 assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_2[stream] += updated_record
             updated_records[stream] += updated_record
