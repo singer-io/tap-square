@@ -4,7 +4,7 @@ import json
 import os
 import random
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import singer
 
@@ -58,7 +58,7 @@ class TestClient(SquareClient):
     ### GETs
     ##########################################################################
 
-    def get_all(self, stream, start_date=None, end_date=None):
+    def get_all(self, stream, start_date=None):
         if stream == 'items':
             return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
         elif stream == 'categories':
@@ -81,8 +81,7 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':
-            inventories = Inventories()
-            return [obj for page, _ in inventories.sync(self, start_date, None) for obj in page]
+            return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
             orders = Orders()
             return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
@@ -164,6 +163,8 @@ class TestClient(SquareClient):
             return self.create_taxes().body.get('objects')
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
+        elif stream == 'inventories':
+            return self.create_inventory_adjustment(start_date=start_date).body.get('counts')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
@@ -178,6 +179,82 @@ class TestClient(SquareClient):
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
+
+    def get_catalog_object(self, obj_id):
+        response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
+        if response.is_error():
+            print(response.body.get('errrors'))
+        return response.body.get('object')
+
+    def get_an_inventory_adjustment(self, obj_id):
+        response = self._client.inventory.retrieve_inventory_changes(catalog_object_id=obj_id)
+
+        if response.is_error():
+            raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
+        return response
+
+    def create_inventory_adjustment(self, start_date=None):
+        # Create an item
+        item = self.create_item().body.get('objects')[0]
+
+        # Crate an item_variation and get it's ID
+        item_variation = self.create_item_variation(item.get('id')).body.get('catalog_object')
+        catalog_obj_id = item_variation.get('id')
+
+        # Get a random location
+        all_locations = self.get_all('locations')
+        loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+        from_state = 'IN_STOCK'  # inventory_obj.get('state')
+
+        # Adjustment logic
+        made_id = self.make_id('inventory')
+        if from_state == 'IN_STOCK':
+            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
+        else:
+            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+        to_state = random.choice(states)
+        occurred_at = datetime.strftime(
+            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+        changes = {
+            # 'TRANSFER': {'transfer': {}}, # Not currently supported
+            'ADJUSTMENT': {
+                'adjustment': {
+                    # 'id': made_id,
+                    # 'from_state': random.choice(states),
+                    'from_state': from_state,
+                    'to_state': to_state,
+                    'location_id': loc_id,
+                    'occurred_at': occurred_at,
+                    # 'employee_id': 'asdasd',
+                    'catalog_object_id': catalog_obj_id,
+                    # 'catalog_object_type': 'ITEM_VARIATION',
+                    'quantity': '1.0',
+                    'source': {
+                        'product': random.choice([
+                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
+            'PHYSICAL_COUNT': {
+                'physical_count': {},
+            },
+        }
+        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
+        key = [k for k in changes.get(change_type).keys()][0]
+        value = [v for v in changes.get(change_type).values()][0]
+
+        body = {
+            'changes': [{'type': change_type,
+                         key: value}],
+            'ignore_unchanged_counts': random.choice([True, False]),
+            'idempotency_key': str(uuid.uuid4())
+        }
+        response = self._client.inventory.batch_change_inventory(body)
+        if response.is_error():
+            print(response.body.get('errors'))
+
+        return response
 
     def create_refunds(self, payment_obj=None, start_date=None):
         """
@@ -276,6 +353,59 @@ class TestClient(SquareClient):
                                           'item_data': {'name': self.make_id('item')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
+
+    def create_item_variation(self, item_id):
+        made_id = self.make_id('item_variation')
+        body = {
+            'idempotency_key': str(uuid.uuid4()),
+            'object': {
+                'id': made_id,
+                'type': 'ITEM_VARIATION',
+                'item_variation_data': {
+                  'item_id': item_id,
+                  'name': 'item data',
+                  'sku': 'sku ',
+                  'pricing_type': 'VARIABLE_PRICING',
+                  'track_inventory': True,
+                  'inventory_alert_type': 'LOW_QUANTITY',
+                  'user_data': 'user data'
+                },
+                'present_at_all_locations': random.choice([True, False]),
+                # 'custom_attribute_values': {
+                #     'Key': {
+                #         'name': 'Item Variation Custom Value',
+                #         'key': 'custom_val' + made_id,
+                #         'type': 'STRING',
+                #         'string_value': 'String value'
+                #     }
+                # },
+                # 'custom_attribute_definition_data': {
+                #     'type': 'STRING',
+                #     'name': made_id + 'Custom Attr',
+                #     'description': 'Description',
+                #     'allowed_object_types': [
+                #         'ITEM',
+                #         'ITEM_VARIATION'
+                #     ],
+                #     'seller_visibility': 'SELLER_VISIBILITY_READ_WRITE_VALUES',
+                #     'app_visibility': 'APP_VISIBILITY_READ_WRITE_VALUES',
+                #     'number_config': {
+                #         'precision': random.randint(0,5),
+                #     },
+                #     'selection_config': {
+                #         'max_allowed_selections': 100
+                #     },
+                #     'key': 'CustAttr{}'.format(made_id),
+                # },
+            }
+        }
+
+        response = self._client.catalog.upsert_catalog_object(body)
+
+        if response.is_error():
+            raise RuntimeError('Create ITEM_VARIATION: {}'.format(response.errors))
+        
+        return response
 
     def create_categories(self):
         body = {'batches': [{'objects': [{'id': self.make_id('category'),
@@ -413,13 +543,13 @@ class TestClient(SquareClient):
     ### UPDATEs
     ##########################################################################
 
-    def update(self, stream, obj_id, version):
+    def update(self, stream, obj_id, version, obj=None):
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work
         """
-        if not obj_id:
-            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+        if not obj_id and not obj:
+            raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and ".format(obj_id, obj))
 
         if stream == 'items':
             return self.update_item(obj_id, version).body.get('objects')
@@ -431,6 +561,8 @@ class TestClient(SquareClient):
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
+        elif stream == 'inventories':
+            return self.update_inventory_adjustment(obj).body.get('counts')
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
@@ -506,6 +638,61 @@ class TestClient(SquareClient):
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp
+
+    def update_inventory_adjustment(self, catalog_obj):
+        catalog_obj_id = catalog_obj.get('catalog_object_id')
+        loc_id = catalog_obj.get('location_id')
+
+        from_state = 'IN_STOCK'  # inventory_obj.get('state')
+
+        # Adjustment logic
+        made_id = self.make_id('inventory')
+        if from_state == 'IN_STOCK':
+            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
+        else:
+            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+        to_state = random.choice(states)
+        occurred_at = datetime.strftime(
+            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+        changes = {
+            'ADJUSTMENT': {
+                'adjustment': {
+                    # 'id': made_id,
+                    # 'from_state': random.choice(states),
+                    'from_state': from_state,
+                    'to_state': to_state,
+                    'location_id': loc_id,
+                    'occurred_at': occurred_at,
+                    # 'employee_id': 'asdasd',
+                    'catalog_object_id': catalog_obj_id,
+                    # 'catalog_object_type': 'ITEM_VARIATION',
+                    'quantity': '1.0',
+                    'source': {
+                        'product': random.choice([
+                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
+            'PHYSICAL_COUNT': {
+                'physical_count': {},
+            },
+        }
+        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
+        key = [k for k in changes.get(change_type).keys()][0]
+        value = [v for v in changes.get(change_type).values()][0]
+
+        body = {
+            'changes': [{'type': change_type,
+                         key: value}],
+            'ignore_unchanged_counts': random.choice([True, False]),
+            'idempotency_key': str(uuid.uuid4())
+        }
+        response = self._client.inventory.batch_change_inventory(body)
+        if response.is_error():
+            print(response.body.get('errors'))
+
+        return response
 
     def update_order(self, location_id, obj_id, version):
         body = {'order': {'note': self.make_id('order'),

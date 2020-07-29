@@ -208,6 +208,17 @@ class TestSquareStartDate(TestSquareBase):
                 record_count_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_2 = record_count_by_stream_2.get(stream, 0)
 
+
+                # Verify that the 2nd sync resutls in less records than the 1st sync.
+                self.assertLessEqual(record_count_2, record_count_1,
+                                msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
+                                "Second sync should result in fewer records\n" +
+                                "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                "Sync 1 record_count: {}\n".format(record_count_1) +
+                                "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                "Sync 2 record_count: {}".format(record_count_2))
+
+
                 # Testing how FULL TABLE streams handle start date
                 if replication_type == self.FULL:
 
@@ -217,31 +228,12 @@ class TestSquareStartDate(TestSquareBase):
                     self.assertTrue(state_2.get(stream) is None,
                                     msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
 
-                    # Verify that the 2nd sync resutls in less records than the 1st sync.
-                    self.assertLess(record_count_2, record_count_1,
-                                    msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
-                                    "Second sync should result in fewer records\n" +
-                                    "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                    "Sync 1 record_count: {}\n".format(record_count_1) +
-                                    "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                    "Sync 2 record_count: {}".format(record_count_2))
-
 
                 # Testing how INCREMENTAL streams handle start date
                 elif replication_type == self.INCREMENTAL:
 
                     # Verify 1st sync record count > 2nd sync record count since the 1st start date is older than the 2nd.
                     self.assertGreater(replicated_row_count_1, replicated_row_count_2, msg="Expected less records on 2nd sync.")
-
-
-                    # Verify that each stream has less records in 2nd sync than the 1st.
-                    self.assertLess(record_count_2, record_count_1,
-                                    msg="\nStream '{}' is {}\n".format(stream, self.INCREMENTAL) +
-                                     "Record count 2 should be less than 2, but is not\n" +
-                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                     "Sync 1 record_count: {}\n".format(record_count_1) +
-                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                     "Sync 2 record_count: {}".format(record_count_2))
 
                     # Verify all data from first sync has bookmark values >= start_date .
                     records_from_sync_1 = set(row.get('data').get('updated_at')
