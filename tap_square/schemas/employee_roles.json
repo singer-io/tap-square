@@ -11,13 +11,7 @@
       ],
       "format": "date-time"
     },
-    "email": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "first_name": {
+    "name": {
       "type": [
         "null",
         "string"
@@ -35,13 +29,7 @@
         "boolean"
       ]
     },
-    "last_name": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "location_ids": {
+    "permissions": {
       "type": [
         "null",
         "array"
@@ -52,12 +40,6 @@
           "string"
         ]
       }
-    },
-    "status": {
-      "type": [
-        "null",
-        "string"
-      ]
     },
     "updated_at": {
       "type": [

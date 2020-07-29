@@ -207,6 +207,7 @@ class SquareClient():
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
+
     def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -238,6 +239,7 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
+
     def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -268,3 +270,20 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
+
+
+    def get_employee_roles(self, start_time, bookmarked_cursor):
+        # sync data but only emit rows >= to the bookmark?
+
+        with singer.http_request_timer('GET payments'):
+            result = self._client.v1_employees.list_employee_roles(order='ASC', limit=200)
+
+        # the next page is in a Link header of the result.headers ApiResponse from square sdk?
+        yield (result.body.get('items', []), result.body.get('cursor'))
+
+        while result.headers.get('Link'):
+            # get the next link between <>
+            # go go go
+
+
+
