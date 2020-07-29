@@ -553,7 +553,7 @@ class TestClient(SquareClient):
         body = {
             'idempotency_key': str(uuid.uuid4()),
             'shift': {
-                'employee_id': 'TMvfDDk-ICS5X0Gp', # This is the only employee we have on the sandbox
+                'employee_id': employee_id, # This is the only employee we have on the sandbox
                 'location_id': location_id, # Should we vary this?
                 'start_at': start_date, # This can probably be derived from the test's start date
                 'end_at': end_date # This can be some short time after the start time
