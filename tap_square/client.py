@@ -6,9 +6,19 @@ from square.client import Client
 from singer import utils
 import singer
 import requests
-
+import urllib.parse
 
 LOGGER = singer.get_logger()
+
+def get_batch_token_from_headers(headers):
+    link = headers.get('link')
+    if link:
+        batch_token_url = requests.utils.parse_header_links(link)[0]['url']
+        parsed_link = urllib.parse.urlparse(batch_token_url)
+        parsed_query = urllib.parse.parse_qs(parsed_link.query)
+        return parsed_query['batch_token'][0]
+    else:
+        return None
 
 
 class SquareClient():
@@ -329,7 +339,7 @@ class SquareClient():
         if result.status_code != 200:
             raise Exception(result.reason)
 
-        batch_token = self.get_batch_token(result.headers.get('Link'))
+        batch_token = get_batch_token_from_headers(result.headers.get('Link'))
 
         yield (result.json(), batch_token)
 
@@ -341,7 +351,7 @@ class SquareClient():
             if result.status_code != 200:
                 raise Exception(result.reason)
 
-            batch_token = self.get_batch_token(result.headers.get('Link'))
+            batch_token = get_batch_token_from_headers(result.headers.get('Link'))
 
             yield (result.json(), batch_token)
 
@@ -373,3 +383,27 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('items', []), result.body.get('cursor'))
+
+    def get_settlements(self, location_id, start_time, bookmarked_cursor):
+
+        url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
+        headers = {
+            'content-type': 'application/json',
+            'authorization': 'Bearer {}'.format(self._access_token)
+        }
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()
+
+        batch_token = get_batch_token_from_headers(resp.headers)
+
+        yield (resp.json(), batch_token)
+
+        while batch_token:
+            with singer.http_request_timer('GET settlements'):
+                resp = requests.get(url, headers=headers)
+
+            resp.raise_for_status()
+
+            batch_token = get_batch_token_from_headers(resp.headers)
+
+            yield (resp.json(), batch_token)
