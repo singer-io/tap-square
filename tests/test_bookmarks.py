@@ -97,6 +97,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # Instatiate default start date
         self.START_DATE = self.get_properties().get('start_date')
+
         # Ensure tested streams have existing records
         expected_records_1 = {x: [] for x in self.expected_streams()}
         for stream in self.testable_streams():
@@ -190,10 +191,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
-
-            updated_record = self.client.update(stream, obj_id=None, version=None, obj=first_rec)
+            updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version, obj=first_rec)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
-
             if stream != 'inventories':
                 assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_2[stream] += updated_record
@@ -313,14 +312,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         first_sync_bookmark = first_sync_state.get('bookmarks').get(stream).get(replication_key)
                         for record in second_sync_data:
                             date_value = record[replication_key]
-                            if stream == 'orders':
-                                self.assertGreaterEqual(date_value,
-                                                        first_sync_bookmark,
-                                                        msg="A 2nd sync record has a replication-key that is less than the 1st sync bookmark.")
-                            else:
-                                self.assertGreater(date_value,
-                                                   first_sync_bookmark,
-                                                   msg="A 2nd sync record has a replication-key that is less than or equal to the 1st sync bookmark.")
+                            self.assertGreaterEqual(date_value,
+                                                    first_sync_bookmark,
+                                                    msg="A 2nd sync record has a replication-key that is less than or equal to the 1st sync bookmark.")
 
                 elif stream in self.expected_full_table_streams():
 
