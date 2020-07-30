@@ -1,25 +1,50 @@
 {
-  "type": "object",
+  "type": [
+    "null",
+    "object"
+  ],
   "properties": {
-    "description": {
-      "type": ["null", "string"]
+    "permissions": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
     },
     "id": {
-      "type": ["null", "integer"]
+      "type": [
+        "null",
+        "string"
+      ]
     },
     "name": {
-      "type": ["null", "string"]
+      "type": [
+        "null",
+        "string"
+      ]
     },
-    "default": {
-      "type": ["null", "boolean"]
-    },
-    "created_at": {
-      "type": ["null", "string"],
-      "format": "date-time"
+    "is_owner": {
+      "type": [
+        "null",
+        "boolean"
+      ]
     },
     "updated_at": {
-      "type": ["null", "string"],
-      "format": "date-time"
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "created_at": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }

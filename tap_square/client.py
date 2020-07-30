@@ -1,9 +1,24 @@
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
+
 from datetime import timedelta
 from square.client import Client
 from singer import utils
 import singer
+import requests
+import urllib.parse
 
 LOGGER = singer.get_logger()
+
+def get_batch_token_from_headers(headers):
+    link = headers.get('link')
+    if link:
+        batch_token_url = requests.utils.parse_header_links(link)[0]['url']
+        parsed_link = urllib.parse.urlparse(batch_token_url)
+        parsed_query = urllib.parse.parse_qs(parsed_link.query)
+        return parsed_query['batch_token'][0]
+    else:
+        return None
 
 
 class SquareClient():
@@ -206,6 +221,35 @@ class SquareClient():
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
+
+    # TODO: Use start_time in a later iteration, ignoring in pylint for now
+    def get_shifts(self, start_time): #pylint: disable=unused-argument
+        body = {
+            "query": {
+                "sort": {
+                    "field": "UPDATED_AT",
+                    "order": "ASC"
+                }
+            }
+        }
+        with singer.http_request_timer('GET shifts'):
+            result = self._client.labor.search_shifts(body=body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('shifts', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body.get('cursor')
+            with singer.http_request_timer('GET shifts'):
+                result = self._client.labor.search_shifts(body=body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('shifts', []), result.body.get('cursor'))
+
     def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -237,6 +281,7 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
+
     def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -267,3 +312,98 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
+
+    def get_batch_token(self, link): #pylint: disable=no-self-use
+        if link:
+            url = link[link.find('<')+1:link.find('>')]
+            parsed = urlparse.urlparse(url)
+            batch_token = parse_qs(parsed.query)['batch_token'][0]
+            return int(batch_token)
+        return None
+
+    def get_roles(self, bookmarked_cursor):
+        headers = {
+            'Authorization': 'Bearer ' + self._access_token,
+            'Content-Type': 'application/json'
+        }
+        params = {}
+        url = 'https://connect.squareup.com/v1/me/roles'
+
+
+        if bookmarked_cursor:
+            params['batch_token'] = bookmarked_cursor
+
+        with singer.http_request_timer('GET payments'):
+            result = requests.get(url, headers=headers, params=params)
+
+        if result.status_code != 200:
+            raise Exception(result.reason)
+
+        batch_token = get_batch_token_from_headers(result.headers.get('Link'))
+
+        yield (result.json(), batch_token)
+
+        while batch_token:
+            params['batch_token'] = batch_token
+            with singer.http_request_timer('GET payments'):
+                result = requests.get(url, headers=headers, params=params)
+
+            if result.status_code != 200:
+                raise Exception(result.reason)
+
+            batch_token = get_batch_token_from_headers(result.headers.get('Link'))
+
+            yield (result.json(), batch_token)
+
+    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        with singer.http_request_timer('GET cash drawer shifts'):
+            result = self._client.cash_drawers.list_cash_drawer_shifts(
+                location_id=location_id,
+                begin_time=start_time,
+                end_time=end_time,
+                cursor=bookmarked_cursor
+            )
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('items', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET cash drawer shifts'):
+                result = self._client.cash_drawers.list_cash_drawer_shifts(
+                    location_id=location_id,
+                    begin_time=start_time,
+                    end_time=end_time,
+                    cursor=result.body.get('cursor')
+                )
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('items', []), result.body.get('cursor'))
+
+    def get_settlements(self, location_id, start_time, bookmarked_cursor):
+
+        url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
+        headers = {
+            'content-type': 'application/json',
+            'authorization': 'Bearer {}'.format(self._access_token)
+        }
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()
+
+        batch_token = get_batch_token_from_headers(resp.headers)
+
+        yield (resp.json(), batch_token)
+
+        while batch_token:
+            with singer.http_request_timer('GET settlements'):
+                resp = requests.get(url, headers=headers)
+
+            resp.raise_for_status()
+
+            batch_token = get_batch_token_from_headers(resp.headers)
+
+            yield (resp.json(), batch_token)

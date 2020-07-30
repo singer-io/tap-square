@@ -23,6 +23,7 @@ class TestSquareAllFields(TestSquareBase):
                 'employees',
                 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
                 'modifier_lists',
+                'roles'# only works with prod
             }
         )
     def testable_streams_static(self):

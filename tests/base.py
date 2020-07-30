@@ -153,7 +153,16 @@ class TestSquareBase(unittest.TestCase):
             "bank_accounts": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
-            }
+            },
+            "roles": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL
+            },
+            "shifts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):
@@ -165,7 +174,8 @@ class TestSquareBase(unittest.TestCase):
     def production_streams(self):
         """Some streams can only have data on the production app. We must test these separately"""
         return {
-            'bank_accounts'
+            'bank_accounts',
+            'roles'
         }
 
     def sandbox_streams(self):
