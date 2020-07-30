@@ -5,8 +5,8 @@ import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from datetime import timedelta, date
-from datetime import datetime as dt
-
+#from datetime import datetime as dt
+from singer import utils
 from base import TestSquareBase
 
 
@@ -16,6 +16,7 @@ class TestSquarePagination(TestSquareBase):
     BATCH_LIMIT = 1000
     API_LIMIT = {
         'items': BATCH_LIMIT,
+        'inventories': BATCH_LIMIT,
         'categories': BATCH_LIMIT,
         'discounts': BATCH_LIMIT,
         'taxes': BATCH_LIMIT,
@@ -24,7 +25,8 @@ class TestSquarePagination(TestSquareBase):
         'refunds': 100,
         'payments': 100,
         'modifier_lists': None, # TODO
-        'orders': 500
+        'orders': 500,
+        'shifts': 200,
     }
 
     def name(self):
@@ -99,16 +101,32 @@ class TestSquarePagination(TestSquareBase):
                     location_id = [location['id'] for location in self.client.get_all('locations')][0]
                     for i in range(num_to_post):
                         new_objects.append(self.client.create_order(location_id))
-                elif self.API_LIMIT.get(stream) < self.BATCH_LIMIT: # not all streams have batch endpoints
+                elif stream == 'shifts':
+                    # Find the max end_at to know when the last shift ends, so we can start a shift there
+                    max_end_at = max([obj['end_at'] for obj in existing_objects])
+                    end_at_datetime = utils.strptime_to_utc(max_end_at)
+                    for i in range(num_to_post):
+                        # Tested in the API Explorer that +00:00 works
+                        # How does this work? It feels like it should be new_objects += blah
+                        new_objects.append(
+                            # Create a shift that is self.client.SHIFT_MINUTES long
+                            self.client.create('shifts', start_date=utils.strftime(end_at_datetime))
+                        )
+                        # Bump our known max `end_at` by self.client.SHIFT_MINUTES
+                        end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
+
+                elif stream in {'inventories','employees', 'refunds', 'payments'}: # non catalog objectsx
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
                         start_date = self.START_DATE if stream == 'refunds' else None
                         new_object = self.client.create(stream, start_date=start_date)
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
                         new_objects += new_object
-                else:
+                elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
                     new_objects = self.client.create_batch_post(stream, num_to_post).body.get('objects', [])
 
+                else:
+                    raise RuntimeError("The stream {} is missing from the setup.".format(stream))
                 expected_records[stream] += new_objects
 
                 print('{}: Created {} records'.format(stream, num_to_post))

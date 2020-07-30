@@ -187,12 +187,14 @@ class SquareClient():
             yield (result.body.get('orders', []), result.body.get('cursor'))
 
 
-    def get_inventories(self, variation_ids, start_time):
+    def get_inventories(self, start_time, bookmarked_cursor):
+        body = {'updated_after': start_time}
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
         with singer.http_request_timer('GET inventories'):
-            result = self._client.inventory.batch_retrieve_inventory_counts(body={
-                "catalog_object_ids": variation_ids,
-                "updated_after": start_time,
-            })
+            result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
 
         if result.is_error():
             raise Exception(result.errors)
@@ -201,17 +203,42 @@ class SquareClient():
 
         while result.body.get('cursor'):
             with singer.http_request_timer('GET inventories'):
-                result = self._client.inventory.batch_retrieve_inventory_counts(body={
-                    "catalog_object_ids": variation_ids,
-                    "updated_after": start_time,
-                    "cursor": result.body.get('cursor'),
-                })
+                body['cursor'] = result.body.get('cursor')
+                result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
 
             if result.is_error():
                 raise Exception(result.errors)
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
+
+    # TODO: Use start_time in a later iteration, ignoring in pylint for now
+    def get_shifts(self, start_time): #pylint: disable=unused-argument
+        body = {
+            "query": {
+                "sort": {
+                    "field": "UPDATED_AT",
+                    "order": "ASC"
+                }
+            }
+        }
+        with singer.http_request_timer('GET shifts'):
+            result = self._client.labor.search_shifts(body=body)
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('shifts', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            body['cursor'] = result.body.get('cursor')
+            with singer.http_request_timer('GET shifts'):
+                result = self._client.labor.search_shifts(body=body)
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('shifts', []), result.body.get('cursor'))
 
     def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
