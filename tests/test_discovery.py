@@ -33,6 +33,7 @@ class DiscoveryTest(TestSquareBase):
         self.set_environment(self.PRODUCTION)
         print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.discovery_test()
+        self.set_environment(self.SANDBOX)
 
     def discovery_test(self):
         """
