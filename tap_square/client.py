@@ -1,6 +1,3 @@
-import urllib.parse as urlparse
-from urllib.parse import parse_qs
-
 from datetime import timedelta
 from square.client import Client
 from singer import utils
@@ -9,6 +6,7 @@ import requests
 import urllib.parse
 
 LOGGER = singer.get_logger()
+
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -312,14 +310,6 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
-
-    def get_batch_token(self, link): #pylint: disable=no-self-use
-        if link:
-            url = link[link.find('<')+1:link.find('>')]
-            parsed = urlparse.urlparse(url)
-            batch_token = parse_qs(parsed.query)['batch_token'][0]
-            return int(batch_token)
-        return None
 
     def get_roles(self, bookmarked_cursor):
         headers = {
