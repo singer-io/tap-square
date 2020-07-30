@@ -174,7 +174,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
-            return self.create_inventory_adjustment(start_date=start_date).body.get('counts')
+            return self.create_batch_inventory_adjustment().body.get('counts')
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
@@ -219,60 +219,54 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    def create_inventory_adjustment(self, start_date=None):
+    def create_batch_inventory_adjustment(self, num_records):
         # Create an item
-        item = self.create_item().body.get('objects')[0]
+        items = self.create_item(num_records).body.get('objects', [])
+        self.assertTrue(items)
 
         # Crate an item_variation and get it's ID
-        item_variation = self.create_item_variation(item.get('id')).body.get('catalog_object')
-        catalog_obj_id = item_variation.get('id')
+        item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
+        self.assertTrue(item_variations)
 
-        # Get a random location
         all_locations = self.get_all('locations')
-        loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
-        from_state = 'IN_STOCK'  # inventory_obj.get('state')
+        changes = []
+        for item_variation in item_variations:
+            catalog_obj_id = item_variation.get('id')
 
-        # Adjustment logic
-        made_id = self.make_id('inventory')
-        if from_state == 'IN_STOCK':
-            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
-        else:
-            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-        to_state = random.choice(states)
-        occurred_at = datetime.strftime(
-            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
-        changes = {
-            # 'TRANSFER': {'transfer': {}}, # Not currently supported
-            'ADJUSTMENT': {
-                'adjustment': {
-                    # 'id': made_id,
-                    # 'from_state': random.choice(states),
-                    'from_state': from_state,
-                    'to_state': to_state,
-                    'location_id': loc_id,
-                    'occurred_at': occurred_at,
-                    # 'employee_id': 'asdasd',
-                    'catalog_object_id': catalog_obj_id,
-                    # 'catalog_object_type': 'ITEM_VARIATION',
-                    'quantity': '1.0',
-                    'source': {
-                        'product': random.choice([
-                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
-            'PHYSICAL_COUNT': {
-                'physical_count': {},
-            },
-        }
-        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
-        key = [k for k in changes.get(change_type).keys()][0]
-        value = [v for v in changes.get(change_type).values()][0]
+            # Get a random location
+            loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            from_state = 'IN_STOCK'  # inventory_obj.get('state')
+
+            # Adjustment logic
+            if from_state == 'IN_STOCK':
+                states = ['SOLD', 'WASTE'] # SOLD_ONLINE
+            else:
+                states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+                        'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+                        'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+            to_state = random.choice(states)
+            occurred_at = datetime.strftime(
+                datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+            change = {
+                'type': 'ADJUSTMENT',
+                'ADJUSTMENT': {
+                    'adjustment': {
+                        'from_state': from_state,
+                        'to_state': to_state,
+                        'location_id': loc_id,
+                        'occurred_at': occurred_at,
+                        'catalog_object_id': catalog_obj_id,
+                        'quantity': '1.0',
+                        'source': {
+                            'product': random.choice([
+                                'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                                'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                                'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
+            }
+            changes.append(change)
 
         body = {
-            'changes': [{'type': change_type,
-                         key: value}],
+            'changes': changes,
             'ignore_unchanged_counts': random.choice([True, False]),
             'idempotency_key': str(uuid.uuid4())
         }
@@ -373,20 +367,6 @@ class TestClient(SquareClient):
         self.PAYMENTS += [response]
         return response
 
-    def create_item(self):
-        start_date = '2020-07-29T00:00:00Z'
-        mod_lists = self.get_all('modifier_lists', start_date)
-        mod_list_id = random.choice(mod_lists).get('id')
-        body = {'batches': [{'objects': [{'id': self.make_id('item'),
-                                          'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item'),
-                                                        'modifier_list_info':[{
-                                                            'modifier_list_id': mod_list_id,
-                                                            'enabled': True
-                                                        }]}}]}],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
-
     def create_modifier_list(self):
         mod_id = self.make_id('modifier')
         list_id = self.make_id('modifier_lists')
@@ -408,61 +388,43 @@ class TestClient(SquareClient):
                                                                       'ordinal': 1}
                                                                  ],}
                                           }]}],
+
+    def create_item(self, num_records=1):
+        start_date = '2020-07-29T00:00:00Z'
+        mod_lists = self.get_all('modifier_lists', start_date)
+        mod_list_id = random.choice(mod_lists).get('id')
+
+        item_ids = [self.make_id('item') for n in range(num_records)]
+        objects = [{'id': item_id,
+                    'type': 'ITEM',
+                    'item_data': {'name': item_id,
+                                  'modifier_list_info':[{
+                                      'modifier_list_id': mod_list_id,
+                                      'enabled': True
+                                  }]}} for item_id in item_ids]
+        body = {'batches': [{'objects': objects}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def create_item_variation(self, item_id):
-        made_id = self.make_id('item_variation')
-        body = {
-            'idempotency_key': str(uuid.uuid4()),
-            'object': {
-                'id': made_id,
-                'type': 'ITEM_VARIATION',
-                'item_variation_data': {
-                  'item_id': item_id,
-                  'name': 'item data',
-                  'sku': 'sku ',
-                  'pricing_type': 'VARIABLE_PRICING',
-                  'track_inventory': True,
-                  'inventory_alert_type': 'LOW_QUANTITY',
-                  'user_data': 'user data'
-                },
-                'present_at_all_locations': random.choice([True, False]),
-                # 'custom_attribute_values': {
-                #     'Key': {
-                #         'name': 'Item Variation Custom Value',
-                #         'key': 'custom_val' + made_id,
-                #         'type': 'STRING',
-                #         'string_value': 'String value'
-                #     }
-                # },
-                # 'custom_attribute_definition_data': {
-                #     'type': 'STRING',
-                #     'name': made_id + 'Custom Attr',
-                #     'description': 'Description',
-                #     'allowed_object_types': [
-                #         'ITEM',
-                #         'ITEM_VARIATION'
-                #     ],
-                #     'seller_visibility': 'SELLER_VISIBILITY_READ_WRITE_VALUES',
-                #     'app_visibility': 'APP_VISIBILITY_READ_WRITE_VALUES',
-                #     'number_config': {
-                #         'precision': random.randint(0,5),
-                #     },
-                #     'selection_config': {
-                #         'max_allowed_selections': 100
-                #     },
-                #     'key': 'CustAttr{}'.format(made_id),
-                # },
-            }
-        }
+    def create_item_variation(self, item_ids):
+        objects = [{
+            'id': self.make_id('item_variation'),
+            'type': 'ITEM_VARIATION',
+            'item_variation_data': {
+                'item_id': item_id,
+                'name': 'item data',
+                'sku': 'sku ',
+                'pricing_type': 'VARIABLE_PRICING',
+                'track_inventory': True,
+                'inventory_alert_type': 'LOW_QUANTITY',
+                'user_data': 'user data'
+            },
+            'present_at_all_locations': random.choice([True, False]),
+        } for item_id in item_ids]
+        body = {'batches': [{'objects': objects}],
+                'idempotency_key': str(uuid.uuid4())}
 
-        response = self._client.catalog.upsert_catalog_object(body)
-
-        if response.is_error():
-            raise RuntimeError('Create ITEM_VARIATION: {}'.format(response.errors))
-        
-        return response
+        return self.post_category(body)
 
     def create_categories(self):
         body = {'batches': [{'objects': [{'id': self.make_id('category'),
