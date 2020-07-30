@@ -303,7 +303,6 @@ class SquareClient():
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
 
-
     def get_batch_token(self, link): #pylint: disable=no-self-use
         if link:
             url = link[link.find('<')+1:link.find('>')]
@@ -345,3 +344,32 @@ class SquareClient():
             batch_token = self.get_batch_token(result.headers.get('Link'))
 
             yield (result.json(), batch_token)
+
+    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        with singer.http_request_timer('GET cash drawer shifts'):
+            result = self._client.cash_drawers.list_cash_drawer_shifts(
+                location_id=location_id,
+                begin_time=start_time,
+                end_time=end_time,
+                cursor=bookmarked_cursor
+            )
+
+        if result.is_error():
+            raise Exception(result.errors)
+
+        yield (result.body.get('items', []), result.body.get('cursor'))
+
+        while result.body.get('cursor'):
+            with singer.http_request_timer('GET cash drawer shifts'):
+                result = self._client.cash_drawers.list_cash_drawer_shifts(
+                    location_id=location_id,
+                    begin_time=start_time,
+                    end_time=end_time,
+                    cursor=result.body.get('cursor')
+                )
+
+            if result.is_error():
+                raise Exception(result.errors)
+
+            yield (result.body.get('items', []), result.body.get('cursor'))
