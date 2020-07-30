@@ -35,9 +35,9 @@
         "payment_id": {
           "type": ["null", "string"]
         },
-        "type": {
+        "`type`": {
           "type": ["null", "string"]
-        },
+        }
       }
     },
     "initiated_at": {
