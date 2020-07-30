@@ -209,7 +209,8 @@ class TestClient(SquareClient):
     def get_catalog_object(self, obj_id):
         response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
         if response.is_error():
-            print(response.body.get('errrors'))
+            raise RuntimeError(response.errors)
+
         return response.body.get('object')
 
     def get_an_inventory_adjustment(self, obj_id):
@@ -280,7 +281,7 @@ class TestClient(SquareClient):
             }
             response = self._client.inventory.batch_change_inventory(body)
             if response.is_error():
-                print(response.body.get('errors'))
+                raise RuntimeError(response.errors)
 
             all_counts += response.body.get('counts')
 
@@ -330,9 +331,6 @@ class TestClient(SquareClient):
 
                 refund = self._client.refunds.refund_payment(body)
                 if refund.is_error(): # Debugging
-                    print("body: {}".format(body))
-                    print("response: {}".format(refund))
-                    print("payment attempted to be refunded: {}".format(payment))
                     raise RuntimeError(refund.errors)
             else:
                 raise RuntimeError(refund.errors)
@@ -369,8 +367,6 @@ class TestClient(SquareClient):
                'note': self.make_id('payment'),}
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -528,8 +524,8 @@ class TestClient(SquareClient):
         }
         response =  self.post_location(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(new_payment))
+            raise RuntimeError(response.errors)
+
         return response
 
     def create_employees(self):
@@ -767,7 +763,7 @@ class TestClient(SquareClient):
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
-            print(response.body.get('errors'))
+            raise RuntimeError(response.errors)
 
         return response
 
