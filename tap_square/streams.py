@@ -189,11 +189,25 @@ class Roles:
     valid_replication_keys = []
     replication_key = None
 
-
     def sync(self, client, start_time, bookmarked_cursor):  #pylint: disable=unused-argument,no-self-use
         # only yield if the updated_at is >= our bookmark?
         for page, cursor in client.get_roles(bookmarked_cursor):
             yield page, cursor
+
+class CashDrawerShifts:
+    tap_stream_id = 'cash_drawer_shifts'
+    key_properties = ['id']
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
+
+    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+        locations = Locations()
+
+        for location_ids_chunk in locations.get_all_location_ids(client, start_time, bookmarked_cursor, chunk_size=1):
+            # Cash Drawer Shifts requests can only take up to 1 location_id at a time
+            for page, cursor in client.get_cash_drawer_shifts(location_ids_chunk[0], start_time, bookmarked_cursor):
+                yield page, cursor
 
 
 STREAMS = {
@@ -211,4 +225,5 @@ STREAMS = {
     'orders': Orders,
     'roles': Roles,
     'shifts': Shifts,
+    'cash_drawer_shifts': CashDrawerShifts,
 }
