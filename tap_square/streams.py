@@ -178,7 +178,7 @@ class Roles:
     replication_key = None
 
 
-    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor):  #pylint: disable=unused-argument,no-self-use
         # only yield if the updated_at is >= our bookmark?
         for page, cursor in client.get_roles(bookmarked_cursor):
             yield page, cursor
