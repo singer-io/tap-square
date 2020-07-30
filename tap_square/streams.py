@@ -69,6 +69,13 @@ class Employees():
         for page, cursor in client.get_employees(bookmarked_cursor):
             yield page, cursor
 
+class ModifierLists(CatalogStream):
+    tap_stream_id = 'modifier_lists'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'MODIFIER_LIST'
 
 class ModifierLists(CatalogStream):
     tap_stream_id = 'modifier_lists'

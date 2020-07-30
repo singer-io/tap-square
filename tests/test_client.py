@@ -169,6 +169,8 @@ class TestClient(SquareClient):
             return self.create_discounts().body.get('objects')
         elif stream == 'taxes':
             return self.create_taxes().body.get('objects')
+        elif stream == 'modifier_lists':
+            return self.create_modifier_list().body.get('objects')
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
@@ -203,6 +205,7 @@ class TestClient(SquareClient):
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
+    # TODO Go through each stream and ensure we are creating as many fiedls within records as possible
     def get_catalog_object(self, obj_id):
         response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
         if response.is_error():
@@ -371,9 +374,40 @@ class TestClient(SquareClient):
         return response
 
     def create_item(self):
+        start_date = '2020-07-29T00:00:00Z'
+        mod_lists = self.get_all('modifier_lists', start_date)
+        mod_list_id = random.choice(mod_lists).get('id')
         body = {'batches': [{'objects': [{'id': self.make_id('item'),
                                           'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item')}}]}],
+                                          'item_data': {'name': self.make_id('item'),
+                                                        'modifier_list_info':[{
+                                                            'modifier_list_id': mod_list_id,
+                                                            'enabled': True
+                                                        }]}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_modifier_list(self):
+        mod_id = self.make_id('modifier')
+        list_id = self.make_id('modifier_lists')
+        body = {'batches': [{'objects': [{'id': list_id,
+                                          'type': 'MODIFIER_LIST',
+                                          'modifier_list_data': {'name': list_id,
+                                                                 'ordinal': 1,
+                                                                 'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
+                                                                 "modifiers": [
+                                                                     {'id': mod_id,
+                                                                      'type': 'MODIFIER',
+                                                                      'modifier_data': {
+                                                                          'name': mod_id[1:],
+                                                                          'price_money': {
+                                                                              'amount': 300,
+                                                                              'currency': 'USD'},
+                                                                      },
+                                                                      'modifier_list_id': list_id,
+                                                                      'ordinal': 1}
+                                                                 ],}
+                                          }]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -603,6 +637,8 @@ class TestClient(SquareClient):
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
+        elif stream == 'modifier_lists':
+            return self.update_modifier_list(obj_id).body
         elif stream == 'inventories':
             return self.update_inventory_adjustment(obj).body.get('counts')
         elif stream == 'locations':
@@ -645,6 +681,7 @@ class TestClient(SquareClient):
             resp = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
             if resp.is_error():
                 raise RuntimeError(resp.errors)
+
             return resp
         else:
             raise NotImplementedError('action {} not supported'.format(action))
@@ -656,6 +693,30 @@ class TestClient(SquareClient):
                                           'category_data': {'name': self.make_id('category')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
+
+    def update_modifier_list(self, obj_id):
+        # Get all items
+        start_date = '2020-07-29T00:00:00Z'
+        items = self.get_all('items', start_date)
+
+        # Randomly select an item with an assigned modifier_list
+        items_with_mods = [i for i in items if i.get('item_data', {'modifier_list_info': False}).get('modifier_list_info')]
+        item = random.choice(items_with_mods)
+
+        # Set update base on existing data
+        item_data = item.get('item_data')
+        enabled = item_data.get('modifier_list_info')[0].get('enabled')
+        modifier_list_id = item_data.get('modifier_list_info')[0].get('modifier_list_id')
+        modifier = 'modifier_lists_to_disable' if enabled else 'modifier_lists_to_enable'
+
+        body = {'item_ids': [item.get('id')],
+                modifier: [modifier_list_id],
+        }
+
+        resp = self._client.catalog.update_item_modifier_lists(body)
+        if resp.is_error():
+            raise RuntimeError("Unable to UPDATE modifier_lists: {}".format(resp.errors))
+        return resp
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,

@@ -14,6 +14,7 @@ from test_client import TestClient
 ##########################################################################
 if __name__ == "__main__":
     client = TestClient(env='sandbox')
+    # START_DATE = '2020-06-24T00:00:00Z'
     START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
@@ -26,6 +27,7 @@ if __name__ == "__main__":
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
+        'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
         'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
