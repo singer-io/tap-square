@@ -23,6 +23,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'employees', # Requires production environment to create records
                 'modifier_lists',
                 'inventories',
+                'roles' # Requires production environment to create records
             }
         )
 

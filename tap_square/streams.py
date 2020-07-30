@@ -169,18 +169,18 @@ class Inventories:
             yield page, cursor
 
 
-class EmployeeRoles:
+class Roles:
     # Square Docs: you must use Connect V1 to manage employees and employee roles.
     tap_stream_id = 'roles'
     key_properties = ['id']
-    replication_method = 'INCREMENTAL'
-    valid_replication_keys = ['updated_at']
-    replication_key = 'updated_at'
+    replication_method = 'FULL_TABLE'
+    valid_replication_keys = []
+    replication_key = None
 
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         # only yield if the updated_at is >= our bookmark?
-        for page, cursor in client.get_employee_roles(start_time, bookmarked_cursor):
+        for page, cursor in client.get_roles(bookmarked_cursor):
             yield page, cursor
 
 
@@ -197,5 +197,5 @@ STREAMS = {
     'modifier_lists': ModifierLists,
     'inventories': Inventories,
     'orders': Orders,
-    'roles': EmployeeRoles
+    'roles': Roles
 }

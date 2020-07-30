@@ -285,16 +285,18 @@ class SquareClient():
             return int(batch_token)
         return None
             
-    def get_employee_roles(self, start_time, bookmarked_cursor):
-#         # sync data but only emit rows >= to the bookmark?
+    def get_roles(self, bookmarked_cursor):
         headers={
             'Authorization': 'Bearer ' + self._access_token,
             'Content-Type': 'application/json'
         }
-        params = {'limit': 1}
+        params = {}
         url='https://connect.squareup.com/v1/me/roles'
-        import ipdb; ipdb.set_trace()
-        1+1
+
+
+        if bookmarked_cursor:
+            params['batch_token'] = bookmarked_cursor
+        
         with singer.http_request_timer('GET payments'):
             result = requests.get(url, headers=headers, params=params)
 
@@ -304,7 +306,6 @@ class SquareClient():
         batch_token = self.get_batch_token(result.headers.get('Link'))
 
         yield (result.json(), batch_token)
-        # the next page is in a Link header of the result.headers ApiResponse from square sdk?
 
         while batch_token:
             params['batch_token'] = batch_token
@@ -318,12 +319,5 @@ class SquareClient():
             
             yield (result.json(), batch_token)
             
-        
-
-# #        while result.headers.get('Link'):
-#             # get the next link between <>
-#             # go go go
-
-
 
 

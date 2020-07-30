@@ -86,6 +86,8 @@ class TestClient(SquareClient):
         elif stream == 'orders':
             orders = Orders()
             return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
+        elif stream == 'roles':
+            return [obj for page, _ in self.get_roles(None) for obj in page]
         else:
             raise NotImplementedError
 

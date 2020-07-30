@@ -26,7 +26,7 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts'
+                'bank_accounts',
             }
         )
 
