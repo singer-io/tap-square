@@ -9,8 +9,7 @@ from datetime import datetime, timedelta
 import singer
 
 from tap_square.client import SquareClient
-from tap_square.streams import Inventories
-from tap_square.streams import Orders
+from tap_square.streams import Inventories, Orders, chunks
 
 LOGGER = singer.get_logger()
 
@@ -220,12 +219,6 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    @staticmethod
-    def _chunks(lst, n):
-        """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i:i + n]
-
     def create_batch_inventory_adjustment(self, num_records):
         # Create an item
         items = self.create_item(num_records).body.get('objects', [])
@@ -272,7 +265,7 @@ class TestClient(SquareClient):
             changes.append(change)
 
         all_counts = []
-        for change_chunk in self._chunks(changes, 100):
+        for change_chunk in chunks(changes, 100):
             body = {
                 'changes': change_chunk,
                 'ignore_unchanged_counts': random.choice([True, False]),
