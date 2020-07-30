@@ -327,8 +327,8 @@ class SquareClient():
         with singer.http_request_timer('GET payments'):
             result = requests.get(url, headers=headers, params=params)
 
-        # if result.is_error():
-        #     raise Exception(result.errors)
+        if result.status_code != 200:
+            raise Exception(result.reason)
 
         batch_token = self.get_batch_token(result.headers.get('Link'))
 
@@ -339,8 +339,8 @@ class SquareClient():
             with singer.http_request_timer('GET payments'):
                 result = requests.get(url, headers=headers, params=params)
 
-            # if result.is_error():
-            #     raise Exception(result.errors)
+            if result.status_code != 200:
+                raise Exception(result.reason)
 
             batch_token = self.get_batch_token(result.headers.get('Link'))
 

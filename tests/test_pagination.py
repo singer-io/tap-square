@@ -37,7 +37,6 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-                'inventories',
                 'roles' #only works with prod app
             }
         )
