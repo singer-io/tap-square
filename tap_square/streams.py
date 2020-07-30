@@ -209,6 +209,6 @@ STREAMS = {
     'modifier_lists': ModifierLists,
     'inventories': Inventories,
     'orders': Orders,
-    'roles': Roles
+    'roles': Roles,
     'shifts': Shifts,
 }
