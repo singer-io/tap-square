@@ -157,7 +157,7 @@ class TestSquareBase(unittest.TestCase):
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL
-            }
+            },
             "shifts": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
