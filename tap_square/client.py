@@ -349,10 +349,10 @@ class SquareClient():
         end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
         with singer.http_request_timer('GET cash drawer shifts'):
             result = self._client.cash_drawers.list_cash_drawer_shifts(
-                location_id = location_id,
-                begin_time = start_time,
-                end_time = end_time,
-                cursor = bookmarked_cursor
+                location_id=location_id,
+                begin_time=start_time,
+                end_time=end_time,
+                cursor=bookmarked_cursor
             )
 
         if result.is_error():
@@ -363,10 +363,10 @@ class SquareClient():
         while result.body.get('cursor'):
             with singer.http_request_timer('GET cash drawer shifts'):
                 result = self._client.cash_drawers.list_cash_drawer_shifts(
-                    location_id = location_id,
-                    begin_time = start_time,
-                    end_time = end_time,
-                    cursor = result.body.get('cursor')
+                    location_id=location_id,
+                    begin_time=start_time,
+                    end_time=end_time,
+                    cursor=result.body.get('cursor')
                 )
 
             if result.is_error():

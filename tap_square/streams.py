@@ -1,7 +1,7 @@
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
-        for i in range(0, len(lst), n):
-            yield lst[i:i + n]
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 class CatalogStream:
     object_type = None
@@ -146,8 +146,8 @@ class Orders():
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         locations = Locations()
-        all_location_ids = locations.get_all_location_ids(client, start_time, bookmarked_cursor):
-        for location_ids_chunk in chunk(all_location_ids, 10):
+        all_location_ids = locations.get_all_location_ids(client, start_time, bookmarked_cursor)
+        for location_ids_chunk in chunks(all_location_ids, 10):
             # orders requests can only take up to 10 location_ids at a time
             for page, cursor in client.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
                 yield page, cursor
@@ -206,7 +206,7 @@ class CashDrawerShifts:
 
         for location_id in locations.get_all_location_ids(client, start_time, bookmarked_cursor):
             # Cash Drawer Shifts requests can only take up to 1 location_id at a time
-            for page, cursor in client.get_cash_drawer_shifts(location_ids_chunk[0], start_time, bookmarked_cursor):
+            for page, cursor in client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
                 yield page, cursor
 
 
