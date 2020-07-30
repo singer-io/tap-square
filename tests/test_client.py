@@ -256,19 +256,18 @@ class TestClient(SquareClient):
                 datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
             change = {
                 'type': 'ADJUSTMENT',
-                'ADJUSTMENT': {
-                    'adjustment': {
-                        'from_state': from_state,
-                        'to_state': to_state,
-                        'location_id': loc_id,
-                        'occurred_at': occurred_at,
-                        'catalog_object_id': catalog_obj_id,
-                        'quantity': '1.0',
-                        'source': {
-                            'product': random.choice([
-                                'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                                'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                                'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
+                'adjustment': {
+                    'from_state': from_state,
+                    'to_state': to_state,
+                    'location_id': loc_id,
+                    'occurred_at': occurred_at,
+                    'catalog_object_id': catalog_obj_id,
+                    'quantity': '1.0',
+                    'source': {
+                        'product': random.choice([
+                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
             }
             changes.append(change)
 
@@ -279,8 +278,10 @@ class TestClient(SquareClient):
                 'ignore_unchanged_counts': random.choice([True, False]),
                 'idempotency_key': str(uuid.uuid4())
             }
+            LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
             response = self._client.inventory.batch_change_inventory(body)
             if response.is_error():
+                LOGGER.error("response had error, body was %s", body)
                 raise RuntimeError(response.errors)
 
             all_counts += response.body.get('counts')
@@ -331,6 +332,9 @@ class TestClient(SquareClient):
 
                 refund = self._client.refunds.refund_payment(body)
                 if refund.is_error(): # Debugging
+                    print("body: {}".format(body))
+                    print("response: {}".format(refund))
+                    print("payment attempted to be refunded: {}".format(payment))
                     raise RuntimeError(refund.errors)
             else:
                 raise RuntimeError(refund.errors)
@@ -367,6 +371,8 @@ class TestClient(SquareClient):
                'note': self.make_id('payment'),}
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -524,8 +530,9 @@ class TestClient(SquareClient):
         }
         response =  self.post_location(body)
         if response.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(new_payment))
             raise RuntimeError(response.errors)
-
         return response
 
     def create_employees(self):
@@ -763,6 +770,7 @@ class TestClient(SquareClient):
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
+            print(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
         return response
