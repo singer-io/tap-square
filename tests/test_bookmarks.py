@@ -22,6 +22,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
+                'roles', # Requires production environment to create records
                 'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
             }
         )

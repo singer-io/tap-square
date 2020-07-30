@@ -1,7 +1,12 @@
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
+
 from datetime import timedelta
 from square.client import Client
 from singer import utils
 import singer
+import requests
+
 
 LOGGER = singer.get_logger()
 
@@ -206,6 +211,7 @@ class SquareClient():
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
+
     # TODO: Use start_time in a later iteration, ignoring in pylint for now
     def get_shifts(self, start_time): #pylint: disable=unused-argument
         body = {
@@ -265,6 +271,7 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
+
     def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -295,3 +302,46 @@ class SquareClient():
                 raise Exception(result.errors)
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
+
+
+    def get_batch_token(self, link): #pylint: disable=no-self-use
+        if link:
+            url = link[link.find('<')+1:link.find('>')]
+            parsed = urlparse.urlparse(url)
+            batch_token = parse_qs(parsed.query)['batch_token'][0]
+            return int(batch_token)
+        return None
+
+    def get_roles(self, bookmarked_cursor):
+        headers = {
+            'Authorization': 'Bearer ' + self._access_token,
+            'Content-Type': 'application/json'
+        }
+        params = {}
+        url = 'https://connect.squareup.com/v1/me/roles'
+
+
+        if bookmarked_cursor:
+            params['batch_token'] = bookmarked_cursor
+
+        with singer.http_request_timer('GET payments'):
+            result = requests.get(url, headers=headers, params=params)
+
+        if result.status_code != 200:
+            raise Exception(result.reason)
+
+        batch_token = self.get_batch_token(result.headers.get('Link'))
+
+        yield (result.json(), batch_token)
+
+        while batch_token:
+            params['batch_token'] = batch_token
+            with singer.http_request_timer('GET payments'):
+                result = requests.get(url, headers=headers, params=params)
+
+            if result.status_code != 200:
+                raise Exception(result.reason)
+
+            batch_token = self.get_batch_token(result.headers.get('Link'))
+
+            yield (result.json(), batch_token)

@@ -24,6 +24,7 @@ class TestSquareStartDate(TestSquareBase):
                 'employees', # TODO Requires production environment to create records
                 'modifier_lists',
                 'inventories',
+                'roles' #doesn't use start_date, this is a full table
             }
         )
 
@@ -31,6 +32,7 @@ class TestSquareStartDate(TestSquareBase):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'bank_accounts', # Cannot create a record, also PROD ONLY
+                'roles'
             }
         )
 

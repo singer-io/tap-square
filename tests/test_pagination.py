@@ -37,7 +37,7 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-
+                'roles' #only works with prod app
             }
         )
 
@@ -46,6 +46,7 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations',  # Only 300 locations can be created, and 300 are returned in a single request
                 'bank_accounts', # Cannot create a record, also PROD ONLY
+                'roles'
             }
         )
 
