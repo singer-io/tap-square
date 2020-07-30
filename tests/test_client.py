@@ -140,7 +140,7 @@ class TestClient(SquareClient):
             category_id = obj.get('id')
             category_type = obj.get('type')
             category_name = obj.get(typesToKeyMap.get(category_type), {}).get('name', 'NONE')
-            LOGGER.info('Created %s with id %s and name %s', category_type, category_id, category_name)
+            LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
     def post_order(self, body, location_id):
@@ -174,7 +174,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
-            return self.create_batch_inventory_adjustment().body.get('counts')
+            return self.create_batch_inventory_adjustment()
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
@@ -219,14 +219,20 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
+    @staticmethod
+    def _chunks(lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
     def create_batch_inventory_adjustment(self, num_records):
         # Create an item
         items = self.create_item(num_records).body.get('objects', [])
-        self.assertTrue(items)
+        assert(items)
 
         # Crate an item_variation and get it's ID
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
-        self.assertTrue(item_variations)
+        assert(item_variations)
 
         all_locations = self.get_all('locations')
         changes = []
@@ -265,16 +271,20 @@ class TestClient(SquareClient):
             }
             changes.append(change)
 
-        body = {
-            'changes': changes,
-            'ignore_unchanged_counts': random.choice([True, False]),
-            'idempotency_key': str(uuid.uuid4())
-        }
-        response = self._client.inventory.batch_change_inventory(body)
-        if response.is_error():
-            print(response.body.get('errors'))
+        all_counts = []
+        for change_chunk in self._chunks(changes, 100):
+            body = {
+                'changes': change_chunk,
+                'ignore_unchanged_counts': random.choice([True, False]),
+                'idempotency_key': str(uuid.uuid4())
+            }
+            response = self._client.inventory.batch_change_inventory(body)
+            if response.is_error():
+                print(response.body.get('errors'))
 
-        return response
+            all_counts += response.body.get('counts')
+
+        return all_counts
 
     def create_refunds(self, payment_obj=None, start_date=None):
         """

@@ -121,7 +121,7 @@ class TestSquarePagination(TestSquareBase):
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
                         new_objects += new_object
                 elif stream == 'inventories':
-                    new_objects = self.client.create_batch_inventory_adjustment(num_records).body.get('counts', [])
+                    new_objects = self.client.create_batch_inventory_adjustment(num_records)
                 elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
                     new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
 
