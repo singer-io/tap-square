@@ -91,7 +91,7 @@ class TestSquarePagination(TestSquareBase):
         for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if len(existing_objects) == 0:
-               print("NO DATA EXISTS FOR STREAM {}".format(stream))
+                print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
 

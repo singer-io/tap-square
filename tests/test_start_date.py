@@ -76,26 +76,26 @@ class TestSquareStartDate(TestSquareBase):
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # get expected records
-        expected_records_1 = {}
+        expected_records = {}
 
         # Ensure modifier_lists is populated first if necessary
-        expected_records_1['modifier_lists'] = self.client.get_all('modifier_lists', self.START_DATE)
+        expected_records['modifier_lists'] = self.client.get_all('modifier_lists', self.START_DATE)
         if any([self.parse_date(modifier_list.get('updated_at')) > self.parse_date(self.START_DATE_2)
-                for modifier_list in expected_records_1['modifier_lists']]):
+                for modifier_list in expected_records['modifier_lists']]):
             LOGGER.info("Data missing for stream modifier_lists, will create a record")
-            expected_records_1['modifier_lists'].append(self.client.create('modifier_lists', start_date=self.START_DATE))
+            expected_records['modifier_lists'].append(self.client.create('modifier_lists', start_date=self.START_DATE))
 
         for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
             print("Data exists for stream: {}".format(stream))
-            expected_records_1[stream] = existing_objects
+            expected_records[stream] = existing_objects
 
             rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
             if any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(self.START_DATE_2)
-                    for stream_obj in expected_records_1[stream]]):
+                    for stream_obj in expected_records[stream]]):
                 LOGGER.info("Data missing for stream %s, will create a record", stream)
-                expected_records_1[stream].append(self.client.create(stream, start_date=self.START_DATE))
+                expected_records[stream].append(self.client.create(stream, start_date=self.START_DATE))
 
         ##########################################################################
         ### First Sync
