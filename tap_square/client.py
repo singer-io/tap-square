@@ -339,7 +339,7 @@ class SquareClient():
         if result.status_code != 200:
             raise Exception(result.reason)
 
-        batch_token = get_batch_token_from_headers(result.headers.get('Link'))
+        batch_token = get_batch_token_from_headers(result.headers)
 
         yield (result.json(), batch_token)
 
@@ -351,7 +351,7 @@ class SquareClient():
             if result.status_code != 200:
                 raise Exception(result.reason)
 
-            batch_token = get_batch_token_from_headers(result.headers.get('Link'))
+            batch_token = get_batch_token_from_headers(result.headers)
 
             yield (result.json(), batch_token)
 
