@@ -216,6 +216,26 @@
             "string"
           ]
         },
+        "modifier_list_info": {
+          "type": [
+            "null",
+            "object"
+          ],
+          "properties": {
+            "enabled": {
+              "type": [
+                "null",
+                "boolean"
+              ]
+            },
+            "modifier_list_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
         "visibility": {
           "type": [
             "null",

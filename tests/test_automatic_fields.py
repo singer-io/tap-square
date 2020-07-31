@@ -201,7 +201,6 @@ class TestAutomaticFields(TestSquareBase):
                         stream_expected_record = stream_expected_records[0]
                         self.assertDictEqual(actual_record, stream_expected_record)
 
-
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
                         stream_actual_records = [record for record in actual_records

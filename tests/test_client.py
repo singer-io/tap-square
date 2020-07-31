@@ -475,7 +475,7 @@ class TestClient(SquareClient):
 
         if response.is_error():
             raise RuntimeError('Create ITEM_VARIATION: {}'.format(response.errors))
-        
+
         return response
 
     def create_categories(self):
@@ -658,7 +658,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'modifier_lists':
-            return self.update_modifier_list(obj_id).body
+            return self.update_modifier_list(obj_id)
         elif stream == 'inventories':
             return self.update_inventory_adjustment(obj).body.get('counts')
         elif stream == 'locations':
@@ -714,7 +714,18 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_modifier_list(self, obj_id):
+
+    def update_modifier_list(self, obj_id, version):
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                         'type': 'MODIFIER_LIST',
+                                          'version': version,
+                                          'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def _update_modifier_list(self, obj_id):  # REFACTOR
+        # TODO use this as an update for the 'items' stream, not 'modifier_lists'
+
         # Get all items
         start_date = '2020-07-29T00:00:00Z'
         items = self.get_all('items', start_date)
@@ -736,7 +747,12 @@ class TestClient(SquareClient):
         resp = self._client.catalog.update_item_modifier_lists(body)
         if resp.is_error():
             raise RuntimeError("Unable to UPDATE modifier_lists: {}".format(resp.errors))
-        return resp
+        # Updated modifier_lists return only the 'updated_at' in the response
+        # so we are grabbing the response body from a get to copare
+        mod_lists = self.get_all('modifier_lists', start_date)
+        updated_mod_lists = [ml for ml in mod_lists if ml.get('id') == modifier_list_id]
+        assert len(updated_mod_lists) == 1
+        return updated_mod_lists
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,

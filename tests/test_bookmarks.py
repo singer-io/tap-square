@@ -25,6 +25,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'roles', # TODO Requires production environment to create records
                 'inventories', # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
                 'settlements', # TODO
+                'modifier_lists',  # TODO Has endpoint but just adds/removes mod_list from an item.
             }
         )
 
@@ -367,11 +368,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         if stream not in self.cannot_update_streams():
                             sync_records = [record for record in second_sync_data
                                             if updated_record.get(pk) == record.get(pk)]
-                            self.assertTrue(len(sync_records),
-                                            msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
-                            self.assertEqual(len(sync_records), 1,
-                                             msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
-                            sync_record = sync_records[0]
+                            if stream != 'modifier_lists':
+                                self.assertTrue(len(sync_records),
+                                                msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
+                                self.assertEqual(len(sync_records), 1,
+                                                 msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
+                                sync_record = sync_records[0]
 
                             # TODO | TEST ISSUE | Address delayed fields in updated payments
                             if stream == 'payments' and sync_record.get('processing_fee') and updated_record.get('processing_fee') is None:
