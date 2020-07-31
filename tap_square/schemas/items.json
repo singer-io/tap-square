@@ -219,9 +219,9 @@
         "modifier_list_info": {
           "type": [
             "null",
-            "object"
+            "array"
           ],
-          "properties": {
+          "items": {
             "enabled": {
               "type": [
                 "null",
