@@ -2,13 +2,15 @@ import os
 from datetime import datetime as dt
 from datetime import timedelta
 
-import unittest
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
+import singer
+
 from base import TestSquareBase
-from test_client import TestClient
+
+LOGGER = singer.get_logger()
 
 
 class TestSquareStartDate(TestSquareBase):
@@ -80,6 +82,7 @@ class TestSquareStartDate(TestSquareBase):
         expected_records_1['modifier_lists'] = self.client.get_all('modifier_lists', self.START_DATE)
         if any([self.parse_date(modifier_list.get('updated_at')) > self.parse_date(self.START_DATE_2)
                 for modifier_list in expected_records_1['modifier_lists']]):
+            LOGGER.info("Data missing for stream modifier_lists, will create a record")
             expected_records_1['modifier_lists'].append(self.client.create('modifier_lists', start_date=self.START_DATE))
 
         for stream in self.TESTABLE_STREAMS:
@@ -88,19 +91,10 @@ class TestSquareStartDate(TestSquareBase):
             print("Data exists for stream: {}".format(stream))
             expected_records_1[stream] = existing_objects
 
-            # If no objects exist since the 2nd start_date, create one
-            data_in_range = False # TODO this can be cleaned up
-            for obj in expected_records_1.get(stream):
-                rep_keys = self.expected_replication_keys().get(stream)
-                rep_key = list(rep_keys)[0] if rep_keys else None
-                if rep_key is None:
-                    key = obj.get('created_at')
-                else:
-                    key = obj.get(rep_key)
-                if self.parse_date(key) > self.parse_date(self.START_DATE_2):
-                    data_in_range = True
-                    break
-            if not data_in_range:
+            rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
+            if any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(self.START_DATE_2)
+                    for stream_obj in expected_records_1[stream]]):
+                LOGGER.info("Data missing for stream %s, will create a record", stream)
                 expected_records_1[stream].append(self.client.create(stream, start_date=self.START_DATE))
 
         ##########################################################################
