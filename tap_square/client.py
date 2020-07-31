@@ -31,7 +31,6 @@ class SquareClient():
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-
     def _get_access_token(self):
         body = {
             'client_id': self._client_id,

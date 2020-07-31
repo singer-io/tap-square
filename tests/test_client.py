@@ -161,7 +161,7 @@ class TestClient(SquareClient):
 
     def create(self, stream, ext_obj=None, start_date=None, end_date=None):
         if stream == 'items':
-            return self.create_item().body.get('objects')
+            return self._create_item(start_date=start_date).body.get('objects')
         elif stream == 'categories':
             return self.create_categories().body.get('objects')
         elif stream == 'discounts':
@@ -173,7 +173,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
-            return self.create_batch_inventory_adjustment()
+            return self.create_batch_inventory_adjustment(start_date=start_date)
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
@@ -219,9 +219,9 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    def create_batch_inventory_adjustment(self, num_records):
+    def create_batch_inventory_adjustment(self, start_date, num_records):
         # Create an item
-        items = self.create_item(num_records).body.get('objects', [])
+        items = self._create_item(start_date=start_date, num_records).body.get('objects', [])
         assert(items)
 
         # Crate an item_variation and get it's ID
@@ -394,8 +394,7 @@ class TestClient(SquareClient):
                                                                  ],}
                                           }]}],
 
-    def create_item(self, num_records=1):
-        start_date = '2020-07-29T00:00:00Z'
+    def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
         mod_list_id = random.choice(mod_lists).get('id')
 
