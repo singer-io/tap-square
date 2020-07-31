@@ -24,7 +24,7 @@ class TestSquarePagination(TestSquareBase):
         'locations': None, # TODO
         'refunds': 100,
         'payments': 100,
-        'modifier_lists': None, # TODO
+        'modifier_lists': BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
     }
@@ -47,7 +47,6 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations',  # Only 300 locations can be created, and 300 are returned in a single request
                 'bank_accounts', # Cannot create a record, also PROD ONLY
-                'roles'
             }
         )
 
@@ -115,7 +114,7 @@ class TestSquarePagination(TestSquareBase):
                         # Bump our known max `end_at` by self.client.SHIFT_MINUTES
                         end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
 
-                elif stream in {'inventories','employees', 'refunds', 'payments'}: # non catalog objectsx
+                elif stream in {'inventories','employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
                         start_date = self.START_DATE if stream == 'refunds' else None

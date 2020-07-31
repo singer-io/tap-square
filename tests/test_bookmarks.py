@@ -20,10 +20,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees', # Requires production environment to create records
-                'roles', # Requires production environment to create records
-
-                'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
+                'cash_drawer_shifts', # TODO
+                'employees', # TODO Requires production environment to create records
+                'roles', # TODO Requires production environment to create records
+                'inventories', # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
+                'settlements', # TODO
             }
         )
 
