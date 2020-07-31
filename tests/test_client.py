@@ -723,7 +723,7 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def _update_modifier_list(self, obj_id):  # REFACTOR
+    def _update_items_by_modifier_list(self, obj_id):  # REFACTOR
         # TODO use this as an update for the 'items' stream, not 'modifier_lists'
 
         # Get all items

@@ -1,5 +1,3 @@
-import urllib.parse as urlparse
-from urllib.parse import parse_qs
 import urllib.parse
 
 from datetime import timedelta
@@ -317,8 +315,8 @@ class SquareClient():
     def get_batch_token(self, link): #pylint: disable=no-self-use
         if link:
             url = link[link.find('<')+1:link.find('>')]
-            parsed = urlparse.urlparse(url)
-            batch_token = parse_qs(parsed.query)['batch_token'][0]
+            parsed = urllib.parse.urlparse(url)
+            batch_token = urllib.parse.parse_qs(parsed.query)['batch_token'][0]
             return int(batch_token)
         return None
 
