@@ -17,8 +17,10 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
+                'cash_drawer_shifts',
                 'employees',
-                'modifier_lists', # TODO must be added once creates and updates are available
+                'settlements',
+                'shifts',  # TEST ISSUE | getting duplicate records in expectations
             }
         )
 

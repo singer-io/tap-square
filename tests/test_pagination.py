@@ -35,9 +35,10 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
+                'cash_drawer_shifts',
                 'employees', # Requires production environment to create records
-                'modifier_lists',
-                'roles' #only works with prod app
+                'roles', #only works with prod app
+                'settlements'
             }
         )
 
