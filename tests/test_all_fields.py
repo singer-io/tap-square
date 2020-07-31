@@ -26,6 +26,7 @@ class TestSquareAllFields(TestSquareBase):
                 'roles'# only works with prod
                 'settlements',
                 'cash_drawer_shifts',
+                'shifts',
             }
         )
 

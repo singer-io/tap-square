@@ -24,6 +24,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'roles', # Requires production environment to create records
 
                 'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
+                'cash_drawer_shifts', # TODO
+                'settlements', # TODO
+                'modifier_lists',  # TODO Has endpoint but just adds/removes mod_list from an item
             }
         )
 

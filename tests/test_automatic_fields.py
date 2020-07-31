@@ -21,6 +21,7 @@ class TestAutomaticFields(TestSquareBase):
                 'modifier_lists', # TODO must be added once creates and updates are available
                 'settlements',
                 'cash_drawer_shifts',
+                'shifts',
             }
         )
 
