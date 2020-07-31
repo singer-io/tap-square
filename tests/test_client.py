@@ -19,7 +19,8 @@ typesToKeyMap = {
     'ITEM': 'item_data',
     'CATEGORY': 'category_data',
     'DISCOUNT': 'discount_data',
-    'TAX': 'tax_data'
+    'TAX': 'tax_data',
+    'MODIFIER_LIST': 'modifier_list_data'
 }
 
 
@@ -46,6 +47,19 @@ class TestClient(SquareClient):
                                                          'currency': 'USD'}}},
         'taxes': {'type': 'TAX',
                   'tax_data': {'name': 'tap_tester_tax_data'}},
+        'modifier_lists': {'type': 'MODIFIER_LIST',
+                           'modifier_list_data': {'name': 'tap_tester_modifier_list_data',
+                                                  'ordinal': 1,
+                                                  'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
+                                                  "modifiers": [
+                                                      {'type': 'MODIFIER',
+                                                       'modifier_data': {
+                                                           'name': 'tap_tester_modifier_data',
+                                                           'price_money': {
+                                                               'amount': 300,
+                                                               'currency': 'USD'},
+                                                       },
+                                                       'ordinal': 1}]}},
     }
 
     def __init__(self, env):
@@ -94,7 +108,7 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(start_date) for obj in page]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("{} is not implmented".format(stream))
 
     def get_a_payment(self, payment_id, start_date):
         self.PAYMENTS = None
@@ -200,7 +214,7 @@ class TestClient(SquareClient):
 
             return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("{} is not implmented".format(stream))
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
@@ -294,7 +308,7 @@ class TestClient(SquareClient):
         """
         # SETUP
         if payment_obj is None:
-            print("The are currently no payments in the test data set with a status " + \
+            print("There are currently no payments in the test data set with a status " + \
                   "of COMPLETED and without existing refunds, so we must generate a new payment.")
             payment_response = self.create_payments(autocomplete=True, source_key="card")
             payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
@@ -609,7 +623,13 @@ class TestClient(SquareClient):
         for i in range(num_records):
             # Use dict() to make a copy so you don't get a list of the same object
             obj = dict(self.stream_to_data_schema[stream])
-            obj['id'] = '#' + stream + str(i)
+            obj_id = self.make_id(stream)
+            obj['id'] = obj_id
+            if stream == 'modifier_lists':
+                obj['ordinal'] = i
+                obj['modifier_list_id'] = obj_id
+                obj['modifier_list_data']['modifier_data']['id'] = self.make_id('modifier')
+                obj['modifier_list_data']['modifier_data']['ordinal'] = i
             recs_to_create.append(obj)
         body = {'idempotency_key': str(uuid.uuid4()),
                 'batches': [{'objects': recs_to_create}]}
@@ -651,7 +671,7 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("{} is not implmented".format(stream))
 
     def update_item(self, obj_id, version):
         if not obj_id:
