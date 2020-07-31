@@ -46,7 +46,7 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            raise Exception(error_message)
+            raise RuntimeError(error_message)
 
         return result.body['access_token']
 
@@ -71,7 +71,7 @@ class SquareClient():
             result = self._client.catalog.search_catalog_objects(body=body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('objects', []), result.body.get('cursor'))
 
@@ -81,7 +81,7 @@ class SquareClient():
                 result = self._client.catalog.search_catalog_objects(body=body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('objects', []), result.body.get('cursor'))
 
@@ -97,7 +97,7 @@ class SquareClient():
             result = self._client.employees.list_employees(**body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('employees', []), result.body.get('cursor'))
 
@@ -107,7 +107,7 @@ class SquareClient():
                 result = self._client.employees.list_employees(**body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('employees', []), result.body.get('cursor'))
 
@@ -117,7 +117,7 @@ class SquareClient():
             result = self._client.locations.list_locations()
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('locations', []), result.body.get('cursor'))
 
@@ -127,7 +127,7 @@ class SquareClient():
                 result = self._client.locations.list_locations(**body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('locations', []), result.body.get('cursor'))
 
@@ -138,7 +138,7 @@ class SquareClient():
             result = self._client.bank_accounts.list_bank_accounts()
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
 
@@ -148,7 +148,7 @@ class SquareClient():
                 result = self._client.bank_accounts.list_bank_accounts(**body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
 
@@ -180,7 +180,7 @@ class SquareClient():
             result = self._client.orders.search_orders(body=body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('orders', []), result.body.get('cursor'))
 
@@ -190,7 +190,7 @@ class SquareClient():
                 result = self._client.orders.search_orders(body=body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('orders', []), result.body.get('cursor'))
 
@@ -205,7 +205,7 @@ class SquareClient():
             result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('counts', []), result.body.get('cursor'))
 
@@ -215,7 +215,7 @@ class SquareClient():
                 result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
@@ -234,7 +234,7 @@ class SquareClient():
             result = self._client.labor.search_shifts(body=body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('shifts', []), result.body.get('cursor'))
 
@@ -244,7 +244,7 @@ class SquareClient():
                 result = self._client.labor.search_shifts(body=body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('shifts', []), result.body.get('cursor'))
 
@@ -265,7 +265,7 @@ class SquareClient():
             result = self._client.refunds.list_payment_refunds(**body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('refunds', []), result.body.get('cursor'))
 
@@ -275,7 +275,7 @@ class SquareClient():
                 result = self._client.refunds.list_payment_refunds(**body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
@@ -297,7 +297,7 @@ class SquareClient():
             result = self._client.payments.list_payments(**body)
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('payments', []), result.body.get('cursor'))
 
@@ -307,7 +307,7 @@ class SquareClient():
                 result = self._client.payments.list_payments(**body)
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
 
@@ -327,7 +327,7 @@ class SquareClient():
             result = requests.get(url, headers=headers, params=params)
 
         if result.status_code != 200:
-            raise Exception(result.reason)
+            raise RuntimeError(result.reason)
 
         batch_token = get_batch_token_from_headers(result.headers)
 
@@ -339,7 +339,7 @@ class SquareClient():
                 result = requests.get(url, headers=headers, params=params)
 
             if result.status_code != 200:
-                raise Exception(result.reason)
+                raise RuntimeError(result.reason)
 
             batch_token = get_batch_token_from_headers(result.headers)
 
@@ -357,7 +357,7 @@ class SquareClient():
             )
 
         if result.is_error():
-            raise Exception(result.errors)
+            raise RuntimeError(result.errors)
 
         yield (result.body.get('items', []), result.body.get('cursor'))
 
@@ -372,7 +372,7 @@ class SquareClient():
                 )
 
             if result.is_error():
-                raise Exception(result.errors)
+                raise RuntimeError(result.errors)
 
             yield (result.body.get('items', []), result.body.get('cursor'))
 

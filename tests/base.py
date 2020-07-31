@@ -36,6 +36,7 @@ class TestSquareBase(unittest.TestCase):
 
         # Allows diffs in asserts to print more
         self.maxDiff = None
+        self.set_environment(self.SANDBOX) # We always want the tests to start in sandbox
 
     @staticmethod
     def get_type():
@@ -44,12 +45,6 @@ class TestSquareBase(unittest.TestCase):
     @staticmethod
     def tap_name():
         return "tap-square"
-
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        env = 'sandbox' # We always want the tests to start in sandbox
-        cls.client = TestClient(env=env)
 
     def set_environment(self, env):
         """
@@ -182,6 +177,7 @@ class TestSquareBase(unittest.TestCase):
     def production_streams(self):
         """Some streams can only have data on the production app. We must test these separately"""
         return {
+            'settlements',
             'bank_accounts',
             'roles'
         }

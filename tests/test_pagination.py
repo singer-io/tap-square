@@ -41,7 +41,9 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees', # Requires production environment to create records
                 'modifier_lists',
-                'roles' #only works with prod app
+                'roles', #only works with prod app
+                'settlements',
+                'cash_drawer_shifts',
             }
         )
 
@@ -50,7 +52,7 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations',  # Only 300 locations can be created, and 300 are returned in a single request
                 'bank_accounts', # Cannot create a record, also PROD ONLY
-                'roles'
+                'roles',
             }
         )
 
@@ -83,9 +85,6 @@ class TestSquarePagination(TestSquareBase):
         """
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
-
-        if self.TESTABLE_STREAMS == set(): # REMOVE once we are testing a static stream
-            print("WE ARE SKIPPING THIS TEST\n\n")
 
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
