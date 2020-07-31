@@ -59,7 +59,7 @@ if __name__ == "__main__":
                 ext_obj = None
                 if obj == 'refunds':
                     payments = client.get_all('payments', start_date=START_DATE)
-                created_obj = client.create(obj, ext_obj)
+                created_obj = client.create(obj, ext_obj, start_date=START_DATE)
                 if not created_obj:
                     print("FAILED")
                     continue

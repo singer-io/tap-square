@@ -159,9 +159,12 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, ext_obj=None, start_date=None, end_date=None):
+    def create(self, stream, ext_obj=None, start_date=None, end_date=None, num_records=1):
+        if not start_date:
+            raise ValueError("Expected start_date but None was provided")
+
         if stream == 'items':
-            return self._create_item(start_date=start_date).body.get('objects')
+            return self._create_item(start_date=start_date, num_records=num_records).body.get('objects')
         elif stream == 'categories':
             return self.create_categories().body.get('objects')
         elif stream == 'discounts':
@@ -571,7 +574,6 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
-
 
     def create_batch_post(self, stream, num_records):
         recs_to_create = []

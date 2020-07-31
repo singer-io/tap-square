@@ -92,7 +92,7 @@ class TestSquareStartDate(TestSquareBase):
                     break
             if not data_in_range:
                 if stream in self.TESTABLE_STREAMS:
-                    expected_records_1[stream].append(self.client.create(stream))
+                    expected_records_1[stream].append(self.client.create(stream), start_date=self.START_DATE)
                     continue
                 assert None, "Sufficient test data does not exist for {}, test will fail.".format(stream)
 
