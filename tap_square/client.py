@@ -1,9 +1,10 @@
 from datetime import timedelta
+import urllib.parse
+
 from square.client import Client
 from singer import utils
 import singer
 import requests
-import urllib.parse
 
 LOGGER = singer.get_logger()
 
@@ -374,7 +375,7 @@ class SquareClient():
 
             yield (result.body.get('items', []), result.body.get('cursor'))
 
-    def get_settlements(self, location_id, start_time, bookmarked_cursor):
+    def get_settlements(self, location_id):
 
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
         headers = {
