@@ -25,13 +25,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'roles', # TODO Requires production environment to create records
                 'inventories', # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
                 'settlements', # TODO
-                'modifier_lists',  # TODO Has endpoint but just adds/removes mod_list from an item.
             }
         )
 
     def cannot_update_streams(self):
         return {
             'refunds',  # Does not have an endpoint for updating records
+            'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
         }
 
     def streams_with_record_differences_after_create(self):
@@ -343,7 +343,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 expected_records = expected_records_2.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
-                if stream != 'orders':  # ORDERS has too many dependencies to track explicitly
+                if stream in {'orders', 'modifier_lists'}:  # Some streams have too many dependencies to track explicitly
+                    self.assertLessEqual(len(expected_records), len(second_sync_data),
+                                         msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
+                                            "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                    )
+                else:
                     self.assertEqual(len(expected_records), len(second_sync_data),
                                      msg="Expected number of records do not match actual for 2nd sync.\n" +
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))

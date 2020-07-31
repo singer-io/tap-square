@@ -658,7 +658,7 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.update_employees(obj_id, version).body.get('objects')
         elif stream == 'modifier_lists':
-            return self.update_modifier_list(obj_id)
+            raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
             return self.update_inventory_adjustment(obj).body.get('counts')
         elif stream == 'locations':
@@ -715,7 +715,7 @@ class TestClient(SquareClient):
         return self.post_category(body)
 
 
-    def update_modifier_list(self, obj_id, version):
+    def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
         body = {'batches': [{'objects': [{'id': obj_id,
                                          'type': 'MODIFIER_LIST',
                                           'version': version,
