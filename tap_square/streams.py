@@ -3,6 +3,7 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
+
 class CatalogStream:
     object_type = None
     tap_stream_id = None
@@ -27,7 +28,6 @@ class Items(CatalogStream):
             for item in page:
                 for item_data_variation in item['item_data'].get('variations', list()):
                     yield item_data_variation['id']
-
 
 
 class Categories(CatalogStream):
@@ -97,6 +97,7 @@ class Locations():
     def sync(self, client, start_time, bookmarked_cursor=None): #pylint: disable=unused-argument,no-self-use
         for page, cursor in client.get_locations():
             yield page, cursor
+
 
 class BankAccounts():
     tap_stream_id = 'bank_accounts'
