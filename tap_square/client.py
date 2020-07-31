@@ -352,7 +352,8 @@ class SquareClient():
                 location_id=location_id,
                 begin_time=start_time,
                 end_time=end_time,
-                cursor=bookmarked_cursor
+                cursor=bookmarked_cursor,
+                limit=1000,
             )
 
         if result.is_error():
@@ -366,7 +367,8 @@ class SquareClient():
                     location_id=location_id,
                     begin_time=start_time,
                     end_time=end_time,
-                    cursor=result.body.get('cursor')
+                    cursor=result.body.get('cursor'),
+                    limit=1000,
                 )
 
             if result.is_error():
@@ -381,7 +383,10 @@ class SquareClient():
             'content-type': 'application/json',
             'authorization': 'Bearer {}'.format(self._access_token)
         }
-        resp = requests.get(url, headers=headers)
+        params = {
+            'limit': 200,
+        }
+        resp = requests.get(url, headers=headers, params=params)
         resp.raise_for_status()
 
         batch_token = get_batch_token_from_headers(resp.headers)
@@ -390,7 +395,7 @@ class SquareClient():
 
         while batch_token:
             with singer.http_request_timer('GET settlements'):
-                resp = requests.get(url, headers=headers)
+                resp = requests.get(url, headers=headers, params=params)
 
             resp.raise_for_status()
 

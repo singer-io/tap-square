@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import singer
 
 from tap_square.client import SquareClient
-from tap_square.streams import Inventories, Orders, chunks, Settlements
+from tap_square.streams import Inventories, Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
 
@@ -95,6 +95,9 @@ class TestClient(SquareClient):
         elif stream == 'settlements':
             settlements = Settlements()
             return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
+        elif stream == 'cash_drawer_shifts':
+            cash_drawer_shifts = CashDrawerShifts()
+            return [obj for page, _ in cash_drawer_shifts.sync(self, start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 

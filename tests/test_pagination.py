@@ -22,6 +22,7 @@ class TestSquarePagination(TestSquareBase):
         'categories': DEFAULT_BATCH_LIMIT,
         'discounts': DEFAULT_BATCH_LIMIT,
         'taxes': DEFAULT_BATCH_LIMIT,
+        'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
         'employees': 50,
         'locations': None, # TODO
         'refunds': 100,
@@ -29,6 +30,7 @@ class TestSquarePagination(TestSquareBase):
         'modifier_lists': None, # TODO
         'orders': 500,
         'shifts': 200,
+        'settlements': 200,
     }
 
     def name(self):
