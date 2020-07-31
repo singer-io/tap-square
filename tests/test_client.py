@@ -208,7 +208,7 @@ class TestClient(SquareClient):
 
             return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
         else:
-            raise NotImplementedError
+            raise NotImplementedError("create not implemented for stream {}".format(stream))
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))

@@ -116,7 +116,7 @@ class TestSquarePagination(TestSquareBase):
                         end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
 
                 elif stream in {'inventories', 'employees', 'refunds', 'payments'}: # non catalog objectsx
-                    LOGGER.info('%s: Created %s records', stream, n)
+                    LOGGER.info('%s: Created %s records', stream, num_records)
                     new_objects += self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
                 elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
                     new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])

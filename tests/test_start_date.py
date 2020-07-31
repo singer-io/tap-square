@@ -15,6 +15,7 @@ class TestSquareStartDate(TestSquareBase):
     START_DATE = ""
     START_DATE_1 = ""
     START_DATE_2 = ""
+
     def name(self):
         return "tap_tester_square_start_date_test"
 
@@ -24,7 +25,9 @@ class TestSquareStartDate(TestSquareBase):
                 'employees', # TODO Requires production environment to create records
                 'modifier_lists',
                 'inventories',
-                'roles' #doesn't use start_date, this is a full table
+                'roles', #doesn't use start_date, this is a full table
+                'settlements',
+                'cash_drawer_shifts',
             }
         )
 
@@ -32,7 +35,7 @@ class TestSquareStartDate(TestSquareBase):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'bank_accounts', # Cannot create a record, also PROD ONLY
-                'roles'
+                'roles',
             }
         )
 

@@ -19,6 +19,8 @@ class TestAutomaticFields(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'employees',
                 'modifier_lists', # TODO must be added once creates and updates are available
+                'settlements',
+                'cash_drawer_shifts',
             }
         )
 

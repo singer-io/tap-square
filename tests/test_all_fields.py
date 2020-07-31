@@ -24,8 +24,11 @@ class TestSquareAllFields(TestSquareBase):
                 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
                 'modifier_lists',
                 'roles'# only works with prod
+                'settlements',
+                'cash_drawer_shifts',
             }
         )
+
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
