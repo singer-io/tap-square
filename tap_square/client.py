@@ -1,6 +1,6 @@
+from datetime import timedelta
 import urllib.parse
 
-from datetime import timedelta
 from square.client import Client
 from singer import utils
 import singer
@@ -8,6 +8,7 @@ import requests
 
 
 LOGGER = singer.get_logger()
+
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -30,7 +31,6 @@ class SquareClient():
 
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
-
 
     def _get_access_token(self):
         body = {
@@ -384,7 +384,6 @@ class SquareClient():
             yield (result.body.get('items', []), result.body.get('cursor'))
 
     def get_settlements(self, location_id, start_time, bookmarked_cursor): #pylint: disable=unused-argument
-
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
         headers = {
             'content-type': 'application/json',

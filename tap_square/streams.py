@@ -222,7 +222,7 @@ class Settlements:
 
         for location_id in locations.get_all_location_ids(client, start_time, bookmarked_cursor):
             # Settlements requests can only take up to 1 location_id at a time
-            for page, batch_token in client.get_settlements(location_id, start_time, bookmarked_cursor):
+            for page, batch_token in client.get_settlements(location_id):
                 yield page, batch_token
 
 
