@@ -219,9 +219,9 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    def create_batch_inventory_adjustment(self, start_date, num_records):
+    def create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
-        items = self._create_item(start_date=start_date, num_records).body.get('objects', [])
+        items = self._create_item(start_date, num_records).body.get('objects', [])
         assert(items)
 
         # Crate an item_variation and get it's ID
@@ -393,6 +393,8 @@ class TestClient(SquareClient):
                                                                       'ordinal': 1}
                                                                  ],}
                                           }]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
 
     def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
