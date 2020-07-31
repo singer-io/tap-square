@@ -218,7 +218,7 @@ class Settlements:
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, start_time, bookmarked_cursor=None): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor=None): #pylint: disable=no-self-use, unused-argument
         locations = Locations()
 
         for location_id in locations.get_all_location_ids(client, start_time):
