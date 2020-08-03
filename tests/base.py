@@ -7,7 +7,11 @@ from datetime import timedelta
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
 
+import singer
+
 from test_client import TestClient
+
+LOGGER = singer.get_logger()
 
 
 class TestSquareBase(unittest.TestCase):
@@ -36,6 +40,7 @@ class TestSquareBase(unittest.TestCase):
 
         # Allows diffs in asserts to print more
         self.maxDiff = None
+        self.set_environment(self.SANDBOX) # We always want the tests to start in sandbox
 
     @staticmethod
     def get_type():
@@ -44,12 +49,6 @@ class TestSquareBase(unittest.TestCase):
     @staticmethod
     def tap_name():
         return "tap-square"
-
-    @classmethod
-    def setUpClass(cls):
-        print("\n\nTEST SETUP\n")
-        env = 'sandbox' # We always want the tests to start in sandbox
-        cls.client = TestClient(env=env)
 
     def set_environment(self, env):
         """
@@ -158,6 +157,14 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
+            "settlements": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL
+            },
+            "cash_drawer_shifts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL
+            },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL
@@ -182,6 +189,7 @@ class TestSquareBase(unittest.TestCase):
     def production_streams(self):
         """Some streams can only have data on the production app. We must test these separately"""
         return {
+            'settlements',
             'bank_accounts',
             'roles'
         }
@@ -321,29 +329,10 @@ class TestSquareBase(unittest.TestCase):
 
         return props.keys()
 
-    # TODO Determine if sorting is even a valid modifier for our expectations
-    def sort_records_recur(self, records):
-        pass
-        # for record in records:
-        #     self.sort_record_recur(record)
-
-    def sort_record_recur(self, record):
-        pass
-        # if isinstance(record, dict):
-        #     for key, value in record.items():
-        #         if type(value) == dict:
-        #             self.sort_record_recur(value)
-        #         elif type(value) == list:
-        #             for rec in value:
-        #                 self.sort_record_recur(rec)
-        #             self.sort_array_type(record, key, value)
-            
-
     def modify_expected_records(self, records):
-       for rec in records:
-           self.modify_expected_record(rec)
+        for rec in records:
+            self.modify_expected_record(rec)
 
-           
     def modify_expected_record(self, expected_record):
         """ Align expected data with how the tap _should_ emit them. """
         if isinstance(expected_record, dict):
@@ -353,7 +342,6 @@ class TestSquareBase(unittest.TestCase):
                 elif type(value) == list:
                     for item in value:
                         self.modify_expected_record(item)
-                    self.sort_array_type(expected_record, key, value)
                 else:
                     self.align_date_type(expected_record, key, value)
                     self.align_number_type(expected_record, key, value)
@@ -371,19 +359,24 @@ class TestSquareBase(unittest.TestCase):
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
 
-    def sort_array_type(self, record, key, value):
-        """
-        List values are returned by square as unordered arrays.
-        In order to accurately compare expected and actual records, we must sort all lists.
-        """
-        pass
-        # try:
-        #     if isinstance(value, list) and value:
-        #         if isinstance(value[0], dict) and "id" in value[0].keys():
-        #             record[key] = sorted(value, key=lambda x: x['id'])
-        #         else:
-        #             record[key] = sorted(value)
-        # except Exception as ex:
-        #     print("Could not sort array at key: {}, value: {}".format(key, value))
-        #     raise
+    def create_test_data(self, testable_streams, start_date, start_date_2=None):
+        if not start_date_2:
+            start_date_2 = start_date
 
+        expected_records = {x: [] for x in self.expected_streams()}
+
+        expected_records['modifier_lists'] = self.client.get_all('modifier_lists', start_date)
+        if not any([self.parse_date(modifier_list.get('updated_at')) > self.parse_date(start_date_2)
+                    for modifier_list in expected_records['modifier_lists']]):
+            LOGGER.info("Data missing for stream modifier_lists, will create a record")
+            expected_records['modifier_lists'].append(self.client.create('modifier_lists', start_date=start_date))
+
+        for stream in testable_streams:
+            expected_records[stream] = self.client.get_all(stream, start_date)
+            rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
+            if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
+                        for stream_obj in expected_records[stream]]):
+                LOGGER.info("Data missing for stream %s, will create a record", stream)
+                expected_records[stream].append(self.client.create(stream, start_date=start_date))
+
+        return expected_records

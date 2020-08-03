@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import singer
 
 from tap_square.client import SquareClient
-from tap_square.streams import Inventories, Orders, chunks
+from tap_square.streams import Inventories, Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
 
@@ -106,8 +106,14 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(start_date) for obj in page]
+        elif stream == 'settlements':
+            settlements = Settlements()
+            return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
+        elif stream == 'cash_drawer_shifts':
+            cash_drawer_shifts = CashDrawerShifts()
+            return [obj for page, _ in cash_drawer_shifts.sync(self, start_date, None) for obj in page]
         else:
-            raise NotImplementedError("{} is not implmented".format(stream))
+            raise NotImplementedError("Not implemented for stream {}".format(stream))
 
     def get_a_payment(self, payment_id, start_date):
         self.PAYMENTS = None
@@ -173,9 +179,12 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, ext_obj=None, start_date=None, end_date=None):
+    def create(self, stream, ext_obj=None, start_date=None, end_date=None, num_records=1):
+        if not start_date:
+            raise ValueError("Expected start_date but None was provided")
+
         if stream == 'items':
-            return self._create_item(start_date=start_date).body.get('objects')
+            return self._create_item(start_date=start_date, num_records=num_records).body.get('objects')
         elif stream == 'categories':
             return self.create_categories().body.get('objects')
         elif stream == 'discounts':
@@ -213,7 +222,7 @@ class TestClient(SquareClient):
 
             return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
         else:
-            raise NotImplementedError("{} is not implmented".format(stream))
+            raise NotImplementedError("create not implemented for stream {}".format(stream))
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
@@ -585,7 +594,6 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
-
 
     def create_batch_post(self, stream, num_records):
         recs_to_create = []

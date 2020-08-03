@@ -1,13 +1,15 @@
 import os
+from datetime import timedelta
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from datetime import timedelta, date
-#from datetime import datetime as dt
+import singer
 from singer import utils
 from base import TestSquareBase
+
+LOGGER = singer.get_logger()
 
 
 class TestSquarePagination(TestSquareBase):
@@ -20,6 +22,7 @@ class TestSquarePagination(TestSquareBase):
         'categories': DEFAULT_BATCH_LIMIT,
         'discounts': DEFAULT_BATCH_LIMIT,
         'taxes': DEFAULT_BATCH_LIMIT,
+        'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
         'employees': 50,
         'locations': None, # TODO
         'refunds': 100,
@@ -27,6 +30,7 @@ class TestSquarePagination(TestSquareBase):
         'modifier_lists': DEFAULT_BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
+        'settlements': 200,
     }
 
     def name(self):
@@ -81,15 +85,12 @@ class TestSquarePagination(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        if self.TESTABLE_STREAMS == set(): # REMOVE once we are testing a static stream
-            print("WE ARE SKIPPING THIS TEST\n\n")
-
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
             if len(existing_objects) == 0:
-               print("NO DATA EXISTS FOR STREAM {}".format(stream))
+                print("NO DATA EXISTS FOR STREAM {}".format(stream))
 
             expected_records[stream] += existing_objects
 
@@ -106,16 +107,14 @@ class TestSquarePagination(TestSquareBase):
                     max_end_at = max([obj['end_at'] for obj in existing_objects])
                     end_at_datetime = utils.strptime_to_utc(max_end_at)
                     for i in range(num_records):
-                        # Tested in the API Explorer that +00:00 works
-                        # How does this work? It feels like it should be new_objects += blah
                         new_objects.append(
-                            # Create a shift that is self.client.SHIFT_MINUTES long
+                            # TODO: create takes num_records, so push this loop's logic into there
                             self.client.create('shifts', start_date=utils.strftime(end_at_datetime))
                         )
                         # Bump our known max `end_at` by self.client.SHIFT_MINUTES
                         end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
 
-                elif stream in {'inventories','employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
+                elif stream in {'employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
                     for n in range(num_records):
                         print('{}: Created {} records'.format(stream, n))
                         new_object = self.client.create(stream, start_date=self.START_DATE)
@@ -128,6 +127,7 @@ class TestSquarePagination(TestSquareBase):
 
                 else:
                     raise RuntimeError("The stream {} is missing from the setup.".format(stream))
+                assert new_objects, "Failed to create any new records for stream {}".format(stream)
                 expected_records[stream] += new_objects
 
                 print('{}: Created {} records'.format(stream, num_records))

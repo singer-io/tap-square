@@ -86,6 +86,35 @@
             "string"
           ]
         },
+        "errors": {
+          "type": ["null", "array"],
+          "items": {
+            "category": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "code": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "detail": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "field": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
         "card": {
           "type": [
             "null",
