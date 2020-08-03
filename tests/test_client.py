@@ -47,6 +47,8 @@ class TestClient(SquareClient):
                                                   'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
                                                   "modifiers": [
                                                       {'type': 'MODIFIER',
+                                                       'id': 0,
+                                                       'modifier_list_id': 0,
                                                        'modifier_data': {
                                                            'name': 'tap_tester_modifier_data',
                                                            'price_money': {
@@ -594,8 +596,9 @@ class TestClient(SquareClient):
             if stream == 'modifier_lists':
                 obj['ordinal'] = i
                 obj['modifier_list_id'] = obj_id
-                obj['modifier_list_data']['modifiers']['id'] = self.make_id('modifier')
-                obj['modifier_list_data']['modifiers']['ordinal'] = i
+                for modifier in obj['modifier_list_data']['modifiers']:
+                    modifier['id'] = self.make_id('modifier')
+                    modifier['ordinal'] = i
             recs_to_create.append(obj)
         body = {'idempotency_key': str(uuid.uuid4()),
                 'batches': [{'objects': recs_to_create}]}
