@@ -2,7 +2,6 @@ import uuid
 import random
 import os
 from datetime import datetime, timedelta
-from time import sleep
 
 import singer
 
@@ -176,10 +175,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, start_date=None, end_date=None, num_records=1):
-        if not start_date:
-            raise ValueError("Expected start_date but None was provided")
-
+    def create(self, stream, start_date, end_date=None, num_records=1):
         if stream == 'items':
             return self._create_item(start_date=start_date, num_records=num_records).body.get('objects')
         elif stream == 'categories':

@@ -114,10 +114,10 @@ class TestSquarePagination(TestSquareBase):
                         # Bump our known max `end_at` by self.client.SHIFT_MINUTES
                         end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
 
-                elif stream in {'inventories', 'employees', 'refunds', 'payments'}: # non catalog objectsx
+                elif stream in {'inventories', 'employees', 'refunds', 'payments'}: # non catalog objects
                     LOGGER.info('%s: Created %s records', stream, num_records)
                     new_objects += self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
-                elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
+                elif stream in {'items', 'categories', 'discounts', 'taxes', 'modifier_lists'}:  # catalog objects
                     new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
 
                 else:
