@@ -108,7 +108,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Adjust expectations for datetime format
         for stream, expected_records in expected_records_1.items():
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records( expected_records)
+            self.modify_expected_records(expected_records)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
