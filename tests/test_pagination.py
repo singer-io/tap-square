@@ -13,13 +13,13 @@ from base import TestSquareBase
 class TestSquarePagination(TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
-    BATCH_LIMIT = 1000
+    DEFAULT_BATCH_LIMIT = 1000
     API_LIMIT = {
-        'items': BATCH_LIMIT,
-        'inventories': BATCH_LIMIT,
-        'categories': BATCH_LIMIT,
-        'discounts': BATCH_LIMIT,
-        'taxes': BATCH_LIMIT,
+        'items': DEFAULT_BATCH_LIMIT,
+        'inventories': DEFAULT_BATCH_LIMIT,
+        'categories': DEFAULT_BATCH_LIMIT,
+        'discounts': DEFAULT_BATCH_LIMIT,
+        'taxes': DEFAULT_BATCH_LIMIT,
         'employees': 50,
         'locations': None, # TODO
         'refunds': 100,
@@ -93,18 +93,18 @@ class TestSquarePagination(TestSquareBase):
             expected_records[stream] += existing_objects
 
             if len(existing_objects) <= self.API_LIMIT.get(stream):
-                num_to_post = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
-                print('{}: Will create {} records'.format(stream, num_to_post))
+                num_records = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
+                print('{}: Will create {} records'.format(stream, num_records))
                 new_objects = []
                 if stream == 'orders':
                     location_id = [location['id'] for location in self.client.get_all('locations')][0]
-                    for i in range(num_to_post):
+                    for i in range(num_records):
                         new_objects.append(self.client.create_order(location_id))
                 elif stream == 'shifts':
                     # Find the max end_at to know when the last shift ends, so we can start a shift there
                     max_end_at = max([obj['end_at'] for obj in existing_objects])
                     end_at_datetime = utils.strptime_to_utc(max_end_at)
-                    for i in range(num_to_post):
+                    for i in range(num_records):
                         # Tested in the API Explorer that +00:00 works
                         # How does this work? It feels like it should be new_objects += blah
                         new_objects.append(
@@ -117,18 +117,19 @@ class TestSquarePagination(TestSquareBase):
                 elif stream in {'inventories','employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
                     for n in range(num_to_post):
                         print('{}: Created {} records'.format(stream, n))
-                        start_date = self.START_DATE if stream == 'refunds' else None
-                        new_object = self.client.create(stream, start_date=start_date)
+                        new_object = self.client.create(stream, start_date=self.START_DATE)
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
                         new_objects += new_object
+                elif stream == 'inventories':
+                    new_objects = self.client.create_batch_inventory_adjustment(num_records)
                 elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
-                    new_objects = self.client.create_batch_post(stream, num_to_post).body.get('objects', [])
+                    new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
 
                 else:
                     raise RuntimeError("The stream {} is missing from the setup.".format(stream))
                 expected_records[stream] += new_objects
 
-                print('{}: Created {} records'.format(stream, num_to_post))
+                print('{}: Created {} records'.format(stream, num_records))
             else:
                 print('{}: Have sufficent amount of data to continue test'.format(stream))
 

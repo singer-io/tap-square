@@ -1,13 +1,13 @@
+from datetime import timedelta
 import urllib.parse
 
-from datetime import timedelta
 from square.client import Client
 from singer import utils
 import singer
 import requests
 
-
 LOGGER = singer.get_logger()
+
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -30,7 +30,6 @@ class SquareClient():
 
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
-
 
     def _get_access_token(self):
         body = {
