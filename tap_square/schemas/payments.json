@@ -160,6 +160,32 @@
             "string"
           ]
         },
+        "errors": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "category": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "code": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
+            "detail": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
         "statement_description": {
           "type": [
             "null",

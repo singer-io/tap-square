@@ -21,10 +21,12 @@ class TestSquareStartDate(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'cash_drawer_shifts',
                 'employees', # TODO Requires production environment to create records
-                'modifier_lists',
                 'inventories',
-                'roles' #doesn't use start_date, this is a full table
+                'roles',  # doesn't use start_date, this is a full table
+                'settlements',
+                'shifts', # failing in create when called from this test
             }
         )
 
@@ -32,7 +34,6 @@ class TestSquareStartDate(TestSquareBase):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'bank_accounts', # Cannot create a record, also PROD ONLY
-                'roles'
             }
         )
 
@@ -92,7 +93,7 @@ class TestSquareStartDate(TestSquareBase):
                     break
             if not data_in_range:
                 if stream in self.TESTABLE_STREAMS:
-                    expected_records_1[stream].append(self.client.create(stream))
+                    expected_records_1[stream].append(self.client.create(stream, start_date=self.START_DATE))
                     continue
                 assert None, "Sufficient test data does not exist for {}, test will fail.".format(stream)
 

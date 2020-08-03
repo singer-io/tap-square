@@ -20,16 +20,18 @@ class TestSquareIncrementalReplication(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees', # Requires production environment to create records
-                'roles', # Requires production environment to create records
-
-                'inventories' # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
+                'cash_drawer_shifts', # TODO
+                'employees', # TODO Requires production environment to create records
+                'roles', # TODO Requires production environment to create records
+                'inventories', # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
+                'settlements', # TODO
             }
         )
 
     def cannot_update_streams(self):
         return {
             'refunds',  # Does not have an endpoint for updating records
+            'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
         }
 
     def streams_with_record_differences_after_create(self):
@@ -182,7 +184,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 continue
             elif stream == 'orders':
                 for message in first_sync_records.get(stream).get('messages'):
-                    if message.get('data')['state'] != 'COMPLETED':
+                    if message.get('data')['state'] not in ['COMPLETED', 'CANCELED']:
                         first_rec = message.get('data')
                         break
 
@@ -341,7 +343,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 expected_records = expected_records_2.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
-                if stream != 'orders':  # ORDERS has too many dependencies to track explicitly
+                if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly
+                    self.assertLessEqual(len(expected_records), len(second_sync_data),
+                                         msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
+                                            "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                    )
+                else:
                     self.assertEqual(len(expected_records), len(second_sync_data),
                                      msg="Expected number of records do not match actual for 2nd sync.\n" +
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
@@ -366,11 +373,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         if stream not in self.cannot_update_streams():
                             sync_records = [record for record in second_sync_data
                                             if updated_record.get(pk) == record.get(pk)]
-                            self.assertTrue(len(sync_records),
-                                            msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
-                            self.assertEqual(len(sync_records), 1,
-                                             msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
-                            sync_record = sync_records[0]
+                            if stream != 'modifier_lists':
+                                self.assertTrue(len(sync_records),
+                                                msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
+                                self.assertEqual(len(sync_records), 1,
+                                                 msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
+                                sync_record = sync_records[0]
 
                             # TODO | TEST ISSUE | Address delayed fields in updated payments
                             if stream == 'payments' and sync_record.get('processing_fee') and updated_record.get('processing_fee') is None:

@@ -17,8 +17,10 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
+                'cash_drawer_shifts',
                 'employees',
-                'modifier_lists', # TODO must be added once creates and updates are available
+                'settlements',
+                'shifts',  # TEST ISSUE | getting duplicate records in expectations
             }
         )
 
@@ -198,7 +200,6 @@ class TestAutomaticFields(TestSquareBase):
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
                         self.assertDictEqual(actual_record, stream_expected_record)
-
 
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
