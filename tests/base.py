@@ -363,15 +363,18 @@ class TestSquareBase(unittest.TestCase):
         if not start_date_2:
             start_date_2 = start_date
 
+        # Force modifier_lists to go first and payments to go last
+        create_test_data_streams = list(testable_streams)
+        if 'modifier_lists' in testable_streams:
+            create_test_data_streams.remove('modifier_lists')
+            create_test_data_streams.insert(0, 'modifier_lists')
+        if 'payments' in testable_streams:
+            create_test_data_streams.remove('payments')
+            create_test_data_streams.append('payments')
+
         expected_records = {x: [] for x in self.expected_streams()}
 
-        expected_records['modifier_lists'] = self.client.get_all('modifier_lists', start_date)
-        if not any([self.parse_date(modifier_list.get('updated_at')) > self.parse_date(start_date_2)
-                    for modifier_list in expected_records['modifier_lists']]):
-            LOGGER.info("Data missing for stream modifier_lists, will create a record")
-            expected_records['modifier_lists'].append(self.client.create('modifier_lists', start_date=start_date))
-
-        for stream in testable_streams:
+        for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)
             rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
             if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)

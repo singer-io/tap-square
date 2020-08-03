@@ -1,15 +1,13 @@
 import uuid
 import random
-import json
 import os
-import random
-import requests
 from datetime import datetime, timedelta
+from time import sleep
 
 import singer
 
 from tap_square.client import SquareClient
-from tap_square.streams import Inventories, Orders, chunks, Settlements, CashDrawerShifts
+from tap_square.streams import Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
 
@@ -112,18 +110,21 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
-    def get_a_payment(self, payment_id, start_date):
-        return_value = []
-        while not return_value:
+    def get_a_payment(self, payment_id, start_date, keys_exist=set(), **kwargs):
+        while True:
             LOGGER.info('get_a_payment: Calling API')
             all_payments = self.get_all('payments', start_date)
-            return_value = [payment for payment in all_payments if payment['id'] == payment_id]
+            found_payment = [payment for payment in all_payments if payment['id'] == payment_id]
+            if not found_payment:
+                LOGGER.warn("Payment with id %s not found, retrying", payment_id)
+                continue
 
-            return_value = None if len(return_value) > 0 and return_value[0].get('status') == 'APPROVED' else return_value
+            if not set(found_payment[0].keys()).issuperset(keys_exist):
+                continue
 
-        LOGGER.info('get_a_payment: %s', str(return_value))
-        return return_value
-
+            if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
+                LOGGER.info('get_a_payment found payment successfully: %s', found_payment)
+                return found_payment
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -200,7 +201,7 @@ class TestClient(SquareClient):
             return [self.create_order(location_id).body.get('order')]
         elif stream == 'refunds':
             (created_refund, _) = self.create_refund(start_date)
-            return [created_refund.body.get('refund')]
+            return [created_refund]
         elif stream == 'payments':
             return [self.create_payments()]
         elif stream == 'shifts':
@@ -313,12 +314,14 @@ class TestClient(SquareClient):
         """
         # SETUP
         payment_response = self.create_payments(autocomplete=True, source_key="card")
-        payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
+        payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
         upper_limit = 10 if 10 < payment_amount else payment_amount
         amount = random.randint(1, upper_limit)  # we must be careful not to refund more than the charge
+        amount_money = {'amount': amount, # in cents
+                        'currency': 'USD'}
         status = payment_obj.get('status')
 
         if status != "COMPLETED": # Just a sanity check that logic above is working
@@ -326,8 +329,7 @@ class TestClient(SquareClient):
         # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
-                'amount_money': {'amount': amount, # in cents
-                                 'currency': 'USD'},
+                'amount_money': amount_money,
                 'idempotency_key': str(uuid.uuid4()),
                 'reason': 'Becuase you are worth it'}
 
@@ -349,7 +351,8 @@ class TestClient(SquareClient):
             else:
                 raise RuntimeError(refund.errors)
 
-        return (refund, payment_obj)
+        updated_payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
+        return (refund.body.get('refund'), updated_payment_obj)
 
     def create_payments(self, autocomplete=False, source_key=None):
         """
