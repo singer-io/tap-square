@@ -312,14 +312,6 @@ class SquareClient():
 
             yield (result.body.get('payments', []), result.body.get('cursor'))
 
-    def get_batch_token(self, link): #pylint: disable=no-self-use
-        if link:
-            url = link[link.find('<')+1:link.find('>')]
-            parsed = urllib.parse.urlparse(url)
-            batch_token = urllib.parse.parse_qs(parsed.query)['batch_token'][0]
-            return int(batch_token)
-        return None
-
     def get_roles(self, bookmarked_cursor):
         headers = {
             'Authorization': 'Bearer ' + self._access_token,
