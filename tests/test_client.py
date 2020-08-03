@@ -1,7 +1,7 @@
 import uuid
 import random
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import singer
 
@@ -194,7 +194,7 @@ class TestClient(SquareClient):
 
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
-            return self.create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
+            return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             if num_records != 1:
                 raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
@@ -258,7 +258,7 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    def create_batch_inventory_adjustment(self, start_date, num_records=1):
+    def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
         items = self._create_item(start_date, num_records).body.get('objects', [])
         assert(items)
@@ -285,7 +285,7 @@ class TestClient(SquareClient):
                         'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
             to_state = random.choice(states)
             occurred_at = datetime.strftime(
-                datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
             change = {
                 'type': 'ADJUSTMENT',
                 'adjustment': {
