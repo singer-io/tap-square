@@ -376,12 +376,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                             msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
                             self.assertEqual(len(sync_records), 1,
                                              msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
-                            sync_record = sync_records[0]
+
+                        sync_record = sync_records[0]
 
                         if stream == 'payments':
-                            self.assertPaymentsEqual(created_record, sync_record)
+                            self.assertPaymentsEqual(updated_record, sync_record)
                         else:
-                            self.assertDictEqual(created_record, sync_record)
+                            self.assertDictEqual(updated_record, sync_record)
 
     def assertPaymentsEqual(self, created_record, sync_record):
         self.assertEqual(frozenset(created_record.keys()), frozenset(sync_record.keys()))
