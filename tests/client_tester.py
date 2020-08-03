@@ -56,10 +56,9 @@ if __name__ == "__main__":
             for obj in objects_to_test:
                 print("Testing CREATE: {}".format(obj))
                 import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
-                ext_obj = None
                 if obj == 'refunds':
                     payments = client.get_all('payments', start_date=START_DATE)
-                created_obj = client.create(obj, ext_obj, start_date=START_DATE)
+                created_obj = client.create(obj, start_date=START_DATE)
                 if not created_obj:
                     print("FAILED")
                     continue

@@ -175,7 +175,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, ext_obj=None, start_date=None, end_date=None, num_records=1):
+    def create(self, stream, start_date=None, end_date=None, num_records=1):
         if not start_date:
             raise ValueError("Expected start_date but None was provided")
 
