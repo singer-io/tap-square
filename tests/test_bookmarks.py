@@ -103,22 +103,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
 
         # Ensure tested streams have existing records
-        expected_records_1 = {x: [] for x in self.expected_streams()}
-        for stream in self.testable_streams():
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-
-            if len(existing_objects) == 0:
-                # TODO change from 'failure you need data' to 'create data then so we can test'
-                # This can be implemented at the end of testing once all streams can be created consistently
-                assert None, "NO DATA EXISTS FOR {}, SOMETHING HAS GONE TERRIBLY WRONG".format(stream)
-
-            expected_records_1[stream] += existing_objects
-            print('{}: Have sufficent amount of data to continue test'.format(stream))
+        expected_records_1 = self.create_test_data(self.testable_streams(), self.START_DATE)
 
         # Adjust expectations for datetime format
         for stream, expected_records in expected_records_1.items():
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(expected_records)
+            self.modify_expected_records( expected_records)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
