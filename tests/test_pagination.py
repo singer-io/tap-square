@@ -115,7 +115,7 @@ class TestSquarePagination(TestSquareBase):
                         end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
 
                 elif stream in {'inventories','employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
-                    for n in range(num_to_post):
+                    for n in range(num_records):
                         print('{}: Created {} records'.format(stream, n))
                         new_object = self.client.create(stream, start_date=self.START_DATE)
                         assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
