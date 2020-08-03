@@ -199,7 +199,8 @@ class TestClient(SquareClient):
             location_id = [location['id'] for location in self.get_all('locations')][0]
             return [self.create_order(location_id).body.get('order')]
         elif stream == 'refunds':
-            return [self.create_refund(start_date).body.get('refund')]
+            (created_refund, _) = self.create_refund(start_date)
+            return [created_refund.body.get('refund')]
         elif stream == 'payments':
             return [self.create_payments()]
         elif stream == 'shifts':
