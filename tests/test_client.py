@@ -32,8 +32,6 @@ class TestClient(SquareClient):
     Client used to perfrom GET, CREATE and UPDATE on streams.
         NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
     """
-    PAYMENTS = [] # We need to track state of records due to a dependency in the `refunds` stream
-
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
                   'item_data': {'name': 'tap_tester_item_data'}},
@@ -93,8 +91,7 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
-            return self.PAYMENTS
+            return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':
@@ -116,7 +113,6 @@ class TestClient(SquareClient):
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
     def get_a_payment(self, payment_id, start_date):
-        self.PAYMENTS = None
         return_value = []
         while not return_value:
             LOGGER.info('get_a_payment: Calling API')
@@ -203,7 +199,7 @@ class TestClient(SquareClient):
             location_id = [location['id'] for location in self.get_all('locations')][0]
             return [self.create_order(location_id).body.get('order')]
         elif stream == 'refunds':
-            return [self.create_refunds(ext_obj, start_date).body.get('refund')]
+            return [self.create_refund(start_date).body.get('refund')]
         elif stream == 'payments':
             return [self.create_payments()]
         elif stream == 'shifts':
@@ -304,7 +300,7 @@ class TestClient(SquareClient):
 
         return all_counts
 
-    def create_refunds(self, payment_obj=None, start_date=None):
+    def create_refund(self, start_date):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -315,11 +311,8 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        if payment_obj is None:
-            print("There are currently no payments in the test data set with a status " + \
-                  "of COMPLETED and without existing refunds, so we must generate a new payment.")
-            payment_response = self.create_payments(autocomplete=True, source_key="card")
-            payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
+        payment_response = self.create_payments(autocomplete=True, source_key="card")
+        payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -355,10 +348,7 @@ class TestClient(SquareClient):
             else:
                 raise RuntimeError(refund.errors)
 
-        # Update Payments
-        self.PAYMENTS = None # Force refresh of the cache since we updated one
-        self.get_all('payments', start_date)
-        return refund
+        return (refund, payment_obj)
 
     def create_payments(self, autocomplete=False, source_key=None):
         """
@@ -392,7 +382,6 @@ class TestClient(SquareClient):
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
-        self.PAYMENTS += [response]
         return response
 
     def create_modifier_list(self):

@@ -377,6 +377,13 @@ class TestSquareBase(unittest.TestCase):
             if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
                         for stream_obj in expected_records[stream]]):
                 LOGGER.info("Data missing for stream %s, will create a record", stream)
-                expected_records[stream].append(self.client.create(stream, start_date=start_date))
+                created_records = self.client.create(stream, start_date=start_date)
+
+                if isinstance(created_records, dict):
+                    expected_records[stream].append(created_records)
+                elif isinstance(created_records, list):
+                    expected_records[stream].extend(created_records)
+                else:
+                    raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
         return expected_records

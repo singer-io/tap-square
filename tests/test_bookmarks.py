@@ -153,20 +153,23 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 expected_records_2['orders'].append(order['data'])
 
         for stream in self.testable_streams():
-            # Create
-            new_record = self.client.create(stream, start_date=self.START_DATE)
-            assert len(new_record) > 0, "Failed to create a {} record".format(stream)
-            if stream != 'inventories':  # This stream may have multiple records as a result of a single create
-                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
+            new_record = []
+            if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
+                # a CREATE for refunds will result in a new payments object
+                (new_record, payment) = self.client.create_refund(start_date=self.START_DATE)
 
+                created_records['payments'].append(payment)
+                expected_records_2['payments'].append(payment)
+            else:
+                # Create
+                new_record = self.client.create(stream, start_date=self.START_DATE)
+
+            assert new_record, "Failed to create a {} record".format(stream)
             expected_records_2[stream] += new_record
             created_records[stream] += new_record
-            if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
-                refund = created_records[stream][0]
-                payment_id = refund.get('payment_id')
-                # a CREATE for refunds will result in a new payments object
-                created_records['payments'].append(self.client.PAYMENTS[-1])
-                expected_records_2['payments'].append(self.client.PAYMENTS[-1])
+
+            if stream != 'inventories':  # This stream may have multiple records as a result of a single create
+                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
 
         for stream in self.testable_streams().difference(self.cannot_update_streams()):
             # Update all streams (but save payments for last)
@@ -251,6 +254,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     self.assertEqual(len(expected_records_2.get(stream)), 2,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
+                import ipdb; ipdb.set_trace()
+                1+1
                 self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
