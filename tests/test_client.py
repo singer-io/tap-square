@@ -191,15 +191,18 @@ class TestClient(SquareClient):
         elif stream == 'employees':
             return self.create_employees().body.get('objects')
         elif stream == 'inventories':
-            return self.create_batch_inventory_adjustment(start_date=start_date)
+            return self.create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
             location_id = [location['id'] for location in self.get_all('locations')][0]
             return [self.create_order(location_id).body.get('order')]
         elif stream == 'refunds':
-            (created_refund, _) = self.create_refund(start_date)
-            return [created_refund]
+            refunds = []
+            for _ in range(num_records):
+                (created_refund, _) = self.create_refund(start_date)
+                refunds.append(created_refund)
+            return refunds
         elif stream == 'payments':
             return [self.create_payments()]
         elif stream == 'shifts':
@@ -595,9 +598,9 @@ class TestClient(SquareClient):
             obj['id'] = obj_id
             if stream == 'modifier_lists':
                 obj['ordinal'] = i
-                obj['modifier_list_id'] = obj_id
                 for modifier in obj['modifier_list_data']['modifiers']:
                     modifier['id'] = self.make_id('modifier')
+                    modifier['modifier_list_id'] = obj_id
                     modifier['ordinal'] = i
             recs_to_create.append(obj)
         body = {'idempotency_key': str(uuid.uuid4()),

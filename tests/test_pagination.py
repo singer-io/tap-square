@@ -102,6 +102,7 @@ class TestSquarePagination(TestSquareBase):
                     location_id = [location['id'] for location in self.client.get_all('locations')][0]
                     for i in range(num_records):
                         new_objects.append(self.client.create_order(location_id))
+
                 elif stream == 'shifts':
                     # Find the max end_at to know when the last shift ends, so we can start a shift there
                     max_end_at = max([obj['end_at'] for obj in existing_objects])
@@ -117,7 +118,9 @@ class TestSquarePagination(TestSquareBase):
                 elif stream in {'inventories', 'employees', 'refunds', 'payments'}: # non catalog objects
                     LOGGER.info('%s: Created %s records', stream, num_records)
                     new_objects += self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
+
                 elif stream in {'items', 'categories', 'discounts', 'taxes', 'modifier_lists'}:  # catalog objects
+                    # TODO combine this call inside the test_client.create when num_records > 1
                     new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
 
                 else:
