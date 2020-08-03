@@ -24,7 +24,7 @@ class TestSquarePagination(TestSquareBase):
         'locations': None, # TODO
         'refunds': 100,
         'payments': 100,
-        'modifier_lists': BATCH_LIMIT,
+        'modifier_lists': DEFAULT_BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
     }
