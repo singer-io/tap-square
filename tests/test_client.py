@@ -594,8 +594,8 @@ class TestClient(SquareClient):
             if stream == 'modifier_lists':
                 obj['ordinal'] = i
                 obj['modifier_list_id'] = obj_id
-                obj['modifier_list_data']['modifier_data']['id'] = self.make_id('modifier')
-                obj['modifier_list_data']['modifier_data']['ordinal'] = i
+                obj['modifier_list_data']['modifiers']['id'] = self.make_id('modifier')
+                obj['modifier_list_data']['modifiers']['ordinal'] = i
             recs_to_create.append(obj)
         body = {'idempotency_key': str(uuid.uuid4()),
                 'batches': [{'objects': recs_to_create}]}
