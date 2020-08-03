@@ -377,6 +377,10 @@ class TestSquareBase(unittest.TestCase):
             if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
                         for stream_obj in expected_records[stream]]):
                 LOGGER.info("Data missing for stream %s, will create a record", stream)
-                expected_records[stream].append(self.client.create(stream, start_date=start_date))
+                created_record = self.client.create(stream, start_date=start_date)
+                if isinstance(created_record, list):  # TODO Fix creates so that they all return a single object
+                    expected_records[stream] += created_record
+                else:
+                    expected_records[stream].append(created_record)
 
         return expected_records

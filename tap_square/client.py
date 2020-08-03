@@ -222,7 +222,7 @@ class SquareClient():
 
 
     # TODO: Use start_time in a later iteration, ignoring in pylint for now
-    def get_shifts(self, start_time): #pylint: disable=unused-argument
+    def get_shifts(self, start_time, bookmarked_cursor): #pylint: disable=unused-argument
         body = {
             "query": {
                 "sort": {
@@ -231,6 +231,10 @@ class SquareClient():
                 }
             }
         }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
         with singer.http_request_timer('GET shifts'):
             result = self._client.labor.search_shifts(body=body)
 

@@ -217,18 +217,21 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
-            primary_keys = self.expected_primary_keys().get(stream)
-            pk = list(primary_keys)[0] if primary_keys else None
-            if pk:
+            if stream in self.testable_streams():
+                primary_keys = self.expected_primary_keys().get(stream)
+                pk = list(primary_keys)[0] if primary_keys else None
+                if pk:
 
-                updated_ids = [record.get(pk) for record in updated_records[stream]]
-                for record in expected_records_1.get(stream, []):
-                    if record.get(pk) in updated_ids:
-                        continue  # do not add the orginal of the updated record
-                    expected_records_2[stream].append(record)
+                    updated_ids = [record.get(pk) for record in updated_records[stream]]
+                    for record in expected_records_1.get(stream, []):
+                        if isinstance(record, list):
+                            import pdb; pdb.set_trace()
+                        if record.get(pk) in updated_ids:
+                            continue  # do not add the orginal of the updated record
+                        expected_records_2[stream].append(record)
 
-            else:  # since `inventories` has no pk add all records from 1st sync
-                expected_records_2[stream] += (expected_records_1.get(stream, []))
+                else:  # since `inventories` has no pk add all records from 1st sync
+                    expected_records_2[stream] += (expected_records_1.get(stream, []))
 
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),

@@ -17,10 +17,9 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts',
                 'employees',
                 'settlements',
-                'shifts',  # TEST ISSUE | getting duplicate records in expectations
+                'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3669
             }
         )
 
@@ -179,6 +178,17 @@ class TestAutomaticFields(TestSquareBase):
                         msg="Expected automatic fields and nothing else.")
 
                 actual_records = [row['data'] for row in data['messages']]
+
+
+                # TODO REMOVE once bug addressed
+                ids = []
+                dup_ids = []
+                if stream == 'shifts':  # BUG | see top of file
+                    for rec in expected_records.get(stream):
+                        if rec.get('id') not in ids:
+                            ids.append(rec.get('id'))
+                        else:
+                            dup_ids.append(rec.get('id')) # Look at this to see we aren't getting duplicates
 
                 # Verify the number of records match expectations
                 self.assertEqual(len(expected_records.get(stream)),

@@ -105,7 +105,7 @@ class TestClient(SquareClient):
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
-            return [obj for page, _ in self.get_shifts(start_date) for obj in page]
+            return [obj for page, _ in self.get_shifts(start_date, None) for obj in page]
         elif stream == 'settlements':
             settlements = Settlements()
             return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
@@ -206,6 +206,8 @@ class TestClient(SquareClient):
             return [self.create_refunds(ext_obj, start_date).body.get('refund')]
         elif stream == 'payments':
             return [self.create_payments()]
+        elif stream == 'cash_drawer_shifts':
+            raise NotImplementedError("create not implemented for stream {}".format(stream))
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees')][0]
             location_id = [location['id'] for location in self.get_all('locations')][0]
@@ -641,7 +643,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations')][0]
+            location_id = obj.get('location_id')
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]

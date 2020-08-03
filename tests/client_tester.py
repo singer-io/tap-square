@@ -72,7 +72,7 @@ if __name__ == "__main__":
                     # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                     obj_id = created_obj[0].get('id')
                     version = created_obj[0].get('version')
-                    updated_obj = client.update(obj, obj_id=obj_id, version=version)
+                    updated_obj = client.update(obj, obj_id=obj_id, version=version, obj=created_obj[0])
                     if updated_obj:
                         print("SUCCESS")
                         if print_objects:
