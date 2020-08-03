@@ -130,7 +130,8 @@ class TestClient(SquareClient):
     ### CREATEs
     ##########################################################################
 
-    MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 1000
+    # Even though this is documented to be 1000, it fails for a batch of 985 for modifier_lists
+    MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 500
 
     def post_category(self, body):
         """
@@ -287,7 +288,7 @@ class TestClient(SquareClient):
                         'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
             to_state = random.choice(states)
             occurred_at = datetime.strftime(
-                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
             change = {
                 'type': 'ADJUSTMENT',
                 'adjustment': {
