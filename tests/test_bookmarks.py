@@ -184,7 +184,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 continue
             elif stream == 'orders':
                 for message in first_sync_records.get(stream).get('messages'):
-                    if message.get('data')['state'] != 'COMPLETED':
+                    if message.get('data')['state'] not in ['COMPLETED', 'CANCELED']:
                         first_rec = message.get('data')
                         break
 
@@ -343,7 +343,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 expected_records = expected_records_2.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
-                if stream in {'orders', 'modifier_lists'}:  # Some streams have too many dependencies to track explicitly
+                if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly
                     self.assertLessEqual(len(expected_records), len(second_sync_data),
                                          msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
                                             "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
