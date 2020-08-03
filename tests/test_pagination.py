@@ -96,41 +96,14 @@ class TestSquarePagination(TestSquareBase):
 
             if len(existing_objects) <= self.API_LIMIT.get(stream):
                 num_records = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
-                print('{}: Will create {} records'.format(stream, num_records))
-                new_objects = []
-                if stream == 'orders':
-                    location_id = [location['id'] for location in self.client.get_all('locations')][0]
-                    for i in range(num_records):
-                        new_objects.append(self.client.create_order(location_id))
+                LOGGER.info('%s: Will create %s records', stream, num_records)
+                new_objects = self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
 
-                elif stream == 'shifts':
-                    # Find the max end_at to know when the last shift ends, so we can start a shift there
-                    max_end_at = max([obj['end_at'] for obj in existing_objects])
-                    end_at_datetime = utils.strptime_to_utc(max_end_at)
-                    for i in range(num_records):
-                        new_objects.append(
-                            # TODO: create takes num_records, so push this loop's logic into there
-                            self.client.create('shifts', start_date=utils.strftime(end_at_datetime))
-                        )
-                        # Bump our known max `end_at` by self.client.SHIFT_MINUTES
-                        end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
-
-                elif stream in {'inventories', 'employees', 'refunds', 'payments'}: # non catalog objects
-                    LOGGER.info('%s: Created %s records', stream, num_records)
-                    new_objects += self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
-
-                elif stream in {'items', 'categories', 'discounts', 'taxes', 'modifier_lists'}:  # catalog objects
-                    # TODO combine this call inside the test_client.create when num_records > 1
-                    new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
-
-                else:
-                    raise RuntimeError("The stream {} is missing from the setup.".format(stream))
                 assert new_objects, "Failed to create any new records for stream {}".format(stream)
+                self.assertEqual(len(new_objects), num_records)
                 expected_records[stream] += new_objects
-
-                print('{}: Created {} records'.format(stream, num_records))
             else:
-                print('{}: Have sufficent amount of data to continue test'.format(stream))
+                LOGGER.info('%s: Have sufficent amount of data to continue test', stream)
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in self.TESTABLE_STREAMS:
