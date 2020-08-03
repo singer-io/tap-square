@@ -130,6 +130,8 @@ class TestClient(SquareClient):
     ### CREATEs
     ##########################################################################
 
+    MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 1000
+
     def post_category(self, body):
         """
         body:
@@ -437,7 +439,8 @@ class TestClient(SquareClient):
                                             'ordinal': 1}
                                         ],}
                 })
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
         return self.post_category(body)
@@ -454,7 +457,8 @@ class TestClient(SquareClient):
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
                                   }]}} for item_id in item_ids]
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -473,9 +477,10 @@ class TestClient(SquareClient):
             },
             'present_at_all_locations': random.choice([True, False]),
         } for item_id in item_ids]
-        body = {'batches': [{'objects': objects}],
-                'idempotency_key': str(uuid.uuid4())}
 
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
+                'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def create_categories(self, num_records):
@@ -483,7 +488,8 @@ class TestClient(SquareClient):
         objects = [{'id': category_id,
                     'type': 'CATEGORY',
                     'category_data': {'name': category_id}} for category_id in category_ids]
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -495,7 +501,8 @@ class TestClient(SquareClient):
                                       'discount_type': 'FIXED_AMOUNT',
                                       'amount_money': {'amount': 34500,
                                                        'currency': 'USD'}}} for discount_id in discount_ids]
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
         return self.post_category(body)
@@ -505,7 +512,8 @@ class TestClient(SquareClient):
         objects = [{'id': tax_id,
                     'type': 'TAX',
                     'tax_data': {'name': tax_id}} for tax_id in tax_ids]
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
         return self.post_category(body)
@@ -645,8 +653,10 @@ class TestClient(SquareClient):
                     modifier['modifier_list_id'] = obj_id
                     modifier['ordinal'] = i
             recs_to_create.append(obj)
-        body = {'idempotency_key': str(uuid.uuid4()),
-                'batches': [{'objects': recs_to_create}]}
+
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(recs_to_create, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
+                'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     ##########################################################################
@@ -725,15 +735,6 @@ class TestClient(SquareClient):
                                           'type': 'CATEGORY',
                                           'version': version,
                                           'category_data': {'name': self.make_id('category')}}]}],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
-
-
-    def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
-        body = {'batches': [{'objects': [{'id': obj_id,
-                                         'type': 'MODIFIER_LIST',
-                                          'version': version,
-                                          'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
