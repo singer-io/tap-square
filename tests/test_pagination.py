@@ -27,7 +27,7 @@ class TestSquarePagination(TestSquareBase):
         'locations': None, # TODO
         'refunds': 100,
         'payments': 100,
-        'modifier_lists': None, # TODO
+        'modifier_lists': DEFAULT_BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
         'settlements': 200,
@@ -39,11 +39,11 @@ class TestSquarePagination(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
-                'employees', # Requires production environment to create records
-                'modifier_lists',
-                'roles', #only works with prod app
-                'settlements',
-                'cash_drawer_shifts',
+                'cash_drawer_shifts',  # TODO determine if testable
+                'employees',  # TODO Requires production environment to create records
+                'roles',  # TODO only works with prod app
+                'settlements',  # TODO determine if testable
+                'shifts',  # TODO Creates seem to be failing and we do not generate a sufficient amount of records
             }
         )
 
@@ -52,7 +52,6 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'locations',  # Only 300 locations can be created, and 300 are returned in a single request
                 'bank_accounts', # Cannot create a record, also PROD ONLY
-                'roles',
             }
         )
 

@@ -24,13 +24,12 @@ class TestSquareStartDate(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'employees', # TODO Requires production environment to create records
-                'modifier_lists',
-                'inventories',
-                'roles', #doesn't use start_date, this is a full table
-                'settlements',
                 'cash_drawer_shifts',
-                'shifts',
+                'employees', # TODO Requires production environment to create records
+                'inventories',
+                'roles',  # doesn't use start_date, this is a full table
+                'settlements',
+                'shifts', # failing in create when called from this test
             }
         )
 

@@ -22,6 +22,24 @@
         "object"
       ],
       "properties": {
+        "name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "ordinal": {
+          "type": [
+            "null",
+            "integer"
+          ]
+        },
+        "selection_type": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "modifiers": {
           "type": [
             "null",
@@ -74,6 +92,26 @@
                       "null",
                       "integer"
                     ]
+                  },
+                  "price_money": {
+                    "type": [
+                      "null",
+                      "object"
+                    ],
+                    "properties": {
+                      "amount": {
+                        "type": [
+                          "null",
+                          "integer"
+                        ]
+                      },
+                      "currency": {
+                        "type": [
+                          "null",
+                          "string"
+                        ]
+                      }
+                    }
                   }
                 }
               },

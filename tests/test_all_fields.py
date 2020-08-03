@@ -20,13 +20,12 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
+                'cash_drawer_shifts',
                 'employees',
                 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
-                'modifier_lists',
-                'roles', # only works with prod
-                'settlements',
-                'cash_drawer_shifts',
-                'shifts',
+                'roles',  # only works with prod
+                'shifts',  # TEST ISSUE | getting duplicate records in expectations
+                'settlements'
             }
         )
 
