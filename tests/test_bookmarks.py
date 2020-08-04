@@ -272,7 +272,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             with self.subTest(stream=stream):
 
                 second_sync_data = [record.get("data") for record
-                                    in second_sync_records.get(stream, {}).get("messages", {"data": {}})]
+                                    in second_sync_records.get(stream, {}).get("messages", [])]
                 stream_replication_keys = self.expected_replication_keys()
                 stream_primary_keys = self.expected_primary_keys()
 
@@ -294,7 +294,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         first_sync_record_count.get(stream, 0),
                         second_sync_record_count.get(stream, 0),
                         msg="first sync didn't have more records, bookmark usage not verified")
-
 
                     for replication_key in replication_keys:
 

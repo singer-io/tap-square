@@ -101,7 +101,8 @@ class TestClient(SquareClient):
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
-            return [obj for page, _ in self.get_shifts(start_date) for obj in page]
+            return [obj for page, _ in self.get_shifts() for obj in page
+                    if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
             settlements = Settlements()
             return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
