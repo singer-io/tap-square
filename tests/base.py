@@ -184,7 +184,8 @@ class TestSquareBase(unittest.TestCase):
         """Some streams can only have data on the production app. We must test these separately"""
         return {
             'bank_accounts',
-            'roles'
+            'employees',
+            'roles',
         }
 
     def sandbox_streams(self):

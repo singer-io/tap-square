@@ -72,6 +72,17 @@ class TestClient(SquareClient):
         super().__init__(config)
 
     ##########################################################################
+    ### V1 INFO
+    ##########################################################################
+
+    def get_headers(self):
+        return {"Authorization":"Bearer {}".format(self._access_token),
+                "Content-Type": "application/json"}
+
+    def env_is_sandbox(self):
+        return self._environment == "sandbox"
+
+    ##########################################################################
     ### GETs
     ##########################################################################
 
@@ -185,7 +196,7 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             return self.create_modifier_list().body.get('objects')
         elif stream == 'employees':
-            return self.create_employees().body.get('objects')
+            return [self.create_employees_v1()]
         elif stream == 'inventories':
             return self.create_batch_inventory_adjustment(start_date=start_date)
         elif stream == 'locations':
@@ -543,18 +554,25 @@ class TestClient(SquareClient):
             raise RuntimeError(response.errors)
         return response
 
-    def create_employees(self):
-        HEADERS = {
-            "Authorization":"Bearer {}".format("{" + self._access_token + "}"),
-            "Content-Type": "application/json"}
+    def create_employees_v1(self):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
 
         base_v1 = "https://connect.squareup.com/v1/me/"
         endpoint = "employees"
         full_url = base_v1 + endpoint
-        data = {'id': self.make_id('employee'),
-                'first_name': 'singer',
-                'last_name': 'songerwriter'}
-        resp = requests.post(url=full_url, headers=HEADERS, json=data)
+
+        employee_id = self.make_id('employee').split('employee')[-1]
+        last_name = 'songerwriter' + employee_id
+        data = {
+            'first_name': 'singer',
+            'last_name': last_name,
+            'email': employee_id + '@sttichdata.com',
+            'authorized_location_ids': [],
+            'role_ids': [],
+        }
+
+        resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
         if resp.status_code >= 400:
             print(resp.text)
         return resp.json()
@@ -621,7 +639,7 @@ class TestClient(SquareClient):
         elif stream == 'taxes':
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
-            return self.update_employees(obj_id, version).body.get('objects')
+            return [self.update_employees_v1(obj)]
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
@@ -679,6 +697,23 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
+    def update_employees_v1(self, obj):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "employees"
+        employee_id = obj.get('id')
+        full_url = base_v1 + endpoint + "/" + employee_id
+
+        uid = self.make_id('employee')[1:]
+        data = {'first_name': uid,
+                'last_name': obj.get('last_name')}
+
+        resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
+        if resp.status_code >= 400:
+            print(resp.text)
+        return resp.json()
 
     def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
         body = {'batches': [{'objects': [{'id': obj_id,

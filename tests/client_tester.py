@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
-    test_updates = False  # To test updates, must also test creates
+    test_updates = True  # To test updates, must also test creates
     test_gets = True
     test_deletes = False  # To test updates, must also test creates
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         for _ in range(1):
             for obj in objects_to_test:
                 print("Testing CREATE: {}".format(obj))
-                import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+                # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                 ext_obj = None
                 if obj == 'refunds':
                     payments = client.get_all('payments', start_date=START_DATE)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
                     # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                     obj_id = created_obj[0].get('id')
                     version = created_obj[0].get('version')
-                    updated_obj = client.update(obj, obj_id=obj_id, version=version)
+                    updated_obj = client.update(stream=obj, obj_id=obj_id, version=version, obj=created_obj[0])
                     if updated_obj:
                         print("SUCCESS")
                         if print_objects:
