@@ -22,7 +22,7 @@ class TestSquarePagination(TestSquareBase):
         'taxes': DEFAULT_BATCH_LIMIT,
         'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
         'employees': 50,
-        'locations': None, # TODO
+        'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
         'refunds': 100,
         'payments': 100,
         'modifier_lists': DEFAULT_BATCH_LIMIT,
