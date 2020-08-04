@@ -195,7 +195,6 @@ class SquareClient():
 
             yield (result.body.get('orders', []), result.body.get('cursor'))
 
-
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
 

@@ -163,16 +163,16 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
-    def post_order(self, body, location_id):
+    def post_order(self, body, business_location_id):
         """
         body: {
           "order": {
-            "location_id": None,
+            "location_id": 123,
           },
           "idempotency_key": str(uuid.uuid4())
         }
         """
-        resp = self._client.orders.create_order(location_id=location_id, body=body)
+        resp = self._client.orders.create_order(location_id=business_location_id, body=body)
 
         if resp.is_error():
             stream_name = body['batches'][0]['objects'][0]['type']
@@ -213,7 +213,7 @@ class TestClient(SquareClient):
                 refunds.append(created_refund)
             return refunds
         elif stream == 'payments':
-            return [self.create_payments(num_records)]
+            return self.create_payments(num_records)
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees')][0]
             location_id = [location['id'] for location in self.get_all('locations')][0]
@@ -613,7 +613,8 @@ class TestClient(SquareClient):
         return None
 
     def _create_orders(self, location_id, num_records):
-        body = {'order': {'location_id': None},
+        # location id in body is merchant location id, one in create_order call is bussiness location id
+        body = {'order': {'location_id': location_id},
                 'idempotency_key': str(uuid.uuid4())}
 
         created_orders = []
