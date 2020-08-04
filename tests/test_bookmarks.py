@@ -199,6 +199,15 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
+            elif stream == 'roles':
+                for message in first_sync_records.get(stream).get('messages'):
+                    data = message.get('data')
+                    if not data['is_owner'] and 'role' in data['name']:
+                        first_rec = message.get('data')
+                        break
+
+                if not first_rec:
+                    raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
             else:
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')

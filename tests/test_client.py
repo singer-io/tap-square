@@ -575,8 +575,8 @@ class TestClient(SquareClient):
         }
 
         resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code >= 400:
-            print(resp.text)
+        if resp.status_code != 200:
+            raise Exception(resp.text)
         return resp.json()
 
     def create_roles_v1(self):
@@ -601,8 +601,8 @@ class TestClient(SquareClient):
             'is_owner': False,
         }
         resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code >= 400:
-            print(resp.text)
+        if resp.status_code != 200:
+            raise Exception(resp.text)
         return resp.json()
 
     def create_order(self, location_id):
@@ -741,8 +741,8 @@ class TestClient(SquareClient):
                 'last_name': obj.get('last_name')}
 
         resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code >= 400:
-            print(resp.text)
+        if resp.status_code != 200:
+            raise Exception(resp.text)
         return resp.json()
 
     def update_roles_v1(self, obj):
@@ -759,8 +759,9 @@ class TestClient(SquareClient):
             'name': 'updated_' + uid,
         }
         resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code >= 400:
-            print(resp.text)
+
+        if resp.status_code != 200:
+            raise Exception(resp.text)
         return resp.json()
 
 
