@@ -197,6 +197,8 @@ class TestClient(SquareClient):
             return self.create_modifier_list().body.get('objects')
         elif stream == 'employees':
             return [self.create_employees_v1()]
+        elif stream == 'roles':
+            return [self.create_roles_v1()]
         elif stream == 'inventories':
             return self.create_batch_inventory_adjustment(start_date=start_date)
         elif stream == 'locations':
@@ -577,6 +579,32 @@ class TestClient(SquareClient):
             print(resp.text)
         return resp.json()
 
+    def create_roles_v1(self):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "roles"
+        full_url = base_v1 + endpoint
+
+        role_id = self.make_id(endpoint)
+        permissions = ['REGISTER_ACCESS_SALES_HISTORY',
+                       'REGISTER_APPLY_RESTRICTED_DISCOUNTS',
+                       'REGISTER_CHANGE_SETTINGS',
+                       'REGISTER_EDIT_ITEM',
+                       'REGISTER_ISSUE_REFUNDS',
+                       'REGISTER_OPEN_CASH_DRAWER_OUTSIDE_SALE',
+                       'REGISTER_VIEW_SUMMARY_REPORTS']
+        data = {
+            'name': role_id[1:],
+            'permissions': random.choice(permissions),
+            'is_owner': False,
+        }
+        resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
+        if resp.status_code >= 400:
+            print(resp.text)
+        return resp.json()
+
     def create_order(self, location_id):
         body = {'order': {'location_id': None},
                 'idempotency_key': str(uuid.uuid4())}
@@ -640,6 +668,8 @@ class TestClient(SquareClient):
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
             return [self.update_employees_v1(obj)]
+        elif stream == 'roles':
+            return [self.update_roles_v1(obj)]
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
@@ -714,6 +744,25 @@ class TestClient(SquareClient):
         if resp.status_code >= 400:
             print(resp.text)
         return resp.json()
+
+    def update_roles_v1(self, obj):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "roles"
+        role_id = obj.get('id')
+        full_url = base_v1 + endpoint + "/" + role_id
+
+        uid = self.make_id(endpoint)[1:]
+        data = {
+            'name': 'updated_' + uid,
+        }
+        resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
+        if resp.status_code >= 400:
+            print(resp.text)
+        return resp.json()
+
 
     def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
         body = {'batches': [{'objects': [{'id': obj_id,
