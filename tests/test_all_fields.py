@@ -1,13 +1,11 @@
 import os
 import unittest
 
-from singer import metadata
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBase
-from test_client import TestClient
 
 
 class TestSquareAllFields(TestSquareBase):

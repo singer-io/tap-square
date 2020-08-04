@@ -153,7 +153,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
             if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
                 expected_records_second_sync['orders'].append(order['data'])
 
-        for stream in self.testable_streams():
+        streams_to_create_records = list(self.testable_streams())
+        streams_to_create_records.remove('payments')
+        streams_to_create_records.append('payments')
+
+        for stream in streams_to_create_records:
             new_records = []
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
                 # a CREATE for refunds will result in a new payments object
@@ -162,10 +166,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 created_records['payments'].append(payment)
                 expected_records_second_sync['payments'].append(payment)
-            if stream == 'payments':
-                created_record = self.client.create(stream, start_date=self.START_DATE)
-                # We need to poll for the record till it has the processing_fee
-                new_records = self.client.get_a_payment(payment_id=created_record[0].get('id'), start_date=self.START_DATE, keys_exist={'processing_fee'})
             else:
                 # Create
                 new_records = self.client.create(stream, start_date=self.START_DATE)
