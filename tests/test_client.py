@@ -614,11 +614,10 @@ class TestClient(SquareClient):
 
     def _create_orders(self, location_id, num_records):
         # location id in body is merchant location id, one in create_order call is bussiness location id
-        body = {'order': {'location_id': location_id},
-                'idempotency_key': str(uuid.uuid4())}
-
         created_orders = []
         for i in range(num_records):
+            body = {'order': {'location_id': location_id},
+                    'idempotency_key': str(uuid.uuid4())}
             created_orders.append(self.post_order(body, location_id).body.get('order'))
 
         return created_orders
