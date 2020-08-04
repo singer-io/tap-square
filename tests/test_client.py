@@ -544,24 +544,20 @@ class TestClient(SquareClient):
         return response
 
     def create_employees(self):
-        # # TODO Either remove this or make every other stream refernce production
-        # HEADERS = {
-        #     "Authorization":"Bearer {}".format("{" + self._access_token + "}"),
-        #     "Content-Type": "application/json"}
-        # base_v1 = "https://connect.squareup.com/v1/me/"
-        # # base_v1 = "https://connect.squareupsandbox.com/v1" # THIS DOES NOT EXIST
-        # endpoint = "employees"
-        # full_url = base_v1 + endpoint
-        # body = {'id': self.make_id('employee'),
-        #         'first_name': 'singer',
-        #         'last_name': 'songerwriter'}
-        # #'email': '{}@stitchdata.com'.format(self.make_id('employee')[1:].replace('_', '')),
-        # response = requests.post(full_url, headers=HEADERS, data=body)
-        # if response.status_code >= 400:
-        #     print(response.text)
-        #     import pdb; pdb.set_trace()
-        # return response.json()
-        return None
+        HEADERS = {
+            "Authorization":"Bearer {}".format("{" + self._access_token + "}"),
+            "Content-Type": "application/json"}
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "employees"
+        full_url = base_v1 + endpoint
+        data = {'id': self.make_id('employee'),
+                'first_name': 'singer',
+                'last_name': 'songerwriter'}
+        resp = requests.post(url=full_url, headers=HEADERS, json=data)
+        if resp.status_code >= 400:
+            print(resp.text)
+        return resp.json()
 
     def create_order(self, location_id):
         body = {'order': {'location_id': None},

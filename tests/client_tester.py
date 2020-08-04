@@ -13,7 +13,7 @@ from test_client import TestClient
 # Testing the TestCLient
 ##########################################################################
 if __name__ == "__main__":
-    client = TestClient(env='sandbox')
+    client = TestClient(env='production')
     # START_DATE = '2020-06-24T00:00:00Z'
     START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
@@ -27,13 +27,13 @@ if __name__ == "__main__":
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        # 'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")

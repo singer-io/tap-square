@@ -36,6 +36,7 @@ class TestSquareBase(unittest.TestCase):
 
         # Allows diffs in asserts to print more
         self.maxDiff = None
+        self.set_environment(self.SANDBOX) # We always want the tests to start in sandbox
 
     @staticmethod
     def get_type():
