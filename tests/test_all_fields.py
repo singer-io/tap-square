@@ -28,6 +28,7 @@ class TestSquareAllFields(TestSquareBase):
                 'settlements'
             }
         )
+
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED

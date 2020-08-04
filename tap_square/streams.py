@@ -3,6 +3,7 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
+
 class CatalogStream:
     object_type = None
     tap_stream_id = None
@@ -27,7 +28,6 @@ class Items(CatalogStream):
             for item in page:
                 for item_data_variation in item['item_data'].get('variations', list()):
                     yield item_data_variation['id']
-
 
 
 class Categories(CatalogStream):
@@ -86,17 +86,18 @@ class Locations():
     valid_replication_keys = []
     replication_key = None
 
-    def get_all_location_ids(self, client, start_time, bookmarked_cursor):
+    def get_all_location_ids(self, client, start_time):
         all_location_ids = list()
-        for page, _ in self.sync(client, start_time, bookmarked_cursor):
+        for page, _ in self.sync(client, start_time):
             for location in page:
                 all_location_ids.append(location['id'])
 
         return all_location_ids
 
-    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=unused-argument,no-self-use
+    def sync(self, client, start_time, bookmarked_cursor=None): #pylint: disable=unused-argument,no-self-use
         for page, cursor in client.get_locations():
             yield page, cursor
+
 
 class BankAccounts():
     tap_stream_id = 'bank_accounts'
@@ -146,7 +147,7 @@ class Orders():
 
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         locations = Locations()
-        all_location_ids = locations.get_all_location_ids(client, start_time, bookmarked_cursor)
+        all_location_ids = locations.get_all_location_ids(client, start_time)
         for location_ids_chunk in chunks(all_location_ids, 10):
             # orders requests can only take up to 10 location_ids at a time
             for page, cursor in client.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
@@ -194,6 +195,7 @@ class Roles:
         for page, cursor in client.get_roles(bookmarked_cursor):
             yield page, cursor
 
+
 class CashDrawerShifts:
     tap_stream_id = 'cash_drawer_shifts'
     key_properties = ['id']
@@ -204,7 +206,7 @@ class CashDrawerShifts:
     def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
         locations = Locations()
 
-        for location_id in locations.get_all_location_ids(client, start_time, bookmarked_cursor):
+        for location_id in locations.get_all_location_ids(client, start_time):
             # Cash Drawer Shifts requests can only take up to 1 location_id at a time
             for page, cursor in client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
                 yield page, cursor
@@ -217,10 +219,10 @@ class Settlements:
     valid_replication_keys = []
     replication_key = None
 
-    def sync(self, client, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, client, start_time, bookmarked_cursor=None): #pylint: disable=no-self-use, unused-argument
         locations = Locations()
 
-        for location_id in locations.get_all_location_ids(client, start_time, bookmarked_cursor):
+        for location_id in locations.get_all_location_ids(client, start_time):
             # Settlements requests can only take up to 1 location_id at a time
             for page, batch_token in client.get_settlements(location_id):
                 yield page, batch_token
