@@ -44,7 +44,6 @@ class TestAutomaticFields(TestSquareBase):
 
         self.set_environment(self.PRODUCTION)
 
-
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())

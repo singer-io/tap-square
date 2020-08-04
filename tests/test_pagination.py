@@ -36,7 +36,6 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',  # TODO determine if testable
-                'employees',  # TODO Requires production environment to create records
                 'roles',  # TODO only works with prod app
                 'settlements',  # TODO determine if testable
                 'shifts',  # TODO Creates seem to be failing and we do not generate a sufficient amount of records
@@ -53,20 +52,24 @@ class TestSquarePagination(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-
-        print("\n\nTESTING WITH DYNAMIC DATA")
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams()
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.pagination_test()
 
-        print("\n\nTESTING WITH STATIC DATA")
+        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         # TODO Uncomment once TASK addressed https://stitchdata.atlassian.net/browse/SRCE-3575
         # self.START_DATE = self.STATIC_START_DATE
-        # self.TESTABLE_STREAMS = self.testable_streams_static()
+        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         # self.pagination_test()
 
-        # TODO implement PRODUCTION
+        self.set_environment(self.PRODUCTION)
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.pagination_test()
+
 
     def pagination_test(self):
         """
