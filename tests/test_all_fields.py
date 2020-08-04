@@ -21,9 +21,7 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'cash_drawer_shifts',
-                'employees',
                 'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
-                'roles',  # only works with prod
                 'shifts',  # TEST ISSUE | getting duplicate records in expectations
                 'settlements'
             }
@@ -41,19 +39,23 @@ class TestSquareAllFields(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        print("\n\nTESTING WITH DYNAMIC DATA")
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams()
-        assert None, "Failing immmediately to check the slack integration"
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.all_fields_test()
 
-        print("\n\nTESTING WITH STATIC DATA")
+        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static()
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.all_fields_test()
 
-        # TODO implement PRODUCTION
+        self.set_environment(self.PRODUCTION)
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.all_fields_test()
+
 
     def all_fields_test(self):
         """
@@ -63,9 +65,6 @@ class TestSquareAllFields(TestSquareBase):
 
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
-
-        if self.TESTABLE_STREAMS == set(): # REMOVE once BUG addressed
-            print("WE ARE SKIPPING THIS TEST\n\n")
 
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
