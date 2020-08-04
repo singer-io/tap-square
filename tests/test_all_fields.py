@@ -45,6 +45,7 @@ class TestSquareAllFields(TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA")
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams()
+        assert None, "Failing immmediately to check the slack integration"
         self.all_fields_test()
 
         print("\n\nTESTING WITH STATIC DATA")
