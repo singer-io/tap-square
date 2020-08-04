@@ -103,10 +103,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
 
         # Ensure tested streams have existing records
-        expected_records_1 = self.create_test_data(self.testable_streams(), self.START_DATE)
+        expected_records_first_sync = self.create_test_data(self.testable_streams(), self.START_DATE)
 
         # Adjust expectations for datetime format
-        for stream, expected_records in expected_records_1.items():
+        for stream, expected_records in expected_records_first_sync.items():
             print("Adjust expectations for stream: {}".format(stream))
             self.modify_expected_records(expected_records)
 
@@ -146,12 +146,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Add data before next sync via insert and update, and set expectations
         created_records = {x: [] for x in self.expected_streams()}
         updated_records = {x: [] for x in self.expected_streams()}
-        expected_records_2 = {x: [] for x in self.expected_streams()}
+        expected_records_second_sync = {x: [] for x in self.expected_streams()}
 
         # We should expect any records with rep-keys equal to the bookmark from the first sync to be returned by the second
         for order in first_sync_records['orders']['messages']:
             if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
-                expected_records_2['orders'].append(order['data'])
+                expected_records_second_sync['orders'].append(order['data'])
 
         for stream in self.testable_streams():
             new_records = []
@@ -161,13 +161,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 new_records = [new_refund] # To match output of create method
 
                 created_records['payments'].append(payment)
-                expected_records_2['payments'].append(payment)
+                expected_records_second_sync['payments'].append(payment)
             else:
                 # Create
                 new_records = self.client.create(stream, start_date=self.START_DATE)
 
             assert new_records, "Failed to create a {} record".format(stream)
-            expected_records_2[stream] += new_records
+            expected_records_second_sync[stream] += new_records
             created_records[stream] += new_records
 
             if stream != 'inventories':  # This stream may have multiple records as a result of a single create
@@ -193,7 +193,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
             if stream != 'inventories':
                 assert len(updated_record) == 1, "Updated too many {} records".format(stream)
-            expected_records_2[stream] += updated_record
+            expected_records_second_sync[stream] += updated_record
             updated_records[stream] += updated_record
 
         # Update a Payment AFTER all other streams have been updated
@@ -215,7 +215,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         updated_record = self.poll_for_updated_record(first_rec_id, self.START_DATE)
 
-        expected_records_2['payments'] += updated_record
+        expected_records_second_sync['payments'] += updated_record
         updated_records['payments'] += updated_record
 
 
@@ -223,39 +223,40 @@ class TestSquareIncrementalReplication(TestSquareBase):
         for stream in self.expected_full_table_streams():
             primary_keys = self.expected_primary_keys().get(stream)
             pk = list(primary_keys)[0] if primary_keys else None
-            if pk:
 
+            # TODO: pk might not be the best way to determine if records should be added here or not
+            if pk:
                 updated_ids = [record.get(pk) for record in updated_records[stream]]
-                for record in expected_records_1.get(stream, []):
+                for record in expected_records_first_sync.get(stream, []):
                     if record.get(pk) in updated_ids:
                         continue  # do not add the orginal of the updated record
-                    expected_records_2[stream].append(record)
+                    expected_records_second_sync[stream].append(record)
 
             else:  # since `inventories` has no pk add all records from 1st sync
-                expected_records_2[stream] += (expected_records_1.get(stream, []))
+                expected_records_second_sync[stream] += (expected_records_first_sync.get(stream, []))
 
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),
-                                     ("2nd sync expected records", expected_records_2)]:
+                                     ("2nd sync expected records", expected_records_second_sync)]:
             print("Adjusting epxectations for {} records".format(record_desc))
             for stream, expected_records in records.items():
                 print("\tadjusting for stream: {}".format(stream))
                 self.modify_expected_records(expected_records)
 
-        # ensure validity of expected_records_2
+        # ensure validity of expected_records_second_sync
         for stream in self.testable_streams():
             if stream in self.expected_incremental_streams():
                 if stream in self.cannot_update_streams():
-                    self.assertEqual(len(expected_records_2.get(stream)), 1,
+                    self.assertEqual(len(expected_records_second_sync.get(stream)), 1,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 elif stream == 'orders': # ORDERS are returned inclusive on the datetime queried
-                    self.assertEqual(len(expected_records_2.get(stream)), 3,
+                    self.assertEqual(len(expected_records_second_sync.get(stream)), 3,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 else:  # Most streams will have 2 records from the Update and Insert
-                    self.assertEqual(len(expected_records_2.get(stream)), 2,
+                    self.assertEqual(len(expected_records_second_sync.get(stream)), 2,
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
-                self.assertEqual(len(expected_records_2.get(stream)), len(expected_records_1.get(stream)) + len(created_records[stream]),
+                self.assertEqual(len(expected_records_second_sync.get(stream)), len(expected_records_first_sync.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
         # Run a second sync job using orchestrator
@@ -334,7 +335,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # Verify that the expected records are replicated in the 2nd sync
                 # For incremental streams we should see only 2 records (a new record and an updated record)
                 # For full table streams we should see 1 more record than the first sync
-                expected_records = expected_records_2.get(stream)
+                expected_records = expected_records_second_sync.get(stream)
                 primary_keys = stream_primary_keys.get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
                 if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly

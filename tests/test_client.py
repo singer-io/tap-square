@@ -640,26 +640,6 @@ class TestClient(SquareClient):
         LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
 
-    def create_batch_post(self, stream, num_records):
-        recs_to_create = []
-        for i in range(num_records):
-            # Use dict() to make a copy so you don't get a list of the same object
-            obj = dict(self.stream_to_data_schema[stream])
-            obj_id = self.make_id(stream)
-            obj['id'] = obj_id
-            if stream == 'modifier_lists':
-                obj['ordinal'] = i
-                for modifier in obj['modifier_list_data']['modifiers']:
-                    modifier['id'] = self.make_id('modifier')
-                    modifier['modifier_list_id'] = obj_id
-                    modifier['ordinal'] = i
-            recs_to_create.append(obj)
-
-        body = {'batches': [{'objects': object_chunk}
-                            for object_chunk in chunks(recs_to_create, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
-
     ##########################################################################
     ### UPDATEs
     ##########################################################################
