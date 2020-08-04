@@ -162,6 +162,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 created_records['payments'].append(payment)
                 expected_records_second_sync['payments'].append(payment)
+            if stream == 'payments':
+                created_record = self.client.create(stream, start_date=self.START_DATE)
+                # We need to poll for the record till it has the processing_fee
+                new_records = self.client.get_a_payment(payment_id=created_record[0].get('id'), start_date=self.START_DATE, keys_exist={'processing_fee'})
             else:
                 # Create
                 new_records = self.client.create(stream, start_date=self.START_DATE)
