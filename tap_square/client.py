@@ -219,11 +219,15 @@ class SquareClient():
 
             yield (result.body.get('counts', []), result.body.get('cursor'))
 
-
     # TODO: Use start_time in a later iteration, ignoring in pylint for now
     def get_shifts(self, start_time): #pylint: disable=unused-argument
         body = {
             "query": {
+                "filter": {
+                    "start": {
+                        "start_at": start_time
+                    },
+                },
                 "sort": {
                     "field": "UPDATED_AT",
                     "order": "ASC"
