@@ -22,6 +22,7 @@ class TestSquarePagination(TestSquareBase):
         'taxes': DEFAULT_BATCH_LIMIT,
         'employees': 50,
         'locations': None, # TODO
+        'roles': 100,
         'refunds': 100,
         'payments': 100,
         'modifier_lists': DEFAULT_BATCH_LIMIT,
@@ -36,7 +37,6 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',  # TODO determine if testable
-                'roles',  # TODO only works with prod app
                 'settlements',  # TODO determine if testable
                 'shifts',  # TODO Creates seem to be failing and we do not generate a sufficient amount of records
             }
