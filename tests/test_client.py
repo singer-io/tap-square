@@ -378,7 +378,7 @@ class TestClient(SquareClient):
     def create_payments(self, num_records):
         payments = []
         for n in range(num_records):
-            payments += self.create_payment()
+            payments.append(self.create_payment())
 
         return payments
 
