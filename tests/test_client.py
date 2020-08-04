@@ -677,7 +677,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations')][0]
+            location_id = obj.get('location_id')
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]
