@@ -51,7 +51,8 @@ class SquareClient():
 
         return result.body['access_token']
 
-    def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
+    @staticmethod
+    def _get_v2_objects(request_timer_suffix, request_method, body, body_key):
         cursor = body.get('cursor', '__initial__')
         while cursor:
             if cursor != '__initial__':
