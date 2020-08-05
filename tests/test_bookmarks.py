@@ -162,11 +162,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
         if 'orders' in self.TESTABLE_STREAMS:
             for order in first_sync_records['orders']['messages']:
                 if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
-                    expected_records_2['orders'].append(order['data'])
+                    expected_records_second_sync['orders'].append(order['data'])
 
         streams_to_create_records = list(self.TESTABLE_STREAMS)
-        streams_to_create_records.remove('payments')
-        streams_to_create_records.append('payments')
+        if 'payments' in self.TESTABLE_STREAMS:
+            streams_to_create_records.remove('payments')
+            streams_to_create_records.append('payments')
 
         for stream in streams_to_create_records:
 
@@ -242,7 +243,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             updated_record = self.poll_for_updated_record(first_rec_id, self.START_DATE)
 
-            expected_records_2['payments'] += updated_record
+            expected_records_second_sync['payments'] += updated_record
             updated_records['payments'] += updated_record
 
         # adjust expectations for full table streams to include the expected records from sync 1
@@ -269,7 +270,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 print("\tadjusting for stream: {}".format(stream))
                 self.modify_expected_records(expected_records)
 
-        # ensure validity of expected_records_2
+        # ensure validity of expected_records_second_sync
         for stream in self.TESTABLE_STREAMS:
             if stream in self.expected_incremental_streams():
                 if stream in self.cannot_update_streams():
