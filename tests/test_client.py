@@ -616,7 +616,7 @@ class TestClient(SquareClient):
                 'last_name': last_name,
                 'email': employee_id + '@sttichdata.com',
                 'authorized_location_ids': [],
-                'role_ids': [],
+                'role_ids': [],  # This is needed for v1 upsert, but does not exist in v2
             }
 
             resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
