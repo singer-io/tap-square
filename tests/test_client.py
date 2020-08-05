@@ -1,5 +1,6 @@
 import uuid
 import random
+import requests
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -67,6 +68,17 @@ class TestClient(SquareClient):
         }
 
         super().__init__(config)
+
+    ##########################################################################
+    ### V1 INFO
+    ##########################################################################
+
+    def get_headers(self):
+        return {"Authorization":"Bearer {}".format(self._access_token),
+                "Content-Type": "application/json"}
+
+    def env_is_sandbox(self):
+        return self._environment == "sandbox"
 
     ##########################################################################
     ### GETs
@@ -193,10 +205,9 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             return self.create_modifier_list(num_records).body.get('objects')
         elif stream == 'employees':
-            if num_records != 1:
-                raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
-
-            return self.create_employees().body.get('objects')
+            return self.create_employees_v1(num_records)
+        elif stream == 'roles':
+            return self.create_roles_v1(num_records)
         elif stream == 'inventories':
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
@@ -402,11 +413,7 @@ class TestClient(SquareClient):
                'amount_money': {'amount': random.randint(100,10000), # in cents
                                'currency': 'USD'},
                'source_id': source_id,
-               # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money?
                'autocomplete': autocomplete,
-               # 'customer_id': '',
-               # 'location_id': '',
-               # 'reference_id': '123456',
                'note': self.make_id('payment'),}
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
@@ -593,25 +600,66 @@ class TestClient(SquareClient):
             raise RuntimeError(response.errors)
         return response
 
-    def create_employees(self):
-        # # TODO Either remove this or make every other stream refernce production
-        # HEADERS = {
-        #     "Authorization":"Bearer {}".format("{" + self._access_token + "}"),
-        #     "Content-Type": "application/json"}
-        # base_v1 = "https://connect.squareup.com/v1/me/"
-        # # base_v1 = "https://connect.squareupsandbox.com/v1" # THIS DOES NOT EXIST
-        # endpoint = "employees"
-        # full_url = base_v1 + endpoint
-        # body = {'id': self.make_id('employee'),
-        #         'first_name': 'singer',
-        #         'last_name': 'songerwriter'}
-        # #'email': '{}@stitchdata.com'.format(self.make_id('employee')[1:].replace('_', '')),
-        # response = requests.post(full_url, headers=HEADERS, data=body)
-        # if response.status_code >= 400:
-        #     print(response.text)
-        #     import pdb; pdb.set_trace()
-        # return response.json()
-        return None
+    def create_employees_v1(self, num_records):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "employees"
+        full_url = base_v1 + endpoint
+
+        employees = []
+        for _ in range(num_records):
+            employee_id = self.make_id('employee').split('employee')[-1]
+            last_name = 'songerwriter' + employee_id
+            data = {
+                'first_name': 'singer',
+                'last_name': last_name,
+                'email': employee_id + '@sttichdata.com',
+                'authorized_location_ids': [],
+                'role_ids': [],  # This is needed for v1 upsert, but does not exist in v2
+            }
+
+            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
+            if resp.status_code != 200:
+                raise Exception(resp.text)
+
+            response = resp.json() # account for v1 to v2 changes
+            response['location_ids'] = response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
+            del response['authorized_location_ids']
+            del response['role_ids']  # role_ids exists in v1 only
+
+            employees.append(response)
+        return employees
+
+    def create_roles_v1(self, num_records):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = "roles"
+        full_url = base_v1 + endpoint
+        permissions = ['REGISTER_ACCESS_SALES_HISTORY',
+                       'REGISTER_APPLY_RESTRICTED_DISCOUNTS',
+                       'REGISTER_CHANGE_SETTINGS',
+                       'REGISTER_EDIT_ITEM',
+                       'REGISTER_ISSUE_REFUNDS',
+                       'REGISTER_OPEN_CASH_DRAWER_OUTSIDE_SALE',
+                       'REGISTER_VIEW_SUMMARY_REPORTS']
+
+        roles = []
+        for _ in range(num_records):
+            role_id = self.make_id(endpoint)
+            data = {
+                'name': role_id[1:],
+                'permissions': random.choice(permissions),
+                'is_owner': False,
+            }
+            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
+            if resp.status_code != 200:
+                raise Exception(resp.text)
+            roles.append(resp.json())
+        return roles
 
     def _create_orders(self, location_id, num_records):
         # location id in body is merchant location id, one in create_order call is bussiness location id
@@ -662,7 +710,9 @@ class TestClient(SquareClient):
         elif stream == 'taxes':
             return self.update_taxes(obj_id, version).body.get('objects')
         elif stream == 'employees':
-            return self.update_employees(obj_id, version).body.get('objects')
+            return [self.update_employees_v1(obj)]
+        elif stream == 'roles':
+            return [self.update_roles_v1(obj)]
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
@@ -670,7 +720,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations', None)][0]
+            location_id = obj.get('location_id')
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]
@@ -717,6 +767,42 @@ class TestClient(SquareClient):
                                           'type': 'CATEGORY',
                                           'version': version,
                                           'category_data': {'name': self.make_id('category')}}]}],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def _update_object_v1(self, stream, obj_id, data):
+        if self.env_is_sandbox():
+            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
+
+        base_v1 = "https://connect.squareup.com/v1/me/"
+        endpoint = base_v1 + stream + "/" + obj_id
+
+        resp = requests.put(url=endpoint, headers=self.get_headers(), json=data)
+        if resp.status_code != 200:
+            raise Exception(resp.text)
+        return resp.json()
+
+    def update_employees_v1(self, obj):
+        employee_id = obj.get('id')
+        uid = self.make_id('employee')[1:]
+        data = {'first_name': uid,
+                'last_name': obj.get('last_name')}
+
+        return self._update_object_v1("employees", employee_id, data)
+
+    def update_roles_v1(self, obj):
+        role_id = obj.get('id')
+        uid = self.make_id(endpoint)[1:]
+        data = {
+            'name': 'updated_' + uid,
+        }
+        return self._update_object_v1("roles", rol_id, data)
+
+    def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
+        body = {'batches': [{'objects': [{'id': obj_id,
+                                         'type': 'MODIFIER_LIST',
+                                          'version': version,
+                                          'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 

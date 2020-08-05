@@ -17,7 +17,6 @@ class TestAutomaticFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',
-                'employees',
                 'settlements',
             }
         )
@@ -25,30 +24,31 @@ class TestAutomaticFields(TestSquareBase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts',
+                'bank_accounts', # data cannot be created via API
             }
         )
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        print("\n\nTESTING WITH DYNAMIC DATA")
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.auto_fields_test()
 
-        print("\n\nTESTING WITH STATIC DATA")
+        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.auto_fields_test()
 
-        # TODO PRODUCTION is not fully configured
-        # self.set_environment(self.PRODUCTION)
-        # print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # print("\n\nTESTING WITH STATIC DATA")
-        # self.START_DATE = self.get_properties().get('start_date')
-        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
-        # self.auto_fields_test()
+        self.set_environment(self.PRODUCTION)
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.auto_fields_test()
+
+        # TODO Determine if static prod streams exist
+
 
     def auto_fields_test(self):
         """
