@@ -29,7 +29,6 @@ class TestSquareStartDate(TestSquareBase):
                 'inventories',
                 'roles',  # doesn't use start_date, this is a full table
                 'settlements',
-                'shifts', # failing in create when called from this test
             }
         )
 

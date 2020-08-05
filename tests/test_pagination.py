@@ -41,7 +41,6 @@ class TestSquarePagination(TestSquareBase):
                 'employees',  # TODO Requires production environment to create records
                 'roles',  # TODO only works with prod app
                 'settlements',  # TODO determine if testable
-                'shifts',  # TODO Creates seem to be failing and we do not generate a sufficient amount of records
             }
         )
 

@@ -21,7 +21,6 @@ class TestSquareAllFields(TestSquareBase):
                 'cash_drawer_shifts',
                 'employees',
                 'roles',  # only works with prod
-                'shifts',  # TEST ISSUE | getting duplicate records in expectations
                 'settlements'
             }
         )
