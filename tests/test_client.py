@@ -276,11 +276,11 @@ class TestClient(SquareClient):
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
         items = self._create_item(start_date, num_records).body.get('objects', [])
-        assert(items)
+        assert(len(items) == num_records)
 
         # Crate an item_variation and get it's ID
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
-        assert(item_variations)
+        assert(len(item_variations) == num_records)
 
         all_locations = self.get_all('locations', start_date)
         changes = []
@@ -296,8 +296,8 @@ class TestClient(SquareClient):
                 states = ['SOLD', 'WASTE'] # SOLD_ONLINE
             else:
                 states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                        'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                        'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+                          'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+                          'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
             to_state = random.choice(states)
             occurred_at = datetime.strftime(
                 datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
@@ -322,7 +322,7 @@ class TestClient(SquareClient):
         for change_chunk in chunks(changes, 100):
             body = {
                 'changes': change_chunk,
-                'ignore_unchanged_counts': random.choice([True, False]),
+                'ignore_unchanged_counts': False,
                 'idempotency_key': str(uuid.uuid4())
             }
             LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
@@ -333,6 +333,7 @@ class TestClient(SquareClient):
 
             all_counts += response.body.get('counts')
 
+        assert (num_records == len(all_counts) or len(all_counts) == 2 * num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be either num_records or 2*num_records".format(2 * num_records, len(all_counts), all_counts)
         return all_counts
 
     def create_refund(self, start_date):
@@ -870,7 +871,6 @@ class TestClient(SquareClient):
         from_state = 'IN_STOCK'  # inventory_obj.get('state')
 
         # Adjustment logic
-        made_id = self.make_id('inventory')
         if from_state == 'IN_STOCK':
             states = ['SOLD', 'WASTE'] # SOLD_ONLINE
         else:

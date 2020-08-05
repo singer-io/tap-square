@@ -25,6 +25,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'settlements', # TODO
                 'employees',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
                 'roles',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
+                #'payments',
+                #'refunds',
             }
         )
 
@@ -92,9 +94,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.bookmarks_test()
-
-        # TODO Determine if static prod streams exist
-
 
     def bookmarks_test(self):
         """
@@ -187,7 +186,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             expected_records_second_sync[stream] += new_records
             created_records[stream] += new_records
 
-            if stream != 'inventories':  # This stream may have multiple records as a result of a single create
+            if stream != 'inventories': # Inventory creates will sometimes result in one record for each state 2 or 1 and it's not consistent
                 assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
 
         for stream in self.TESTABLE_STREAMS.difference(self.cannot_update_streams()):
@@ -217,9 +216,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
             first_rec_version = first_rec.get('version')
             updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version, obj=first_rec)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
-            if stream != 'inventories':
-                assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+            assert len(updated_record) == 1, "Updated too many {} records".format(stream)
             expected_records_second_sync[stream] += updated_record
+
             updated_records[stream] += updated_record
 
         if 'payments' in self.TESTABLE_STREAMS:
@@ -252,14 +251,16 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             # TODO: pk might not be the best way to determine if records should be added here or not
             if pk:
-                updated_ids = [record.get(pk) for record in updated_records[stream]]
-                for record in expected_records_first_sync.get(stream, []):
-                    if record.get(pk) in updated_ids:
-                        continue  # do not add the orginal of the updated record
-                    expected_records_second_sync[stream].append(record)
+                unique_key = pk
 
-            else:  # since `inventories` has no pk add all records from 1st sync
-                expected_records_second_sync[stream] += (expected_records_first_sync.get(stream, []))
+            else:  # since `inventories` has no pk use catalog object id instead
+                unique_key = 'catalog_object_id'
+
+            updated_ids = [record.get(unique_key) for record in updated_records[stream]]
+            for record in expected_records_first_sync.get(stream, []):
+                if record.get(unique_key) in updated_ids:
+                    continue  # do not add the orginal of the updated record
+                expected_records_second_sync[stream].append(record)
 
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),
