@@ -85,10 +85,11 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        yield from self._get_v2_objects(object_type,
-                                        lambda bdy: self._client.catalog.search_catalog_objects(body=bdy),
-                                        body,
-                                        'objects')
+        yield from self._get_v2_objects(
+            object_type,
+            lambda bdy: self._client.catalog.search_catalog_objects(body=bdy),
+            body,
+            'objects')
 
     def get_employees(self, bookmarked_cursor):
         body = {
@@ -98,39 +99,29 @@ class SquareClient():
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
 
-        yield from self._get_v2_objects('employees',
-                                        lambda bdy: self._client.employees.list_employees(**bdy),
-                                        body,
-                                        'employees')
+        yield from self._get_v2_objects(
+            'employees',
+            lambda bdy: self._client.employees.list_employees(**bdy),
+            body,
+            'employees')
 
     def get_locations(self):
         body = {}
 
-        yield from self._get_v2_objects('locations',
-                                        lambda bdy: self._client.locations.list_locations(**bdy),
-                                        body,
-                                        'locations')
+        yield from self._get_v2_objects(
+            'locations',
+            lambda bdy: self._client.locations.list_locations(**bdy),
+            body,
+            'locations')
 
     def get_bank_accounts(self):
         body = {}
 
-        with singer.http_request_timer('GET bank accounts'):
-            result = self._client.bank_accounts.list_bank_accounts()
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET bank accounts'):
-                result = self._client.bank_accounts.list_bank_accounts(**body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('bank_accounts', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'bank_accounts',
+            lambda bdy: self._client.bank_accounts.list_bank_accounts(**bdy),
+            body,
+            'bank_accounts')
 
     def get_orders(self, location_ids, start_time, bookmarked_cursor):
         if bookmarked_cursor:
@@ -156,23 +147,11 @@ class SquareClient():
 
         body['location_ids'] = location_ids
 
-        with singer.http_request_timer('GET orders'):
-            result = self._client.orders.search_orders(body=body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('orders', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            with singer.http_request_timer('GET orders'):
-                body['cursor'] = result.body.get('cursor')
-                result = self._client.orders.search_orders(body=body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('orders', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'orders',
+            lambda bdy: self._client.orders.search_orders(body=bdy),
+            body,
+            'orders')
 
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
