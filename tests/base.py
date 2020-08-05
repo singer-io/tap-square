@@ -99,10 +99,9 @@ class TestSquareBase(unittest.TestCase):
         """The expected streams and metadata about the streams"""
 
         return {
-            "items": {
+            "bank_accounts": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "cash_drawer_shifts": {
                 self.PRIMARY_KEYS: {'id'},
@@ -118,33 +117,20 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "taxes": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
-            },
             "employees": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
-            "locations": {
-                self.PRIMARY_KEYS: {'id'},
+           "inventories": {
+                self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
             },
-            "orders": {
+            "items": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "inventories": {
-                self.PRIMARY_KEYS: set(),
-                self.REPLICATION_METHOD: self.FULL,
-            },
-            "refunds": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL,
-            },
-            "payments": {
+            "locations": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
@@ -153,13 +139,18 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "bank_accounts": {
+            "orders": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
+            "payments": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
-            "settlements": {
+            "refunds": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL
+                self.REPLICATION_METHOD: self.FULL,
             },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
@@ -170,6 +161,11 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.FULL,
             },
             "shifts": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
+            "taxes": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
@@ -185,8 +181,6 @@ class TestSquareBase(unittest.TestCase):
     def production_streams(self):
         """Some streams can only have data on the production app. We must test these separately"""
         return {
-            'settlements',
-            'bank_accounts',
             'employees',
             'roles',
         }
@@ -202,9 +196,14 @@ class TestSquareBase(unittest.TestCase):
         """
         return {
             'locations',  # Limit 300 objects, DELETES not supported
-            'bank_accounts',  # No endpoints for CREATE or UPDATE
         }
 
+    def untestable_streams(self):
+        return {
+            'bank_accounts',  # No endpoints for CREATE or UPDATE
+            'cash_drawer_shifts',  # Require cash transactions (not supported by API)
+            'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
+        }
     def dynamic_data_streams(self):
         """Expected streams minus streams with static data."""
         return self.expected_streams().difference(self.static_data_streams())

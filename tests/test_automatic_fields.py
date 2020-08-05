@@ -14,19 +14,11 @@ class TestAutomaticFields(TestSquareBase):
         return "tap_tester_square_automatic_fields"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts',
-                'settlements',
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
+
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # data cannot be created via API
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -46,8 +38,6 @@ class TestAutomaticFields(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.auto_fields_test()
-
-        # TODO Determine if static prod streams exist
 
 
     def auto_fields_test(self):
@@ -76,7 +66,7 @@ class TestAutomaticFields(TestSquareBase):
             for obj in existing_objects:
                 expected_records[stream].append(
                     {field: obj.get(field)
-                     for field in self.expected_automatic_fields().get(stream)}
+                    for field in self.expected_automatic_fields().get(stream)}
                 )
 
         # Adjust expectations for datetime format

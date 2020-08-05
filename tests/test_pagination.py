@@ -36,20 +36,10 @@ class TestSquarePagination(TestSquareBase):
         return "tap_tester_square_pagination_test"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts',  # TODO determine if testable
-                'settlements',  # TODO determine if testable
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations',  # Only 300 locations can be created, and 300 are returned in a single request
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -157,6 +147,7 @@ class TestSquarePagination(TestSquareBase):
                                    msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
 
                 data = synced_records.get(stream, [])
+                actual_records = [row['data'] for row in data['messages']]
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 auto_fields = self.expected_automatic_fields().get(stream)
 
@@ -170,13 +161,35 @@ class TestSquarePagination(TestSquareBase):
                     self.assertEqual(auto_fields.difference(actual_keys),
                                      set(), msg="A paginated synced stream has a record that is missing expected fields.")
 
-                # TODO ADD CHECK ON IDS
                 # Verify by pks that the data replicated matches what we expect
+                primary_keys = self.expected_primary_keys().get(stream)
+                pk = list(primary_keys)[0] if primary_keys else None
 
+                if pk:
+                    # Verify that actual records were in our expectations
+                    for actual_record in actual_records:
+                        stream_expected_records = [record.get(pk) for record in expected_records.get(stream)
+                                                   if actual_record.get(pk) == record.get(pk)]
+                        self.assertTrue(len(stream_expected_records),
+                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+                        self.assertEqual(len(stream_expected_records), 1,
+                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
+                        stream_expected_record = stream_expected_records[0]
+                        self.assertEqual(actual_record.get(pk), stream_expected_record)
 
-        print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
-            self.expected_streams().difference(self.TESTABLE_STREAMS))
-        )
+                    # Verify that our expected records were replicated by the tap
+                    for expected_record in expected_records.get(stream):
+                        stream_actual_records = [record.get(pk) for record in actual_records
+                                                 if expected_record.get(pk) == record.get(pk)]
+                        self.assertTrue(len(stream_actual_records),
+                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+                        self.assertEqual(len(stream_actual_records), 1,
+                                         msg="A duplicate record was found in the sync for {}.".format(stream))
+                        stream_actual_record = stream_actual_records[0]
+                        self.assertEqual(expected_record.get(pk), stream_actual_record)
+
+                    # TODO account for streams without pks (inventories)
+
 
 if __name__ == '__main__':
     unittest.main()
