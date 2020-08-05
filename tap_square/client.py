@@ -161,7 +161,7 @@ class SquareClient():
 
         yield from self._get_v2_objects(
             'inventories',
-            lambda bdy: self._client.orders.search_orders(body=bdy),
+            lambda bdy: self._client.inventory.batch_retrieve_inventory_counts(body=bdy),
             body,
             'counts')
 
