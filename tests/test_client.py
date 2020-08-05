@@ -622,7 +622,13 @@ class TestClient(SquareClient):
             resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
             if resp.status_code != 200:
                 raise Exception(resp.text)
-            employees.append(resp.json())
+
+            response = resp.json() # account for v1 to v2 changes
+            response['location_ids'] = response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
+            del response['authorized_location_ids']
+            del response['role_ids']  # role_ids exists in v1 only
+
+            employees.append(response)
         return employees
 
     def create_roles_v1(self, num_records):
