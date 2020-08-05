@@ -52,9 +52,9 @@ class SquareClient():
         return result.body['access_token']
 
     def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
-        cursor = body.get('cursor', 'initial')
+        cursor = body.get('cursor', '__initial__')
         while cursor:
-            if cursor != 'initial':
+            if cursor != '__initial__':
                 body['cursor'] = cursor
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
@@ -159,23 +159,11 @@ class SquareClient():
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
 
-        with singer.http_request_timer('GET inventories'):
-            result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('counts', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            with singer.http_request_timer('GET inventories'):
-                body['cursor'] = result.body.get('cursor')
-                result = self._client.inventory.batch_retrieve_inventory_counts(body=body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('counts', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'inventories',
+            lambda bdy: self._client.orders.search_orders(body=bdy),
+            body,
+            'counts')
 
     def get_shifts(self):
         body = {
@@ -186,23 +174,12 @@ class SquareClient():
                 }
             }
         }
-        with singer.http_request_timer('GET shifts'):
-            result = self._client.labor.search_shifts(body=body)
 
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('shifts', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body.get('cursor')
-            with singer.http_request_timer('GET shifts'):
-                result = self._client.labor.search_shifts(body=body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('shifts', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'shifts',
+            lambda bdy: self._client.labor.search_shifts(body=bdy),
+            body,
+            'shifts')
 
     def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
