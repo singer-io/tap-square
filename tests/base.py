@@ -161,10 +161,6 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL
             },
-            "cash_drawer_shifts": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL
-            },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL

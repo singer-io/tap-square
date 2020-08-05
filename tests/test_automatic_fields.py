@@ -5,7 +5,6 @@ import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBase
-from test_client import TestClient
 
 
 class TestAutomaticFields(TestSquareBase):
@@ -19,7 +18,6 @@ class TestAutomaticFields(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',
                 'settlements',
-                'shifts',  # TEST ISSUE | getting duplicate records in expectations
             }
         )
 
@@ -104,7 +102,6 @@ class TestAutomaticFields(TestSquareBase):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-
         for cat in found_catalogs:
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
 
@@ -168,7 +165,6 @@ class TestAutomaticFields(TestSquareBase):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 expected_keys = self.expected_automatic_fields().get(stream)
-                schema_keys = set(self.expected_schema_keys(stream))
                 primary_keys = self.expected_primary_keys().get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
 

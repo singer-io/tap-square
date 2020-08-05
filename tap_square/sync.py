@@ -36,7 +36,19 @@ def sync(config, state, catalog):
             if tap_stream_id == 'shifts':
                 replication_key = stream_obj.replication_key
 
-                max_record_value = start_time
+                sync_start_bookmark = singer.get_bookmark(
+                    state,
+                    tap_stream_id,
+                    'sync_start',
+                    singer.utils.strftime(singer.utils.now(),
+                                          format_str=singer.utils.DATETIME_PARSE)
+                )
+                state = singer.write_bookmark(
+                    state,
+                    tap_stream_id,
+                    'sync_start',
+                    sync_start_bookmark,
+                )
                 for page, cursor in stream_obj.sync(client, start_time, bookmarked_cursor):
                     for record in page:
                         if record[replication_key] >= start_time:
@@ -48,12 +60,12 @@ def sync(config, state, catalog):
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
                     singer.write_state(state)
 
+                state = singer.clear_bookmark(state, tap_stream_id, 'sync_start')
                 state = singer.write_bookmark(
                     state,
                     tap_stream_id,
                     replication_key,
-                    singer.utils.strftime(singer.utils.now(),
-                                          format_str=singer.utils.DATETIME_PARSE)
+                    sync_start_bookmark,
                 )
                 singer.write_state(state)
 
