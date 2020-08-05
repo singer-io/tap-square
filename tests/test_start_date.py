@@ -25,9 +25,7 @@ class TestSquareStartDate(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'cash_drawer_shifts',
-                'employees', # TODO Requires production environment to create records
                 'inventories',
-                'roles',  # doesn't use start_date, this is a full table
                 'settlements',
                 'shifts', # failing in create when called from this test
             }
@@ -54,21 +52,30 @@ class TestSquareStartDate(TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA")
 
         # Initialize start_date state to make assertions
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
-        self.TESTABLE_STREAMS = self.testable_streams()
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.start_date_test()
 
-        # print("\n\nTESTING WITH STATIC DATA") # TODO no static streams currently testable
+        # TODO no static streams currently testable
+        # print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         # self.START_DATE = self.STATIC_START_DATE
         # self.START_DATE_1 = self.STATIC_START_DATE
         # self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
         # self.TESTABLE_STREAMS = self.testable_streams_static()
         # self.start_date_test()
 
-        # TODO implement PRODUCTION
+        self.set_environment(self.PRODUCTION)
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.START_DATE_1 = self.START_DATE
+        self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
+        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.start_date_test()
+
 
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))

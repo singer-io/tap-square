@@ -187,7 +187,8 @@ class TestSquareBase(unittest.TestCase):
         return {
             'settlements',
             'bank_accounts',
-            'roles'
+            'employees',
+            'roles',
         }
 
     def sandbox_streams(self):

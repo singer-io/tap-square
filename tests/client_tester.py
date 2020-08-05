@@ -13,13 +13,13 @@ from test_client import TestClient
 # Testing the TestCLient
 ##########################################################################
 if __name__ == "__main__":
-    client = TestClient(env='sandbox')
+    client = TestClient(env='production')
     # START_DATE = '2020-06-24T00:00:00Z'
     START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
-    test_updates = False  # To test updates, must also test creates
+    test_updates = True  # To test updates, must also test creates
     test_gets = True
     test_deletes = False  # To test updates, must also test creates
 
@@ -27,13 +27,14 @@ if __name__ == "__main__":
     print_objects = True
 
     objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        # 'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'employees',  # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
+        'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'employees',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     if test_gets:
         for obj in objects_to_test:
             print("Testing GET (all): {}".format(obj))
-            import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+            # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
             existing_obj = client.get_all(obj, START_DATE)
             if existing_obj:
                 print("SUCCESS")
@@ -71,7 +72,7 @@ if __name__ == "__main__":
                     # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                     obj_id = created_obj[0].get('id')
                     version = created_obj[0].get('version')
-                    updated_obj = client.update(obj, obj_id=obj_id, version=version)
+                    updated_obj = client.update(stream=obj, obj_id=obj_id, version=version, obj=created_obj[0])
                     if updated_obj:
                         print("SUCCESS")
                         if print_objects:
