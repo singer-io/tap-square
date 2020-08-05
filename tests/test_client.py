@@ -717,7 +717,7 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
-            return self.update_inventory_adjustment(obj).body.get('counts')
+            return self._update_inventory_adjustment(obj)
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
@@ -864,7 +864,7 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         return resp
 
-    def update_inventory_adjustment(self, catalog_obj):
+    def _update_inventory_adjustment(self, catalog_obj):
         catalog_obj_id = catalog_obj.get('catalog_object_id')
         loc_id = catalog_obj.get('location_id')
 
@@ -917,7 +917,11 @@ class TestClient(SquareClient):
             print(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
-        return response
+        all_counts = response.body.get('counts')
+
+        assert (len(all_counts) == 1 or len(all_counts) == 2), "len(all_counts)={}, all_counts={}, len(all_counts) should be either 1 or 2".format(len(all_counts), all_counts)
+
+        return all_counts
 
     def update_shift(self, obj):
         body = {

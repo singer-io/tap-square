@@ -25,8 +25,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 'settlements', # TODO
                 'employees',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
                 'roles',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
-                #'payments',
-                #'refunds',
             }
         )
 
@@ -216,7 +214,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
             first_rec_version = first_rec.get('version')
             updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version, obj=first_rec)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
-            assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+
+            if stream != 'inventories': # Inventory creates will sometimes result in one record for each state 2 or 1 and it's not consistent
+                assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+
             expected_records_second_sync[stream] += updated_record
 
             updated_records[stream] += updated_record
