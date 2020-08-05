@@ -19,7 +19,6 @@ class TestSquareAllFields(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'cash_drawer_shifts',
-                'shifts',  # TEST ISSUE | getting duplicate records in expectations
                 'settlements'
             }
         )

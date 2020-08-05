@@ -27,7 +27,6 @@ class TestSquareStartDate(TestSquareBase):
                 'cash_drawer_shifts',
                 'inventories',
                 'settlements',
-                'shifts', # failing in create when called from this test
             }
         )
 

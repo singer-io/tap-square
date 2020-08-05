@@ -40,7 +40,6 @@ class TestSquarePagination(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',  # TODO determine if testable
                 'settlements',  # TODO determine if testable
-                'shifts',  # TODO Creates seem to be failing and we do not generate a sufficient amount of records
             }
         )
 
