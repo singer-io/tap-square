@@ -770,43 +770,33 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_employees_v1(self, obj):
+    def _update_object_v1(self, stream, obj_id, data):
         if self.env_is_sandbox():
             raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
 
         base_v1 = "https://connect.squareup.com/v1/me/"
-        endpoint = "employees"
-        employee_id = obj.get('id')
-        full_url = base_v1 + endpoint + "/" + employee_id
+        endpoint = base_v1 + stream + "/" + obj_id
 
+        resp = requests.put(url=endpoint, headers=self.get_headers(), json=data)
+        if resp.status_code != 200:
+            raise Exception(resp.text)
+        return resp.json()
+
+    def update_employees_v1(self, obj):
+        employee_id = obj.get('id')
         uid = self.make_id('employee')[1:]
         data = {'first_name': uid,
                 'last_name': obj.get('last_name')}
 
-        resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code != 200:
-            raise Exception(resp.text)
-        return resp.json()
+        return self._update_object_v1("employees", employee_id, data)
 
     def update_roles_v1(self, obj):
-        if self.env_is_sandbox():
-            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
-
-        base_v1 = "https://connect.squareup.com/v1/me/"
-        endpoint = "roles"
         role_id = obj.get('id')
-        full_url = base_v1 + endpoint + "/" + role_id
-
         uid = self.make_id(endpoint)[1:]
         data = {
             'name': 'updated_' + uid,
         }
-        resp = requests.put(url=full_url, headers=self.get_headers(), json=data)
-
-        if resp.status_code != 200:
-            raise Exception(resp.text)
-        return resp.json()
-
+        return self._update_object_v1("roles", rol_id, data)
 
     def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
         body = {'batches': [{'objects': [{'id': obj_id,
