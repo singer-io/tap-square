@@ -162,7 +162,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
                     expected_records_2['orders'].append(order['data'])
 
-        for stream in self.testable_streams():
+        for stream in self.TESTABLE_STREAMS:
             new_records = []
 
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
