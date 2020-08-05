@@ -1,5 +1,6 @@
 import uuid
 import random
+import requests
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -411,11 +412,7 @@ class TestClient(SquareClient):
                'amount_money': {'amount': random.randint(100,10000), # in cents
                                'currency': 'USD'},
                'source_id': source_id,
-               # 'app_fee_money': {'amount': 10,'currency': 'USD'}, # Insufficient permissions to set app_fee_money?
                'autocomplete': autocomplete,
-               # 'customer_id': '',
-               # 'location_id': '',
-               # 'reference_id': '123456',
                'note': self.make_id('payment'),}
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
@@ -611,7 +608,7 @@ class TestClient(SquareClient):
         full_url = base_v1 + endpoint
 
         employees = []
-        for _ in num_records:
+        for _ in range(num_records):
             employee_id = self.make_id('employee').split('employee')[-1]
             last_name = 'songerwriter' + employee_id
             data = {
@@ -644,7 +641,7 @@ class TestClient(SquareClient):
                        'REGISTER_VIEW_SUMMARY_REPORTS']
 
         roles = []
-        for _ in num_records:
+        for _ in range(num_records):
             role_id = self.make_id(endpoint)
             data = {
                 'name': role_id[1:],
