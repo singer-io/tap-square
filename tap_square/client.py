@@ -51,20 +51,20 @@ class SquareClient():
 
         return result.body['access_token']
 
-    def _get_v2_objects(self, object_type, request_method, body):
+    def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
         cursor = body.get('cursor', 'initial')
         while cursor:
             if cursor != 'initial':
                 body['cursor'] = cursor
 
-            with singer.http_request_timer('GET ' + object_type):
+            with singer.http_request_timer('GET ' + request_timer_suffix):
                 result = request_method(body)
 
             if result.is_error():
                 error_message = result.errors if result.errors else result.body
                 raise RuntimeError(error_message)
 
-            yield (result.body.get('objects', []), result.body.get('cursor'))
+            yield (result.body.get(body_key, []), result.body.get('cursor'))
 
             cursor = result.body.get('cursor')
 
@@ -85,7 +85,10 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        yield from self._get_v2_objects(object_type, lambda bdy: self._client.catalog.search_catalog_objects(body=bdy), body)
+        yield from self._get_v2_objects(object_type,
+                                        lambda bdy: self._client.catalog.search_catalog_objects(body=bdy),
+                                        body,
+                                        'objects')
 
     def get_employees(self, bookmarked_cursor):
         body = {
@@ -95,23 +98,10 @@ class SquareClient():
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
 
-        with singer.http_request_timer('GET employees'):
-            result = self._client.employees.list_employees(**body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('employees', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET employees'):
-                result = self._client.employees.list_employees(**body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('employees', []), result.body.get('cursor'))
+        yield from self._get_v2_objects('employees',
+                                        lambda bdy: self._client.employees.list_employees(**bdy),
+                                        body,
+                                        'employees')
 
     def get_locations(self):
         body = {}
