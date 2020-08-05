@@ -4,10 +4,10 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from datetime import timedelta, date
-#from datetime import datetime as dt
-from singer import utils
+import singer
 from base import TestSquareBase
+
+LOGGER = singer.get_logger()
 
 
 class TestSquarePagination(TestSquareBase):
@@ -20,6 +20,7 @@ class TestSquarePagination(TestSquareBase):
         'categories': DEFAULT_BATCH_LIMIT,
         'discounts': DEFAULT_BATCH_LIMIT,
         'taxes': DEFAULT_BATCH_LIMIT,
+        'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
         'employees': 50,
         'locations': None, # TODO
         'roles': 100,
@@ -28,6 +29,7 @@ class TestSquarePagination(TestSquareBase):
         'modifier_lists': DEFAULT_BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
+        'settlements': 200,
     }
 
     def name(self):
@@ -84,58 +86,22 @@ class TestSquarePagination(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        if self.TESTABLE_STREAMS == set(): # REMOVE once we are testing a static stream
-            print("WE ARE SKIPPING THIS TEST\n\n")
-
         # Ensure tested streams have a record count which exceeds the API LIMIT
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
             existing_objects = self.client.get_all(stream, self.START_DATE)
-            if len(existing_objects) == 0:
-               print("NO DATA EXISTS FOR STREAM {}".format(stream))
-
             expected_records[stream] += existing_objects
 
             if len(existing_objects) <= self.API_LIMIT.get(stream):
                 num_records = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
-                print('{}: Will create {} records'.format(stream, num_records))
-                new_objects = []
-                if stream == 'orders':
-                    location_id = [location['id'] for location in self.client.get_all('locations')][0]
-                    for i in range(num_records):
-                        new_objects.append(self.client.create_order(location_id))
-                elif stream == 'shifts':
-                    # Find the max end_at to know when the last shift ends, so we can start a shift there
-                    max_end_at = max([obj['end_at'] for obj in existing_objects])
-                    end_at_datetime = utils.strptime_to_utc(max_end_at)
-                    for i in range(num_records):
-                        # Tested in the API Explorer that +00:00 works
-                        # How does this work? It feels like it should be new_objects += blah
-                        new_objects.append(
-                            # Create a shift that is self.client.SHIFT_MINUTES long
-                            self.client.create('shifts', start_date=utils.strftime(end_at_datetime))
-                        )
-                        # Bump our known max `end_at` by self.client.SHIFT_MINUTES
-                        end_at_datetime = end_at_datetime + timedelta(minutes=self.client.SHIFT_MINUTES)
+                LOGGER.info('%s: Will create %s records because there are now only %s records and the limit for this stream is %s', stream, num_records, len(existing_objects), self.API_LIMIT.get(stream))
+                new_objects = self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
 
-                elif stream in {'inventories','employees', 'refunds', 'payments', 'modifier_lists'}: # non catalog objects
-                    for n in range(num_records):
-                        print('{}: Created {} records'.format(stream, n))
-                        new_object = self.client.create(stream, start_date=self.START_DATE)
-                        assert new_object[0], "Failed to create a {} record.\nRECORD: {}".format(stream, new_object[0])
-                        new_objects += new_object
-                elif stream == 'inventories':
-                    new_objects = self.client.create_batch_inventory_adjustment(num_records)
-                elif stream in {'items', 'categories', 'discounts', 'taxes'}:  # catalog objects
-                    new_objects = self.client.create_batch_post(stream, num_records).body.get('objects', [])
-
-                else:
-                    raise RuntimeError("The stream {} is missing from the setup.".format(stream))
+                assert new_objects, "Failed to create any new records for stream {}".format(stream)
+                self.assertEqual(len(new_objects), num_records, "Mismatched number of new objects created for stream {}".format(stream))
                 expected_records[stream] += new_objects
-
-                print('{}: Created {} records'.format(stream, num_records))
             else:
-                print('{}: Have sufficent amount of data to continue test'.format(stream))
+                LOGGER.info('%s: Have sufficent amount of data to continue test', stream)
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in self.TESTABLE_STREAMS:
@@ -182,17 +148,11 @@ class TestSquarePagination(TestSquareBase):
 
         # read target output
         record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                         self.TESTABLE_STREAMS,
-                                                                         self.expected_primary_keys())
-        replicated_row_count =  sum(record_count_by_stream.values())
+                                                                   self.TESTABLE_STREAMS,
+                                                                   self.expected_primary_keys())
         synced_records = runner.get_records_from_target_output()
-
-        schemas = {catalog['tap_stream_id']: menagerie.get_annotated_schema(conn_id, catalog['stream_id']) for catalog in found_catalogs}
-        all_fields = {stream: set(schema['annotated-schema']['properties'].keys()) for stream, schema in schemas.items()}
-
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
-
                 # Verify we are paginating for testable synced streams
                 self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
                                    msg="We didn't guarantee pagination. The number of records should exceed the api limit.")

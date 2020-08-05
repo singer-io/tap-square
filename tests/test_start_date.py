@@ -2,19 +2,22 @@ import os
 from datetime import datetime as dt
 from datetime import timedelta
 
-import unittest
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
+import singer
+
 from base import TestSquareBase
-from test_client import TestClient
+
+LOGGER = singer.get_logger()
 
 
 class TestSquareStartDate(TestSquareBase):
     START_DATE = ""
     START_DATE_1 = ""
     START_DATE_2 = ""
+
     def name(self):
         return "tap_tester_square_start_date_test"
 
@@ -78,31 +81,7 @@ class TestSquareStartDate(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # get expected records
-        expected_records_1 = {}
-        for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            assert existing_objects, "Test data is not properly set for {}, test will fail.".format(stream)
-            print("Data exists for stream: {}".format(stream))
-            expected_records_1[stream] = existing_objects
-
-            # If no objects exist since the 2nd start_date, create one
-            data_in_range = False # TODO this can be cleaned up
-            for obj in expected_records_1.get(stream):
-                rep_keys = self.expected_replication_keys().get(stream)
-                rep_key = list(rep_keys)[0] if rep_keys else None
-                if rep_key is None:
-                    key = obj.get('created_at')
-                else:
-                    key = obj.get(rep_key)
-                if self.parse_date(key) > self.parse_date(self.START_DATE_2):
-                    data_in_range = True
-                    break
-            if not data_in_range:
-                if stream in self.TESTABLE_STREAMS:
-                    expected_records_1[stream].append(self.client.create(stream, start_date=self.START_DATE))
-                    continue
-                assert None, "Sufficient test data does not exist for {}, test will fail.".format(stream)
+        self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, self.START_DATE_2)
 
         ##########################################################################
         ### First Sync

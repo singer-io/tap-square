@@ -1,15 +1,12 @@
 import uuid
 import random
-import json
 import os
-import random
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import singer
 
 from tap_square.client import SquareClient
-from tap_square.streams import Inventories, Orders, chunks
+from tap_square.streams import Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
 
@@ -32,8 +29,6 @@ class TestClient(SquareClient):
     Client used to perfrom GET, CREATE and UPDATE on streams.
         NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
     """
-    PAYMENTS = [] # We need to track state of records due to a dependency in the `refunds` stream
-
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
                   'item_data': {'name': 'tap_tester_item_data'}},
@@ -52,6 +47,8 @@ class TestClient(SquareClient):
                                                   'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
                                                   "modifiers": [
                                                       {'type': 'MODIFIER',
+                                                       'id': 0,
+                                                       'modifier_list_id': 0,
                                                        'modifier_data': {
                                                            'name': 'tap_tester_modifier_data',
                                                            'price_money': {
@@ -104,8 +101,7 @@ class TestClient(SquareClient):
         elif stream == 'refunds':
             return [obj for page, _ in self.get_refunds(start_date, None) for obj in page]
         elif stream == 'payments':
-            self.PAYMENTS = [obj for page, _ in self.get_payments(start_date, None) for obj in page]
-            return self.PAYMENTS
+            return [obj for page, _ in self.get_payments(start_date, None) for obj in page]
         elif stream == 'modifier_lists':
             return [obj for page, _ in self.get_catalog('MODIFIER_LIST', start_date, None) for obj in page]
         elif stream == 'inventories':
@@ -117,25 +113,36 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(start_date) for obj in page]
+        elif stream == 'settlements':
+            settlements = Settlements()
+            return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
+        elif stream == 'cash_drawer_shifts':
+            cash_drawer_shifts = CashDrawerShifts()
+            return [obj for page, _ in cash_drawer_shifts.sync(self, start_date, None) for obj in page]
         else:
-            raise NotImplementedError("{} is not implmented".format(stream))
+            raise NotImplementedError("Not implemented for stream {}".format(stream))
 
-    def get_a_payment(self, payment_id, start_date):
-        self.PAYMENTS = None
-        return_value = []
-        while not return_value:
+    def get_a_payment(self, payment_id, start_date, keys_exist=set(), **kwargs):
+        while True:
             LOGGER.info('get_a_payment: Calling API')
             all_payments = self.get_all('payments', start_date)
-            return_value = [payment for payment in all_payments if payment['id'] == payment_id]
+            found_payment = [payment for payment in all_payments if payment['id'] == payment_id]
+            if not found_payment:
+                LOGGER.warn("Payment with id %s not found, retrying", payment_id)
+                continue
 
-            return_value = None if len(return_value) > 0 and return_value[0].get('status') == 'APPROVED' else return_value
+            if not set(found_payment[0].keys()).issuperset(keys_exist):
+                continue
 
-        LOGGER.info('get_a_payment: %s', str(return_value))
-        return return_value
-
+            if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
+                LOGGER.info('get_a_payment found payment successfully: %s', found_payment)
+                return found_payment
     ##########################################################################
     ### CREATEs
     ##########################################################################
+
+    # Even though this is documented to be 1000, it fails for a batch of 985 for modifier_lists
+    MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 500
 
     def post_category(self, body):
         """
@@ -167,16 +174,16 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
-    def post_order(self, body, location_id):
+    def post_order(self, body, business_location_id):
         """
         body: {
           "order": {
-            "location_id": None,
+            "location_id": 123,
           },
           "idempotency_key": str(uuid.uuid4())
         }
         """
-        resp = self._client.orders.create_order(location_id=location_id, body=body)
+        resp = self._client.orders.create_order(location_id=business_location_id, body=body)
 
         if resp.is_error():
             stream_name = body['batches'][0]['objects'][0]['type']
@@ -184,32 +191,39 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, ext_obj=None, start_date=None, end_date=None):
+    def create(self, stream, start_date, end_date=None, num_records=1):
         if stream == 'items':
-            return self._create_item(start_date=start_date).body.get('objects')
+            return self._create_item(start_date=start_date, num_records=num_records).body.get('objects')
         elif stream == 'categories':
-            return self.create_categories().body.get('objects')
+            return self.create_categories(num_records).body.get('objects')
         elif stream == 'discounts':
-            return self.create_discounts().body.get('objects')
+            return self.create_discounts(num_records).body.get('objects')
         elif stream == 'taxes':
-            return self.create_taxes().body.get('objects')
+            return self.create_taxes(num_records).body.get('objects')
         elif stream == 'modifier_lists':
-            return self.create_modifier_list().body.get('objects')
+            return self.create_modifier_list(num_records).body.get('objects')
         elif stream == 'employees':
-            return [self.create_employees_v1()]
+            return self.create_employees_v1(num_records)
         elif stream == 'roles':
-            return [self.create_roles_v1()]
+            return self.create_roles_v1(num_records)
         elif stream == 'inventories':
-            return self.create_batch_inventory_adjustment(start_date=start_date)
+            return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
+            if num_records != 1:
+                raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
+
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
             location_id = [location['id'] for location in self.get_all('locations')][0]
-            return [self.create_order(location_id).body.get('order')]
+            return self._create_orders(location_id, num_records)
         elif stream == 'refunds':
-            return [self.create_refunds(ext_obj, start_date).body.get('refund')]
+            refunds = []
+            for _ in range(num_records):
+                (created_refund, _) = self.create_refund(start_date)
+                refunds.append(created_refund)
+            return refunds
         elif stream == 'payments':
-            return [self.create_payments()]
+            return self.create_payments(num_records)
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees')][0]
             location_id = [location['id'] for location in self.get_all('locations')][0]
@@ -220,13 +234,24 @@ class TestClient(SquareClient):
                 start_date = max_end_at
 
             if not end_date:
-                start_date_parsed = singer.utils.strptime_with_tz(start_date)
-                end_date_datetime = start_date_parsed + timedelta(minutes = self.SHIFT_MINUTES)
-                end_date = singer.utils.strftime(end_date_datetime)
+                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
 
-            return [self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift')]
+            created_shifts = []
+            for i in range(num_records):
+                created_shifts.append(self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift'))
+                start_date = end_date
+                # Bump by shift minutes to avoid any shift overlaps
+                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
+
+            return created_shifts
         else:
-            raise NotImplementedError("{} is not implmented".format(stream))
+            raise NotImplementedError("create not implemented for stream {}".format(stream))
+
+    @staticmethod
+    def shift_date(date_string, shift_minutes):
+        date_parsed = singer.utils.strptime_with_tz(date_string)
+        date_datetime = date_parsed + timedelta(minutes=shift_minutes)
+        return singer.utils.strftime(date_datetime)
 
     def make_id(self, stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
@@ -246,7 +271,7 @@ class TestClient(SquareClient):
             raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
         return response
 
-    def create_batch_inventory_adjustment(self, start_date, num_records=1):
+    def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
         items = self._create_item(start_date, num_records).body.get('objects', [])
         assert(items)
@@ -273,7 +298,7 @@ class TestClient(SquareClient):
                         'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
             to_state = random.choice(states)
             occurred_at = datetime.strftime(
-                datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
+                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
             change = {
                 'type': 'ADJUSTMENT',
                 'adjustment': {
@@ -308,7 +333,7 @@ class TestClient(SquareClient):
 
         return all_counts
 
-    def create_refunds(self, payment_obj=None, start_date=None):
+    def create_refund(self, start_date):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -319,16 +344,15 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        if payment_obj is None:
-            print("There are currently no payments in the test data set with a status " + \
-                  "of COMPLETED and without existing refunds, so we must generate a new payment.")
-            payment_response = self.create_payments(autocomplete=True, source_key="card")
-            payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date)[0]
+        payment_response = self.create_payment(autocomplete=True, source_key="card")
+        payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
         upper_limit = 10 if 10 < payment_amount else payment_amount
         amount = random.randint(1, upper_limit)  # we must be careful not to refund more than the charge
+        amount_money = {'amount': amount, # in cents
+                        'currency': 'USD'}
         status = payment_obj.get('status')
 
         if status != "COMPLETED": # Just a sanity check that logic above is working
@@ -336,8 +360,7 @@ class TestClient(SquareClient):
         # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
-                'amount_money': {'amount': amount, # in cents
-                                 'currency': 'USD'},
+                'amount_money': amount_money,
                 'idempotency_key': str(uuid.uuid4()),
                 'reason': 'Becuase you are worth it'}
 
@@ -359,12 +382,17 @@ class TestClient(SquareClient):
             else:
                 raise RuntimeError(refund.errors)
 
-        # Update Payments
-        self.PAYMENTS = None # Force refresh of the cache since we updated one
-        self.get_all('payments', start_date)
-        return refund
+        updated_payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
+        return (refund.body.get('refund'), updated_payment_obj)
 
-    def create_payments(self, autocomplete=False, source_key=None):
+    def create_payments(self, num_records):
+        payments = []
+        for n in range(num_records):
+            payments.append(self.create_payment())
+
+        return payments
+
+    def create_payment(self, autocomplete=False, source_key=None):
         """
         Generate a pyament object
         : param autocomplete: boolean
@@ -396,31 +424,36 @@ class TestClient(SquareClient):
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
-        self.PAYMENTS += [response]
         return response
 
-    def create_modifier_list(self):
-        mod_id = self.make_id('modifier')
-        list_id = self.make_id('modifier_lists')
-        body = {'batches': [{'objects': [{'id': list_id,
-                                          'type': 'MODIFIER_LIST',
-                                          'modifier_list_data': {'name': list_id,
-                                                                 'ordinal': 1,
-                                                                 'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
-                                                                 "modifiers": [
-                                                                     {'id': mod_id,
-                                                                      'type': 'MODIFIER',
-                                                                      'modifier_data': {
-                                                                          'name': mod_id[1:],
-                                                                          'price_money': {
-                                                                              'amount': 300,
-                                                                              'currency': 'USD'},
-                                                                      },
-                                                                      'modifier_list_id': list_id,
-                                                                      'ordinal': 1}
-                                                                 ],}
-                                          }]}],
+    def create_modifier_list(self, num_records):
+        objects = []
+        for n in range(num_records):
+            mod_id = self.make_id('modifier')
+            list_id = self.make_id('modifier_lists')
+            objects.append(
+                {'id': list_id,
+                'type': 'MODIFIER_LIST',
+                'modifier_list_data': {'name': list_id,
+                                        'ordinal': 1,
+                                        'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
+                                        "modifiers": [
+                                            {'id': mod_id,
+                                            'type': 'MODIFIER',
+                                            'modifier_data': {
+                                                'name': mod_id[1:],
+                                                'price_money': {
+                                                    'amount': 300,
+                                                    'currency': 'USD'},
+                                            },
+                                            'modifier_list_id': list_id,
+                                            'ordinal': 1}
+                                        ],}
+                })
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
+
         return self.post_category(body)
 
     def _create_item(self, start_date, num_records=1):
@@ -435,7 +468,8 @@ class TestClient(SquareClient):
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
                                   }]}} for item_id in item_ids]
-        body = {'batches': [{'objects': objects}],
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
@@ -454,33 +488,45 @@ class TestClient(SquareClient):
             },
             'present_at_all_locations': random.choice([True, False]),
         } for item_id in item_ids]
-        body = {'batches': [{'objects': objects}],
+
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_categories(self, num_records):
+        category_ids = [self.make_id('category') for n in range(num_records)]
+        objects = [{'id': category_id,
+                    'type': 'CATEGORY',
+                    'category_data': {'name': category_id}} for category_id in category_ids]
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
+                'idempotency_key': str(uuid.uuid4())}
+        return self.post_category(body)
+
+    def create_discounts(self, num_records):
+        discount_ids = [self.make_id('discount') for n in range(num_records)]
+        objects = [{'id': discount_id,
+                    'type': 'DISCOUNT',
+                    'discount_data': {'name': discount_id,
+                                      'discount_type': 'FIXED_AMOUNT',
+                                      'amount_money': {'amount': 34500,
+                                                       'currency': 'USD'}}} for discount_id in discount_ids]
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
         return self.post_category(body)
 
-    def create_categories(self):
-        body = {'batches': [{'objects': [{'id': self.make_id('category'),
-                                          'type': 'CATEGORY',
-                                          'category_data': {'name': self.make_id('category')}}]}],
+    def create_taxes(self, num_records):
+        tax_ids = [self.make_id('tax') for n in range(num_records)]
+        objects = [{'id': tax_id,
+                    'type': 'TAX',
+                    'tax_data': {'name': tax_id}} for tax_id in tax_ids]
+        body = {'batches': [{'objects': object_chunk}
+                            for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
 
-    def create_discounts(self):
-        body = {'batches': [{'objects': [{'id': self.make_id('discount'),
-                                          'type': 'DISCOUNT',
-                                          'discount_data': {'name': self.make_id('discount'),
-                                                            'discount_type': 'FIXED_AMOUNT',
-                                                            'amount_money': {'amount': 34500,
-                                                                             'currency': 'USD'}}}]}],
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
-
-    def create_taxes(self):
-        body = {'batches': [{'objects': [{'id': self.make_id('tax'),
-                                          'type': 'TAX',
-                                          'tax_data': {'name': self.make_id('tax')}}]}],
-                'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
     def post_location(self, body):
@@ -556,7 +602,7 @@ class TestClient(SquareClient):
             raise RuntimeError(response.errors)
         return response
 
-    def create_employees_v1(self):
+    def create_employees_v1(self, num_records):
         if self.env_is_sandbox():
             raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
 
@@ -564,30 +610,31 @@ class TestClient(SquareClient):
         endpoint = "employees"
         full_url = base_v1 + endpoint
 
-        employee_id = self.make_id('employee').split('employee')[-1]
-        last_name = 'songerwriter' + employee_id
-        data = {
-            'first_name': 'singer',
-            'last_name': last_name,
-            'email': employee_id + '@sttichdata.com',
-            'authorized_location_ids': [],
-            'role_ids': [],
-        }
+        employees = []
+        for _ in num_records:
+            employee_id = self.make_id('employee').split('employee')[-1]
+            last_name = 'songerwriter' + employee_id
+            data = {
+                'first_name': 'singer',
+                'last_name': last_name,
+                'email': employee_id + '@sttichdata.com',
+                'authorized_location_ids': [],
+                'role_ids': [],
+            }
 
-        resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code != 200:
-            raise Exception(resp.text)
-        return resp.json()
+            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
+            if resp.status_code != 200:
+                raise Exception(resp.text)
+            employees.append(resp.json())
+        return employees
 
-    def create_roles_v1(self):
+    def create_roles_v1(self, num_records):
         if self.env_is_sandbox():
             raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
 
         base_v1 = "https://connect.squareup.com/v1/me/"
         endpoint = "roles"
         full_url = base_v1 + endpoint
-
-        role_id = self.make_id(endpoint)
         permissions = ['REGISTER_ACCESS_SALES_HISTORY',
                        'REGISTER_APPLY_RESTRICTED_DISCOUNTS',
                        'REGISTER_CHANGE_SETTINGS',
@@ -595,20 +642,30 @@ class TestClient(SquareClient):
                        'REGISTER_ISSUE_REFUNDS',
                        'REGISTER_OPEN_CASH_DRAWER_OUTSIDE_SALE',
                        'REGISTER_VIEW_SUMMARY_REPORTS']
-        data = {
-            'name': role_id[1:],
-            'permissions': random.choice(permissions),
-            'is_owner': False,
-        }
-        resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-        if resp.status_code != 200:
-            raise Exception(resp.text)
-        return resp.json()
 
-    def create_order(self, location_id):
-        body = {'order': {'location_id': None},
-                'idempotency_key': str(uuid.uuid4())}
-        return self.post_order(body, location_id)
+        roles = []
+        for _ in num_records:
+            role_id = self.make_id(endpoint)
+            data = {
+                'name': role_id[1:],
+                'permissions': random.choice(permissions),
+                'is_owner': False,
+            }
+            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
+            if resp.status_code != 200:
+                raise Exception(resp.text)
+            roles.append(resp.json())
+        return roles
+
+    def _create_orders(self, location_id, num_records):
+        # location id in body is merchant location id, one in create_order call is bussiness location id
+        created_orders = []
+        for i in range(num_records):
+            body = {'order': {'location_id': location_id},
+                    'idempotency_key': str(uuid.uuid4())}
+            created_orders.append(self.post_order(body, location_id).body.get('order'))
+
+        return created_orders
 
     def create_shift(self, employee_id, location_id, start_date, end_date):
         body = {
@@ -627,24 +684,6 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
         return resp
-
-
-    def create_batch_post(self, stream, num_records):
-        recs_to_create = []
-        for i in range(num_records):
-            # Use dict() to make a copy so you don't get a list of the same object
-            obj = dict(self.stream_to_data_schema[stream])
-            obj_id = self.make_id(stream)
-            obj['id'] = obj_id
-            if stream == 'modifier_lists':
-                obj['ordinal'] = i
-                obj['modifier_list_id'] = obj_id
-                obj['modifier_list_data']['modifier_data']['id'] = self.make_id('modifier')
-                obj['modifier_list_data']['modifier_data']['ordinal'] = i
-            recs_to_create.append(obj)
-        body = {'idempotency_key': str(uuid.uuid4()),
-                'batches': [{'objects': recs_to_create}]}
-        return self.post_category(body)
 
     ##########################################################################
     ### UPDATEs
