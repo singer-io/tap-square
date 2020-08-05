@@ -22,7 +22,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts', # TODO
-                'inventories', # BUG | https://stitchdata.atlassian.net/browse/SRCE-3611
                 'settlements', # TODO
                 'employees',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
                 'roles',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
