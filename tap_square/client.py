@@ -51,6 +51,23 @@ class SquareClient():
 
         return result.body['access_token']
 
+    def _get_v2_objects(self, object_type, request_method, body):
+        cursor = body.get('cursor', 'initial')
+        while cursor:
+            if cursor != 'initial':
+                body['cursor'] = cursor
+
+            with singer.http_request_timer('GET ' + object_type):
+                result = request_method(body)
+
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                raise RuntimeError(error_message)
+
+            yield (result.body.get('objects', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
+
     def get_catalog(self, object_type, start_time, bookmarked_cursor):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
@@ -68,23 +85,7 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        with singer.http_request_timer('GET ' + object_type):
-            result = self._client.catalog.search_catalog_objects(body=body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('objects', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET ' + object_type):
-                result = self._client.catalog.search_catalog_objects(body=body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('objects', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(object_type, lambda bdy: self._client.catalog.search_catalog_objects(body=bdy), body)
 
     def get_employees(self, bookmarked_cursor):
         body = {
@@ -277,7 +278,6 @@ class SquareClient():
 
             yield (result.body.get('refunds', []), result.body.get('cursor'))
 
-
     def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
@@ -316,7 +316,6 @@ class SquareClient():
         }
         params = {}
         url = 'https://connect.squareup.com/v1/me/roles'
-
 
         if bookmarked_cursor:
             params['batch_token'] = bookmarked_cursor
