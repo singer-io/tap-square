@@ -86,7 +86,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
-        # self.bookmarks_test()
+        self.bookmarks_test()
 
         self.set_environment(self.PRODUCTION)
 
