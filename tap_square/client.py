@@ -105,23 +105,11 @@ class SquareClient():
 
     def get_locations(self):
         body = {}
-        with singer.http_request_timer('GET locations'):
-            result = self._client.locations.list_locations()
 
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('locations', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body.get('cursor')
-            with singer.http_request_timer('GET locations'):
-                result = self._client.locations.list_locations(**body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('locations', []), result.body.get('cursor'))
+        yield from self._get_v2_objects('locations',
+                                        lambda bdy: self._client.locations.list_locations(**bdy),
+                                        body,
+                                        'locations')
 
     def get_bank_accounts(self):
         body = {}
