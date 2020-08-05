@@ -72,7 +72,7 @@ class TestClient(SquareClient):
     ### GETs
     ##########################################################################
 
-    def get_all(self, stream, start_date=None):
+    def get_all(self, stream, start_date):
         if stream == 'items':
             return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
         elif stream == 'categories':
@@ -101,7 +101,8 @@ class TestClient(SquareClient):
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
-            return [obj for page, _ in self.get_shifts(start_date) for obj in page]
+            return [obj for page, _ in self.get_shifts() for obj in page
+                    if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
             settlements = Settlements()
             return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
@@ -204,7 +205,7 @@ class TestClient(SquareClient):
 
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations')][0]
+            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
             return self._create_orders(location_id, num_records)
         elif stream == 'refunds':
             refunds = []
@@ -215,9 +216,9 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
-            employee_id = [employee['id'] for employee in self.get_all('employees')][0]
-            location_id = [location['id'] for location in self.get_all('locations')][0]
-            max_end_at = max([obj['end_at'] for obj in self.get_all('shifts')])
+            employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
+            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
+            max_end_at = max([obj['end_at'] for obj in self.get_all('shifts', start_date)])
             if start_date < max_end_at:
                 LOGGER.warning('Tried to create a Shift that overlapped another shift')
                 # Readjust start date and end date
@@ -270,7 +271,7 @@ class TestClient(SquareClient):
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
         assert(item_variations)
 
-        all_locations = self.get_all('locations')
+        all_locations = self.get_all('locations', start_date)
         changes = []
         for item_variation in item_variations:
             catalog_obj_id = item_variation.get('id')
@@ -669,7 +670,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations')][0]
+            location_id = [location['id'] for location in self.get_all('locations', None)][0]
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
             return [self.update_payment(obj_id).body.get('payment')]

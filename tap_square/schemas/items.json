@@ -48,8 +48,26 @@
                       "string"
                     ]
                   },
-                  "location_overrides": {
-                    "type": [
+		  "user_data": {
+		    "type": [
+		      "null",
+		      "string"
+		    ]
+		  },
+		  "inventory_alert_type": {
+		    "type": [
+		      "null",
+		      "string"
+		    ]
+		  },
+		  "track_inventory": {
+		    "type": [
+		      "null",
+		      "boolean"
+		    ]
+		  },
+		  "location_overrides": {
+		    "type": [
                       "null",
                       "array"
                     ],

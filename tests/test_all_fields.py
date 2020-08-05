@@ -1,13 +1,11 @@
 import os
 import unittest
 
-from singer import metadata
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBase
-from test_client import TestClient
 
 
 class TestSquareAllFields(TestSquareBase):
@@ -22,7 +20,6 @@ class TestSquareAllFields(TestSquareBase):
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'cash_drawer_shifts',
                 'employees',
-                'items',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3606
                 'roles',  # only works with prod
                 'shifts',  # TEST ISSUE | getting duplicate records in expectations
                 'settlements'
@@ -76,8 +73,8 @@ class TestSquareAllFields(TestSquareBase):
                 for obj in existing_objects:
                     expected_records[stream].append(obj)
             else:
-               print("Data does not exist for stream: {}".format(stream))
-               assert None, "more test functinality needed"
+                print("Data does not exist for stream: {}".format(stream))
+                assert None, "more test functinality needed"
 
         # modify data set to conform to expectations (json standards)
         for stream, records in expected_records.items():
