@@ -194,23 +194,11 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        with singer.http_request_timer('GET refunds'):
-            result = self._client.refunds.list_payment_refunds(**body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('refunds', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET refunds'):
-                result = self._client.refunds.list_payment_refunds(**body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('refunds', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'refunds',
+            lambda bdy: self._client.refunds.list_payment_refunds(**bdy),
+            body,
+            'refunds')
 
     def get_payments(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
@@ -225,23 +213,11 @@ class SquareClient():
         else:
             body['begin_time'] = start_time
 
-        with singer.http_request_timer('GET payments'):
-            result = self._client.payments.list_payments(**body)
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('payments', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            body['cursor'] = result.body['cursor']
-            with singer.http_request_timer('GET payments'):
-                result = self._client.payments.list_payments(**body)
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('payments', []), result.body.get('cursor'))
+        yield from self._get_v2_objects(
+            'payments',
+            lambda bdy: self._client.payments.list_payments(**bdy),
+            body,
+            'payments')
 
     def get_roles(self, bookmarked_cursor):
         headers = {
