@@ -289,35 +289,8 @@ class TestClient(SquareClient):
             catalog_obj_id = item_variation.get('id')
 
             # Get a random location
-            loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
-            from_state = 'IN_STOCK'  # inventory_obj.get('state')
-
-            # Adjustment logic
-            if from_state == 'IN_STOCK':
-                states = ['SOLD'] # WASTE SOLD_ONLINE
-            else:
-                states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                          'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                          'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-            to_state = random.choice(states)
-            occurred_at = datetime.strftime(
-                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
-            change = {
-                'type': 'ADJUSTMENT',
-                'adjustment': {
-                    'from_state': from_state,
-                    'to_state': to_state,
-                    'location_id': loc_id,
-                    'occurred_at': occurred_at,
-                    'catalog_object_id': catalog_obj_id,
-                    'quantity': '1.0',
-                    'source': {
-                        'product': random.choice([
-                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
-            }
-            changes.append(change)
+            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
         for change_chunk in chunks(changes, 100):
@@ -336,6 +309,32 @@ class TestClient(SquareClient):
 
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
+
+    @staticmethod
+    def _inventory_adjustment_change(catalog_obj_id, location_id):
+        # states = ['SOLD'] # WASTE SOLD_ONLINE
+        #else:
+        #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+        #                'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+        #                'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+        # to_state = random.choice(states)
+        occurred_at = datetime.strftime(
+            datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
+        return {
+            'type': 'ADJUSTMENT',
+            'adjustment': {
+                'from_state': 'IN_STOCK',
+                'to_state': 'SOLD',
+                'location_id': location_id,
+                'occurred_at': occurred_at,
+                'catalog_object_id': catalog_obj_id,
+                'quantity': '1.0',
+                'source': {
+                    'product': random.choice([
+                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
+        }
 
     def create_refund(self, start_date):
         """
@@ -869,48 +868,9 @@ class TestClient(SquareClient):
         catalog_obj_id = catalog_obj.get('catalog_object_id')
         loc_id = catalog_obj.get('location_id')
 
-        from_state = 'IN_STOCK'  # inventory_obj.get('state')
-
-        # Adjustment logic
-        if from_state == 'IN_STOCK':
-            states = ['SOLD'] # WASTE SOLD_ONLINE
-        else:
-            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-        to_state = random.choice(states)
-        occurred_at = datetime.strftime(
-            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
-        changes = {
-            'ADJUSTMENT': {
-                'adjustment': {
-                    # 'id': made_id,
-                    # 'from_state': random.choice(states),
-                    'from_state': from_state,
-                    'to_state': to_state,
-                    'location_id': loc_id,
-                    'occurred_at': occurred_at,
-                    # 'employee_id': 'asdasd',
-                    'catalog_object_id': catalog_obj_id,
-                    # 'catalog_object_type': 'ITEM_VARIATION',
-                    'quantity': '1.0',
-                    'source': {
-                        'product': random.choice([
-                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
-            'PHYSICAL_COUNT': {
-                'physical_count': {},
-            },
-        }
-        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
-        key = [k for k in changes.get(change_type).keys()][0]
-        value = [v for v in changes.get(change_type).values()][0]
-
         body = {
-            'changes': [{'type': change_type,
-                         key: value}],
-            'ignore_unchanged_counts': random.choice([True, False]),
+            'changes': [self._inventory_adjustment_change(catalog_obj_id, loc_id)],
+            'ignore_unchanged_counts': False,
             'idempotency_key': str(uuid.uuid4())
         }
         response = self._client.inventory.batch_change_inventory(body)
