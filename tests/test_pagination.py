@@ -63,7 +63,7 @@ class TestSquarePagination(TestSquareBase):
         self.pagination_test()
 
         print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams()),
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")

@@ -199,11 +199,13 @@ class TestSquareBase(unittest.TestCase):
         }
 
     def untestable_streams(self):
+        """STREAMS THAT CANNOT CURRENTLY BE TESTED"""
         return {
             'bank_accounts',  # No endpoints for CREATE or UPDATE
             'cash_drawer_shifts',  # Require cash transactions (not supported by API)
             'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
         }
+
     def dynamic_data_streams(self):
         """Expected streams minus streams with static data."""
         return self.expected_streams().difference(self.static_data_streams())
@@ -372,7 +374,7 @@ class TestSquareBase(unittest.TestCase):
 
         for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)
-            rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
+            rep_key = next(iter(self.expected_replication_keys().get(stream, {'created_at'})))
             if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
                         for stream_obj in expected_records[stream]]):
                 LOGGER.info("Data missing for stream %s, will create a record", stream)

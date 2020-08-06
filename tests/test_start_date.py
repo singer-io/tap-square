@@ -22,20 +22,10 @@ class TestSquareStartDate(TestSquareBase):
         return "tap_tester_square_start_date_test"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'cash_drawer_shifts',
-                'inventories',
-                'settlements',
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def timedelta_formatted(self, dtime, days=0):
         try:
@@ -48,23 +38,20 @@ class TestSquareStartDate(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA")
 
-        # Initialize start_date state to make assertions
+
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
+        self.START_DATE = self.get_properties().get('start_date')  # Initialize start_date state to make assertions
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.start_date_test()
 
-        # TODO no static streams currently testable
-        # print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # self.START_DATE = self.STATIC_START_DATE
-        # self.START_DATE_1 = self.STATIC_START_DATE
-        # self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
-        # self.TESTABLE_STREAMS = self.testable_streams_static()
-        # self.start_date_test()
+        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.START_DATE_1 = self.STATIC_START_DATE
+        self.START_DATE_2 = self.timedelta_formatted(dtime=self.STATIC_START_DATE, days=3) # + 3 days
+        self.start_date_test()
 
         self.set_environment(self.PRODUCTION)
 
@@ -75,12 +62,17 @@ class TestSquareStartDate(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.start_date_test()
 
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, self.START_DATE_2)
+        self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE_1, self.START_DATE_2)
 
         ##########################################################################
         ### First Sync
@@ -216,6 +208,7 @@ class TestSquareStartDate(TestSquareBase):
                     self.assertTrue(state_2.get(stream) is None,
                                     msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
 
+                    # TODO Why do full table streams not respect the start date?
 
                 # Testing how INCREMENTAL streams handle start date
                 elif replication_type == self.INCREMENTAL:
