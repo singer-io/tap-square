@@ -219,7 +219,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             assert len(updated_record) > 0, "Failed to update a {} record".format('payments')
             assert len(updated_record) == 1, "Updated too many {} records".format('payments')
 
-            expected_keys_exist = {'receipt_url', 'processing_fee'} if updated_record['status'] == 'COMPLETED' else set()
+            expected_keys_exist = {'receipt_url', 'processing_fee'} if updated_record[0]['status'] == 'COMPLETED' else set()
             updated_record = self.client.get_a_payment(payment_id=first_rec_id, start_date=self.START_DATE, keys_exist=expected_keys_exist)
 
             expected_records_second_sync['payments'] += updated_record
