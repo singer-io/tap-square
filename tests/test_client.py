@@ -747,7 +747,7 @@ class TestClient(SquareClient):
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
-            action = random.choice([ 'complete'])
+            action = random.choice([ 'complete', 'cancel' ])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             resp = self._client.payments.cancel_payment(obj_id)
