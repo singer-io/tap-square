@@ -398,7 +398,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                             self.assertDictEqual(updated_record, sync_record)
 
     def assertInventoriesEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()))
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
 
@@ -408,7 +408,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.assertDictEqual(expected_record_copy, sync_record_copy)
 
     def assertPaymentsEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()))
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
         # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
