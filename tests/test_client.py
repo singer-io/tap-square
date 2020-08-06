@@ -134,6 +134,7 @@ class TestClient(SquareClient):
                 continue
 
             if not set(found_payment[0].keys()).issuperset(keys_exist):
+                LOGGER.warn("Payment with id %s doesn't have enough keys, [payment=%s][keys_exist=%s]", payment_id, found_payment[0], keys_exist)
                 continue
 
             if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
@@ -293,7 +294,7 @@ class TestClient(SquareClient):
 
             # Adjustment logic
             if from_state == 'IN_STOCK':
-                states = ['SOLD', 'WASTE'] # SOLD_ONLINE
+                states = ['SOLD'] # SOLD_ONLINE
             else:
                 states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
                           'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
@@ -333,7 +334,7 @@ class TestClient(SquareClient):
 
             all_counts += response.body.get('counts')
 
-        assert (num_records == len(all_counts) or len(all_counts) == 2 * num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be either num_records or 2*num_records".format(2 * num_records, len(all_counts), all_counts)
+        assert (len(all_counts) == 1 * num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(2 * num_records, len(all_counts), all_counts)
         return all_counts
 
     def create_refund(self, start_date):
@@ -746,7 +747,7 @@ class TestClient(SquareClient):
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
-            action = random.choice([ 'complete', 'cancel' ])
+            action = random.choice([ 'complete'])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             resp = self._client.payments.cancel_payment(obj_id)
@@ -872,7 +873,7 @@ class TestClient(SquareClient):
 
         # Adjustment logic
         if from_state == 'IN_STOCK':
-            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
+            states = ['SOLD'] # SOLD_ONLINE
         else:
             states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
                       'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
@@ -919,7 +920,7 @@ class TestClient(SquareClient):
 
         all_counts = response.body.get('counts')
 
-        assert (len(all_counts) == 1 or len(all_counts) == 2), "len(all_counts)={}, all_counts={}, len(all_counts) should be either 1 or 2".format(len(all_counts), all_counts)
+        assert (len(all_counts) == 1), "len(all_counts)={}, all_counts={}, len(all_counts) should be 1".format(len(all_counts), all_counts)
 
         return all_counts
 
