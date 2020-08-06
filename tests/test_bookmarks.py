@@ -401,6 +401,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
+
+        # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
         self.assertGreaterEqual(sync_record_copy.pop('calculated_at'),
                                 expected_record_copy.pop('calculated_at'))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
@@ -409,6 +411,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
+        # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
         self.assertGreaterEqual(sync_record_copy.pop('updated_at'),
                                 expected_record_copy.pop('updated_at'))
         self.assertDictEqual(expected_record_copy, sync_record_copy)

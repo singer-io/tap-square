@@ -294,7 +294,7 @@ class TestClient(SquareClient):
 
             # Adjustment logic
             if from_state == 'IN_STOCK':
-                states = ['SOLD'] # SOLD_ONLINE
+                states = ['SOLD'] # WASTE SOLD_ONLINE
             else:
                 states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
                           'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
@@ -334,7 +334,7 @@ class TestClient(SquareClient):
 
             all_counts += response.body.get('counts')
 
-        assert (len(all_counts) == 1 * num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(2 * num_records, len(all_counts), all_counts)
+        assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
     def create_refund(self, start_date):
@@ -873,7 +873,7 @@ class TestClient(SquareClient):
 
         # Adjustment logic
         if from_state == 'IN_STOCK':
-            states = ['SOLD'] # SOLD_ONLINE
+            states = ['SOLD'] # WASTE SOLD_ONLINE
         else:
             states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
                       'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
