@@ -769,13 +769,10 @@ class TestClient(SquareClient):
 
         payment_from_response = response.body.get('payment')
         expected_status = self.PAYMENT_ACTION_TO_STATUS[action]
-        if payment_from_response['status'] == expected_status:
-            return payment_from_response
-        else:
-            LOGGER.warn("payment_from_response status does not match expected status, calling get_a_payment till expected status found")
-            start_date = payment_from_response['created_at']
-            expected_keys_exist = {'receipt_number', 'receipt_url', 'processing_fee'} if expected_status == 'COMPLETED' else set()
-            return self.get_a_payment(payment_id=obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
+        start_date = payment_from_response['created_at']
+        expected_keys_exist = {'receipt_number', 'receipt_url', 'processing_fee'} if expected_status == 'COMPLETED' else set()
+
+        return self.get_a_payment(payment_id=obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
