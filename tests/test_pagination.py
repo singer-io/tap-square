@@ -39,7 +39,8 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(self.untestable_streams())
+        testable_streams = self.static_data_streams().difference(self.untestable_streams())
+        return testable_streams.difference({'locations'})  # Locations does not paginate
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -48,11 +49,11 @@ class TestSquarePagination(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.pagination_test()
 
-        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # TODO Uncomment once TASK addressed https://stitchdata.atlassian.net/browse/SRCE-3575
-        # self.START_DATE = self.STATIC_START_DATE
-        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        # self.pagination_test()
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
         self.set_environment(self.PRODUCTION)
 
@@ -61,6 +62,11 @@ class TestSquarePagination(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.pagination_test()
 
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams()),
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
     def pagination_test(self):
         """
