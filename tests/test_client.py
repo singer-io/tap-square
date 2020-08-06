@@ -349,7 +349,7 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        payment_response = self.create_payment(autocomplete=True, source_key="card")
+        payment_response = self._create_payment(autocomplete=True, source_key="card")
         payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
 
         payment_id = payment_obj.get('id')
@@ -393,19 +393,21 @@ class TestClient(SquareClient):
     def create_payments(self, num_records):
         payments = []
         for n in range(num_records):
-            payments.append(self.create_payment())
+            payments.append(self._create_payment())
 
         return payments
 
-    def create_payment(self, autocomplete=False, source_key=None):
+    def _create_payment(self, autocomplete=False, source_key=None):
         """
         Generate a pyament object
         : param autocomplete: boolean
         : param source_key: must be a key to the source dict below
         """
-        source = {'card': 'cnon:card-nonce-ok',
-                  'card_on_file': 'cnon:card-nonce-ok',
-                  'gift_card': 'cnon:gift-card-nonce-ok'}
+        source = {
+            'card': 'cnon:card-nonce-ok',
+            #'card_on_file': 'cnon:card-nonce-ok',
+            #'gift_card': 'cnon:gift-card-nonce-ok'
+        }
 
         if source_key:
             source_id = source.get(source_key)

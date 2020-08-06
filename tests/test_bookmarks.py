@@ -219,8 +219,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
             assert len(updated_record) > 0, "Failed to update a {} record".format('payments')
             assert len(updated_record) == 1, "Updated too many {} records".format('payments')
 
-            expected_records_second_sync['payments'] += updated_record
-            updated_records['payments'] += updated_record
+            expected_records_second_sync['payments'] += updated_record[0]
+            updated_records['payments'] += updated_record[0]
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
