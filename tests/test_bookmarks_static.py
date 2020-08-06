@@ -17,11 +17,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     @classmethod
     def tearDownClass(cls):
