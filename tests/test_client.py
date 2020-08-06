@@ -140,6 +140,8 @@ class TestClient(SquareClient):
             if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_a_payment found payment successfully: %s', found_payment)
                 return found_payment
+            else:
+                LOGGER.warn("Payment with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_payment=%s]", payment_id, kwargs, found_payment[0]) 
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -372,7 +374,7 @@ class TestClient(SquareClient):
             print("Refund error, Updating payment status and retrying refund process.")
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
-                payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
+                payment = self._update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')
 
@@ -724,7 +726,7 @@ class TestClient(SquareClient):
             location_id = obj.get('location_id')
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
-            return [self.update_payment(obj_id).body.get('payment')]
+            return [self._update_payment(obj_id)]
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
         else:
@@ -740,7 +742,12 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_payment(self, obj_id: str, action=None):
+    PAYMENT_ACTION_TO_STATUS = {
+        'complete': 'COMPLETED',
+        'cancel': 'CANCELED',
+    }
+
+    def _update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
@@ -749,19 +756,26 @@ class TestClient(SquareClient):
             action = random.choice([ 'complete', 'cancel' ])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
-            resp = self._client.payments.cancel_payment(obj_id)
-            if resp.is_error():
-                raise RuntimeError(resp.errors)
-            return resp
+            response = self._client.payments.cancel_payment(obj_id)
+            if response.is_error():
+                raise RuntimeError(response.errors)
         elif action == 'complete':
             body = {'payment_id': obj_id}
-            resp = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
-            if resp.is_error():
-                raise RuntimeError(resp.errors)
-
-            return resp
+            response = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
+            if response.is_error():
+                raise RuntimeError(response.errors)
         else:
             raise NotImplementedError('action {} not supported'.format(action))
+
+        payment_from_response = response.body.get('payment')
+        expected_status = self.PAYMENT_ACTION_TO_STATUS[action]
+        if payment_from_response['status'] == expected_status:
+            return payment_from_response
+        else:
+            LOGGER.warn("payment_from_response status does not match expected status, calling get_a_payment till expected status found")
+            start_date = payment_from_response['created_at']
+            expected_keys_exist = {'receipt_number', 'receipt_url', 'processing_fee'} if expected_status == 'COMPLETED' else set()
+            return self.get_a_payment(payment_id=obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
