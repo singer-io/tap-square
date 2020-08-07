@@ -217,7 +217,7 @@ class TestSquareStartDate(TestSquareBase):
                 # BUG | https://stitchdata.atlassian.net/browse/SRCE-3681
                 # Skipping these two streams until BUG resolved.
                 # NOTE: we skip inventories ^ for a different reason leave that as is
-                if stream in {'roles', 'employees'}: # TODO REMOVE
+                if stream in {'roles', 'employees', 'locations'}: # TODO REMOVE
                     continue
 
 
