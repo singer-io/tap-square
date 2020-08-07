@@ -367,7 +367,9 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     sync_record = sync_records[0]
                     if stream not in self.streams_with_record_differences_after_create():
                         if stream == 'payments':
-                            self.assertPaymentsEqual(created_record, sync_record)
+                            self.assertDictEqualWithOffKeys(created_record,, sync_record, {'updated_at'})
+                        elif stream in {'employees', 'roles'}:
+                            self.assertDictEqualWithOffKeys(created_record,, sync_record, {'created_at', 'updated_at'})
                         else:
                             self.assertDictEqual(created_record, sync_record)
 
@@ -389,9 +391,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
                             self.assertDictEqualWithOffKeys(updated_record, sync_record, {'updated_at'})
                         elif stream == 'inventories':
                             self.assertDictEqualWithOffKeys(updated_record, sync_record, {'calculated_at'})
-                        elif stream in {'employees', 'roles'}:
-
-                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'created_at', 'updated_at'})
                         else:
                             self.assertDictEqual(updated_record, sync_record)
 
