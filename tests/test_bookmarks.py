@@ -32,11 +32,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
         }
 
-    def streams_with_record_differences_after_create(self):
-        return {
-            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario
-        }
-
     @classmethod
     def tearDownClass(cls):
         print("\n\nTEST TEARDOWN\n\n")
@@ -151,7 +146,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
                 # a CREATE for refunds will result in a new payments object
                 (new_refund, payment) = self.client.create_refund(start_date=self.START_DATE)
-                new_records = [new_refund] # To match output of create method
+                new_records = new_refund
 
                 created_records['payments'].append(payment)
                 expected_records_second_sync['payments'].append(payment)
@@ -229,6 +224,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
             for record in expected_records_first_sync.get(stream, []):
+                if isinstance(record, list):
+                    LOGGER.info("stream %s with list record about to be tupled, record=%s", stream, record)
                 record_pk_values = tuple([record.get(pk) for pk in primary_keys])
                 if record_pk_values in updated_pk_values:
                     continue  # do not add the orginal of the updated record
@@ -356,7 +353,8 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 # Verify that the inserted records are replicated by the 2nd sync and match our expectations
                 for created_record in created_records.get(stream):
-
+                    if isinstance(created_record, list):
+                        LOGGER.info("stream %s with list record about to be tupled, record=%s", stream, created_record)
                     record_pk_values = tuple([created_record.get(pk) for pk in primary_keys])
                     sync_records = [sync_record for sync_record in second_sync_data
                                     if tuple([sync_record.get(pk) for pk in primary_keys]) == record_pk_values]
@@ -365,13 +363,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     self.assertEqual(len(sync_records), 1,
                                      msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                     sync_record = sync_records[0]
-                    if stream not in self.streams_with_record_differences_after_create():
-                        if stream == 'payments':
-                            self.assertDictEqualWithOffKeys(created_record,, sync_record, {'updated_at'})
-                        elif stream in {'employees', 'roles'}:
-                            self.assertDictEqualWithOffKeys(created_record,, sync_record, {'created_at', 'updated_at'})
-                        else:
-                            self.assertDictEqual(created_record, sync_record)
+                    self.assertRecordsEqual(stream, created_record, sync_record)
 
                 # Verify that the updated records are replicated by the 2nd sync and match our expectations
                 for updated_record in updated_records.get(stream):
@@ -387,12 +379,17 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                         sync_record = sync_records[0]
 
-                        if stream == 'payments':
-                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'updated_at'})
-                        elif stream == 'inventories':
-                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'calculated_at'})
-                        else:
-                            self.assertDictEqual(updated_record, sync_record)
+                        self.assertRecordsEqual(stream, updated_record, sync_record)
+
+    def assertRecordsEqual(self, stream, expected_record, sync_record):
+        if stream == 'payments':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
+        elif stream == 'inventories':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
+        elif stream in {'employees', 'roles'}:
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        else:
+            self.assertDictEqual(expected_record, sync_record)
 
     def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
         self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
