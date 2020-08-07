@@ -134,11 +134,14 @@ class TestClient(SquareClient):
                 continue
 
             if not set(found_payment[0].keys()).issuperset(keys_exist):
+                LOGGER.warn("Payment with id %s doesn't have enough keys, [payment=%s][keys_exist=%s]", payment_id, found_payment[0], keys_exist)
                 continue
 
             if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_a_payment found payment successfully: %s', found_payment)
                 return found_payment
+            else:
+                LOGGER.warn("Payment with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_payment=%s]", payment_id, kwargs, found_payment[0]) 
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -276,11 +279,11 @@ class TestClient(SquareClient):
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
         items = self._create_item(start_date, num_records).body.get('objects', [])
-        assert(items)
+        assert(len(items) == num_records)
 
         # Crate an item_variation and get it's ID
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
-        assert(item_variations)
+        assert(len(item_variations) == num_records)
 
         all_locations = self.get_all('locations', start_date)
         changes = []
@@ -288,41 +291,14 @@ class TestClient(SquareClient):
             catalog_obj_id = item_variation.get('id')
 
             # Get a random location
-            loc_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
-            from_state = 'IN_STOCK'  # inventory_obj.get('state')
-
-            # Adjustment logic
-            if from_state == 'IN_STOCK':
-                states = ['SOLD', 'WASTE'] # SOLD_ONLINE
-            else:
-                states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                        'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                        'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-            to_state = random.choice(states)
-            occurred_at = datetime.strftime(
-                datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
-            change = {
-                'type': 'ADJUSTMENT',
-                'adjustment': {
-                    'from_state': from_state,
-                    'to_state': to_state,
-                    'location_id': loc_id,
-                    'occurred_at': occurred_at,
-                    'catalog_object_id': catalog_obj_id,
-                    'quantity': '1.0',
-                    'source': {
-                        'product': random.choice([
-                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
-            }
-            changes.append(change)
+            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
         for change_chunk in chunks(changes, 100):
             body = {
                 'changes': change_chunk,
-                'ignore_unchanged_counts': random.choice([True, False]),
+                'ignore_unchanged_counts': False,
                 'idempotency_key': str(uuid.uuid4())
             }
             LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
@@ -333,7 +309,34 @@ class TestClient(SquareClient):
 
             all_counts += response.body.get('counts')
 
+        assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
+
+    @staticmethod
+    def _inventory_adjustment_change(catalog_obj_id, location_id):
+        # states = ['SOLD'] # WASTE SOLD_ONLINE
+        #else:
+        #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
+        #                'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
+        #                'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
+        # to_state = random.choice(states)
+        occurred_at = datetime.strftime(
+            datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
+        return {
+            'type': 'ADJUSTMENT',
+            'adjustment': {
+                'from_state': 'IN_STOCK',
+                'to_state': 'SOLD',
+                'location_id': location_id,
+                'occurred_at': occurred_at,
+                'catalog_object_id': catalog_obj_id,
+                'quantity': '1.0',
+                'source': {
+                    'product': random.choice([
+                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
+        }
 
     def create_refund(self, start_date):
         """
@@ -346,7 +349,7 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        payment_response = self.create_payment(autocomplete=True, source_key="card")
+        payment_response = self._create_payment(autocomplete=True, source_key="card")
         payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
 
         payment_id = payment_obj.get('id')
@@ -371,7 +374,7 @@ class TestClient(SquareClient):
             print("Refund error, Updating payment status and retrying refund process.")
 
             if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
-                payment = self.update_payment(obj_id=payment_id, action='complete').body.get('payment') # update (complete) a payment if it is pending
+                payment = self._update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
                 body['idempotency_key'] = str(uuid.uuid4())
                 body['id'] = self.make_id('refund')
 
@@ -390,19 +393,21 @@ class TestClient(SquareClient):
     def create_payments(self, num_records):
         payments = []
         for n in range(num_records):
-            payments.append(self.create_payment())
+            payments.append(self._create_payment())
 
         return payments
 
-    def create_payment(self, autocomplete=False, source_key=None):
+    def _create_payment(self, autocomplete=False, source_key=None):
         """
         Generate a pyament object
         : param autocomplete: boolean
         : param source_key: must be a key to the source dict below
         """
-        source = {'card': 'cnon:card-nonce-ok',
-                  'card_on_file': 'cnon:card-nonce-ok',
-                  'gift_card': 'cnon:gift-card-nonce-ok'}
+        source = {
+            'card': 'cnon:card-nonce-ok',
+            #'card_on_file': 'cnon:card-nonce-ok',
+            #'gift_card': 'cnon:gift-card-nonce-ok'
+        }
 
         if source_key:
             source_id = source.get(source_key)
@@ -716,14 +721,14 @@ class TestClient(SquareClient):
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
-            return self.update_inventory_adjustment(obj).body.get('counts')
+            return self._update_inventory_adjustment(obj)
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
             location_id = obj.get('location_id')
             return [self.update_order(location_id, obj_id, version).body.get('order')]
         elif stream == 'payments':
-            return [self.update_payment(obj_id).body.get('payment')]
+            return [self._update_payment(obj_id)]
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
         else:
@@ -739,7 +744,12 @@ class TestClient(SquareClient):
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def update_payment(self, obj_id: str, action=None):
+    PAYMENT_ACTION_TO_STATUS = {
+        'complete': 'COMPLETED',
+        'cancel': 'CANCELED',
+    }
+
+    def _update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
@@ -748,19 +758,23 @@ class TestClient(SquareClient):
             action = random.choice([ 'complete', 'cancel' ])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
-            resp = self._client.payments.cancel_payment(obj_id)
-            if resp.is_error():
-                raise RuntimeError(resp.errors)
-            return resp
+            response = self._client.payments.cancel_payment(obj_id)
+            if response.is_error():
+                raise RuntimeError(response.errors)
         elif action == 'complete':
             body = {'payment_id': obj_id}
-            resp = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
-            if resp.is_error():
-                raise RuntimeError(resp.errors)
-
-            return resp
+            response = self._client.payments.complete_payment(body=body, payment_id=obj_id)  # ew square
+            if response.is_error():
+                raise RuntimeError(response.errors)
         else:
             raise NotImplementedError('action {} not supported'.format(action))
+
+        payment_from_response = response.body.get('payment')
+        expected_status = self.PAYMENT_ACTION_TO_STATUS[action]
+        start_date = payment_from_response['created_at']
+        expected_keys_exist = {'receipt_number', 'receipt_url', 'processing_fee'} if expected_status == 'COMPLETED' else set()
+
+        return self.get_a_payment(payment_id=obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -863,53 +877,13 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         return resp
 
-    def update_inventory_adjustment(self, catalog_obj):
+    def _update_inventory_adjustment(self, catalog_obj):
         catalog_obj_id = catalog_obj.get('catalog_object_id')
         loc_id = catalog_obj.get('location_id')
 
-        from_state = 'IN_STOCK'  # inventory_obj.get('state')
-
-        # Adjustment logic
-        made_id = self.make_id('inventory')
-        if from_state == 'IN_STOCK':
-            states = ['SOLD', 'WASTE'] # SOLD_ONLINE
-        else:
-            states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-                      'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-                      'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-        to_state = random.choice(states)
-        occurred_at = datetime.strftime(
-            datetime.utcnow()-timedelta(hours=random.randint(1,23)), '%Y-%m-%dT%H:00:00Z')
-        changes = {
-            'ADJUSTMENT': {
-                'adjustment': {
-                    # 'id': made_id,
-                    # 'from_state': random.choice(states),
-                    'from_state': from_state,
-                    'to_state': to_state,
-                    'location_id': loc_id,
-                    'occurred_at': occurred_at,
-                    # 'employee_id': 'asdasd',
-                    'catalog_object_id': catalog_obj_id,
-                    # 'catalog_object_type': 'ITEM_VARIATION',
-                    'quantity': '1.0',
-                    'source': {
-                        'product': random.choice([
-                            'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                            'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                            'ITEM_LIBRARY_IMPORT', 'OTHER'])}}},
-            'PHYSICAL_COUNT': {
-                'physical_count': {},
-            },
-        }
-        change_type = 'ADJUSTMENT' # random.choice(list(changes.items()))
-        key = [k for k in changes.get(change_type).keys()][0]
-        value = [v for v in changes.get(change_type).values()][0]
-
         body = {
-            'changes': [{'type': change_type,
-                         key: value}],
-            'ignore_unchanged_counts': random.choice([True, False]),
+            'changes': [self._inventory_adjustment_change(catalog_obj_id, loc_id)],
+            'ignore_unchanged_counts': False,
             'idempotency_key': str(uuid.uuid4())
         }
         response = self._client.inventory.batch_change_inventory(body)
@@ -917,7 +891,11 @@ class TestClient(SquareClient):
             print(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
-        return response
+        all_counts = response.body.get('counts')
+
+        assert (len(all_counts) == 1), "len(all_counts)={}, all_counts={}, len(all_counts) should be 1".format(len(all_counts), all_counts)
+
+        return all_counts
 
     def update_shift(self, obj):
         body = {
