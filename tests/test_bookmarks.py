@@ -118,7 +118,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         first_sync_record_count = self.run_sync(conn_id)
 
         # verify that the sync only sent records to the target for selected streams (catalogs)
-        self.assertEqual(set(first_sync_record_count.keys()), streams_to_select,
+        self.assertEqual(streams_to_select, set(first_sync_record_count.keys()),
                          msg="Expect first_sync_record_count keys {} to equal testable streams {},"
                          " first_sync_record_count was {}".format(
                              first_sync_record_count.keys(),
@@ -248,13 +248,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
         for stream in self.TESTABLE_STREAMS:
             if stream in self.expected_incremental_streams():
                 if stream in self.cannot_update_streams():
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 1,
+                    self.assertEqual(1, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 elif stream == 'orders': # ORDERS are returned inclusive on the datetime queried
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 3,
+                    self.assertEqual(3, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 else:  # Most streams will have 2 records from the Update and Insert
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 2,
+                    self.assertEqual(2, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
                 self.assertEqual(len(expected_records_second_sync.get(stream)), len(expected_records_first_sync.get(stream)) + len(created_records[stream]),
@@ -320,12 +320,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                     # Verify no bookmarks are present
                     first_state = first_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(first_state, {},
+                    self.assertEqual({}, first_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(first_sync_state) + \
                                      "\tBookmark: {}".format(first_state))
                     second_state = second_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(second_state, {},
+                    self.assertEqual({}, second_state
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))
@@ -364,7 +364,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                     if tuple([sync_record.get(pk) for pk in primary_keys]) == record_pk_values]
                     self.assertTrue(len(sync_records),
                                     msg="An inserted record is missing from our sync: \nRECORD: {}".format(created_record))
-                    self.assertEqual(len(sync_records), 1,
+                    self.assertEqual(1, len(sync_records),
                                      msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                     sync_record = sync_records[0]
                     if stream not in self.streams_with_record_differences_after_create():
@@ -382,7 +382,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         if stream != 'modifier_lists':
                             self.assertTrue(len(sync_records),
                                             msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
-                            self.assertEqual(len(sync_records), 1,
+                            self.assertEqual(1, len(sync_records),
                                              msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
 
                         sync_record = sync_records[0]

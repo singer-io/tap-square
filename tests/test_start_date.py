@@ -92,7 +92,7 @@ class TestSquareStartDate(TestSquareBase):
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
         diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
         # Select all testable streams and their fields
@@ -150,7 +150,7 @@ class TestSquareStartDate(TestSquareBase):
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
 
         diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are kosher")
 
         # Select all available streams and their fields

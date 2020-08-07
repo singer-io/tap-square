@@ -160,9 +160,9 @@ class TestAutomaticFields(TestSquareBase):
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
-                    self.assertEqual(
-                        actual_keys.symmetric_difference(expected_keys), set(),
-                        msg="Expected automatic fields and nothing else.")
+                    self.assertEqual(set(),
+                                     actual_keys.symmetric_difference(expected_keys),
+                                     msg="Expected automatic fields and nothing else.")
 
                 actual_records = [row['data'] for row in data['messages']]
 
@@ -182,10 +182,10 @@ class TestAutomaticFields(TestSquareBase):
                                                    if actual_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_expected_records),
                                         msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(len(stream_expected_records), 1,
+                        self.assertEqual(1, len(stream_expected_records),
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
-                        self.assertDictEqual(actual_record, stream_expected_record)
+                        self.assertDictEqual(stream_expected_record, actual_record)
 
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
@@ -193,7 +193,7 @@ class TestAutomaticFields(TestSquareBase):
                                                  if expected_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_actual_records),
                                         msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(len(stream_actual_records), 1,
+                        self.assertEqual(1, len(stream_actual_records),
                                          msg="A duplicate record was found in the sync for {}.".format(stream))
                         stream_actual_record = stream_actual_records[0]
                     self.assertDictEqual(expected_record, stream_actual_record)

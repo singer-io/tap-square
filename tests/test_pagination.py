@@ -93,7 +93,7 @@ class TestSquarePagination(TestSquareBase):
                 new_objects = self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
 
                 assert new_objects, "Failed to create any new records for stream {}".format(stream)
-                self.assertEqual(len(new_objects), num_records, "Mismatched number of new objects created for stream {}".format(stream))
+                self.assertEqual(num_records, len(new_objects), "Mismatched number of new objects created for stream {}".format(stream))
                 expected_records[stream] += new_objects
             else:
                 LOGGER.info('%s: Have sufficent amount of data to continue test', stream)
@@ -123,7 +123,7 @@ class TestSquarePagination(TestSquareBase):
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
 
         diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
         #select all catalogs
@@ -164,8 +164,8 @@ class TestSquarePagination(TestSquareBase):
                                     msg="A paginated synced stream has a record that is missing automatic fields.")
 
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
-                    self.assertEqual(auto_fields.difference(actual_keys),
-                                     set(), msg="A paginated synced stream has a record that is missing expected fields.")
+                    self.assertEqual(set(), auto_fields.difference(actual_keys),
+                                     msg="A paginated synced stream has a record that is missing expected fields.")
 
                 # Verify by pks that the data replicated matches what we expect
                 primary_keys = self.expected_primary_keys().get(stream)
@@ -178,10 +178,10 @@ class TestSquarePagination(TestSquareBase):
                                                    if actual_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_expected_records),
                                         msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(len(stream_expected_records), 1,
+                        self.assertEqual(1, len(stream_expected_records),
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
-                        self.assertEqual(actual_record.get(pk), stream_expected_record)
+                        self.assertEqual(stream_expected_record, actual_record.get(pk))
 
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
@@ -189,7 +189,7 @@ class TestSquarePagination(TestSquareBase):
                                                  if expected_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_actual_records),
                                         msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(len(stream_actual_records), 1,
+                        self.assertEqual(1, len(stream_actual_records),
                                          msg="A duplicate record was found in the sync for {}.".format(stream))
                         stream_actual_record = stream_actual_records[0]
                         self.assertEqual(expected_record.get(pk), stream_actual_record)
