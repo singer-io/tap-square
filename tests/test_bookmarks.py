@@ -19,22 +19,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'employees',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
-                'roles',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def cannot_update_streams(self):
         return {
             'refunds',  # Does not have an endpoint for updating records
             'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
-        }
-
-    def streams_with_record_differences_after_create(self):
-        return {
-            'refunds',  # TODO: File bug with square about visible difference - provide recreatable scenario
         }
 
     @classmethod
@@ -151,7 +141,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
             if stream == 'refunds':  # a CREATE for refunds is equivalent to an UPDATE for payments
                 # a CREATE for refunds will result in a new payments object
                 (new_refund, payment) = self.client.create_refund(start_date=self.START_DATE)
-                new_records = [new_refund] # To match output of create method
+                new_records = new_refund
 
                 created_records['payments'].append(payment)
                 expected_records_second_sync['payments'].append(payment)
@@ -356,7 +346,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 # Verify that the inserted records are replicated by the 2nd sync and match our expectations
                 for created_record in created_records.get(stream):
-
                     record_pk_values = tuple([created_record.get(pk) for pk in primary_keys])
                     sync_records = [sync_record for sync_record in second_sync_data
                                     if tuple([sync_record.get(pk) for pk in primary_keys]) == record_pk_values]
@@ -365,11 +354,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                     self.assertEqual(1, len(sync_records),
                                      msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                     sync_record = sync_records[0]
-                    if stream not in self.streams_with_record_differences_after_create():
-                        if stream == 'payments':
-                            self.assertPaymentsEqual(created_record, sync_record)
-                        else:
-                            self.assertDictEqual(created_record, sync_record)
+                    self.assertRecordsEqual(stream, created_record, sync_record)
 
                 # Verify that the updated records are replicated by the 2nd sync and match our expectations
                 for updated_record in updated_records.get(stream):
@@ -385,30 +370,27 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                         sync_record = sync_records[0]
 
-                        if stream == 'payments':
-                            self.assertPaymentsEqual(updated_record, sync_record)
-                        elif stream == 'inventories':
-                            self.assertInventoriesEqual(updated_record, sync_record)
-                        else:
-                            self.assertDictEqual(updated_record, sync_record)
+                        self.assertRecordsEqual(stream, updated_record, sync_record)
 
-    def assertInventoriesEqual(self, expected_record, sync_record):
+    def assertRecordsEqual(self, stream, expected_record, sync_record):
+        if stream == 'payments':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
+        elif stream == 'inventories':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
+        elif stream in {'employees', 'roles'}:
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        else:
+            self.assertDictEqual(expected_record, sync_record)
+
+    def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
         self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
 
         # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
-        self.assertGreaterEqual(sync_record_copy.pop('calculated_at'),
-                                expected_record_copy.pop('calculated_at'))
-        self.assertDictEqual(expected_record_copy, sync_record_copy)
-
-    def assertPaymentsEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
-        expected_record_copy = deepcopy(expected_record)
-        sync_record_copy = deepcopy(sync_record)
-        # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
-        self.assertGreaterEqual(sync_record_copy.pop('updated_at'),
-                                expected_record_copy.pop('updated_at'))
+        for off_key in off_keys:
+            self.assertGreaterEqual(sync_record_copy.pop(off_key),
+                                    expected_record_copy.pop(off_key))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
 
 

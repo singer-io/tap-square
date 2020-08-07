@@ -124,24 +124,24 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
-    def get_a_payment(self, payment_id, start_date, keys_exist=set(), **kwargs):
+    def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=set(), **kwargs):
         while True:
-            LOGGER.info('get_a_payment: Calling API')
-            all_payments = self.get_all('payments', start_date)
-            found_payment = [payment for payment in all_payments if payment['id'] == payment_id]
-            if not found_payment:
-                LOGGER.warn("Payment with id %s not found, retrying", payment_id)
+            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop', stream)
+            all_objects = self.get_all(stream, start_date)
+            found_object = [object for object in all_objects if object['id'] == object_id]
+            if not found_object:
+                LOGGER.warn("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
 
-            if not set(found_payment[0].keys()).issuperset(keys_exist):
-                LOGGER.warn("Payment with id %s doesn't have enough keys, [payment=%s][keys_exist=%s]", payment_id, found_payment[0], keys_exist)
+            if not set(found_object[0].keys()).issuperset(keys_exist):
+                LOGGER.warn("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
                 continue
 
-            if all([found_payment[0].get(key) == value for key, value in kwargs.items()]):
-                LOGGER.info('get_a_payment found payment successfully: %s', found_payment)
-                return found_payment
+            if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
+                LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
+                return found_object
             else:
-                LOGGER.warn("Payment with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_payment=%s]", payment_id, kwargs, found_payment[0]) 
+                LOGGER.warn("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0]) 
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -225,7 +225,7 @@ class TestClient(SquareClient):
             refunds = []
             for _ in range(num_records):
                 (created_refund, _) = self.create_refund(start_date)
-                refunds.append(created_refund)
+                refunds += created_refund
             return refunds
         elif stream == 'payments':
             return self.create_payments(num_records)
@@ -350,7 +350,7 @@ class TestClient(SquareClient):
         """
         # SETUP
         payment_response = self._create_payment(autocomplete=True, source_key="card")
-        payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
+        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -387,8 +387,9 @@ class TestClient(SquareClient):
             else:
                 raise RuntimeError(refund.errors)
 
-        updated_payment_obj = self.get_a_payment(payment_id=payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
-        return (refund.body.get('refund'), updated_payment_obj)
+        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
+        completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
+        return (completed_refund, completed_payment)
 
     def create_payments(self, num_records):
         payments = []
@@ -630,11 +631,7 @@ class TestClient(SquareClient):
                 raise Exception(resp.text)
 
             response = resp.json() # account for v1 to v2 changes
-            response['location_ids'] = response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
-            del response['authorized_location_ids']
-            del response['role_ids']  # role_ids exists in v1 only
-
-            employees.append(response)
+            employees.append(self.convert_employees_v1_to_v2(response))
         return employees
 
     def create_roles_v1(self, num_records):
@@ -774,7 +771,7 @@ class TestClient(SquareClient):
         start_date = payment_from_response['created_at']
         expected_keys_exist = {'receipt_number', 'receipt_url', 'processing_fee'} if expected_status == 'COMPLETED' else set()
 
-        return self.get_a_payment(payment_id=obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
+        return self.get_object_matching_conditions('payments', obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
 
     def update_categories(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -802,17 +799,25 @@ class TestClient(SquareClient):
         data = {'first_name': uid,
                 'last_name': obj.get('last_name')}
 
-        return self._update_object_v1("employees", employee_id, data)
+        response = self._update_object_v1("employees", employee_id, data)
+        return self.convert_employees_v1_to_v2(response)
+
+    def convert_employees_v1_to_v2(self, employee_v1_response):
+        employee_v1_response['location_ids'] = employee_v1_response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
+        del employee_v1_response['authorized_location_ids']
+        del employee_v1_response['role_ids']  # role_ids exists in v1 only
+        return employee_v1_response
 
     def update_roles_v1(self, obj):
         role_id = obj.get('id')
-        uid = self.make_id(endpoint)[1:]
+        uid = self.make_id('role')[1:]
         data = {
             'name': 'updated_' + uid,
         }
-        return self._update_object_v1("roles", rol_id, data)
+        return self._update_object_v1("roles", role_id, data)
 
-    def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
+    def update_modifier_list(self, obj, version): # TODO try v1 endpoint in produciton env
+        obj_id = obj.get('id')
         body = {'batches': [{'objects': [{'id': obj_id,
                                          'type': 'MODIFIER_LIST',
                                           'version': version,
