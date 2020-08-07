@@ -208,9 +208,18 @@ class TestSquareStartDate(TestSquareBase):
                     raise Exception("Expectations are set incorrectly. {} cannot have a "
                                     "replication method of {}".format(stream, replication_type))
 
-                # Skip the remaining assertions for inventories since it is append only and has no reliable datetime field
+
+                # Skip the remaining assertions for inventories since it is append only
                 if stream == 'inventories':
                     continue
+
+
+                # BUG | https://stitchdata.atlassian.net/browse/SRCE-3681
+                # Skipping these two streams until BUG resolved.
+                # NOTE: we skip inventories ^ for a different reason leave that as is
+                if stream in {'roles', 'employees'}: # TODO REMOVE
+                    continue
+
 
                 # Verify all data from first sync has bookmark values >= start_date .
                 records_from_sync_1 = set(row.get('data').get(comparison_key)
