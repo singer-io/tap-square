@@ -224,8 +224,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
             for record in expected_records_first_sync.get(stream, []):
-                if isinstance(record, list):
-                    LOGGER.info("stream %s with list record about to be tupled, record=%s", stream, record)
                 record_pk_values = tuple([record.get(pk) for pk in primary_keys])
                 if record_pk_values in updated_pk_values:
                     continue  # do not add the orginal of the updated record
@@ -353,8 +351,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
                 # Verify that the inserted records are replicated by the 2nd sync and match our expectations
                 for created_record in created_records.get(stream):
-                    if isinstance(created_record, list):
-                        LOGGER.info("stream %s with list record about to be tupled, record=%s", stream, created_record)
                     record_pk_values = tuple([created_record.get(pk) for pk in primary_keys])
                     sync_records = [sync_record for sync_record in second_sync_data
                                     if tuple([sync_record.get(pk) for pk in primary_keys]) == record_pk_values]
