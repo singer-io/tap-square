@@ -194,7 +194,35 @@ class TestSquarePagination(TestSquareBase):
                         stream_actual_record = stream_actual_records[0]
                         self.assertEqual(expected_record.get(pk), stream_actual_record)
 
-                    # TODO account for streams without pks (inventories)
+                elif stream == 'inventories': # We can not compare by pks for this stream so we make a less strict assertion
+
+                    # Verify the expected number of records were replicated
+                    self.assertEqual(len(expected_records.get(stream)), len(actual_records))
+
+                    # Verify the pages contain unique data sets (verify we don't duplicate pages)
+                    page_size = self.API_LIMIT.get(stream)
+                    num_full_pages = len(actual_records) // page_size
+                    num_pages = num_full_pages if len(actual_records) % page_size == 0 else num_full_pages + 1
+
+                    pages_to_compare = []
+                    for page in range(num_pages):  # break the data into pages
+                        start = page*page_size
+                        end = start + page_size - 1
+                        pages_to_compare.append(actual_records[start:end])
+
+                    instances = 0
+                    for page_data in pages_to_compare: # count instances of a page of data
+                        for page in pages_to_compare:
+                            if page_data == page:
+                                instances += 1
+
+                        # Verify there is only 1 instance of a given page of data in the target
+                        self.assertEqual(1, instances, msg="There are duplicate pages of data")
+
+                        instances = 0
+
+                else:
+                    raise NotImplementedError("{} does no have full test coverage for pagination feature.".format(stream))
 
 
 if __name__ == '__main__':
