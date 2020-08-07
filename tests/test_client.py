@@ -806,13 +806,14 @@ class TestClient(SquareClient):
 
     def update_roles_v1(self, obj):
         role_id = obj.get('id')
-        uid = self.make_id(endpoint)[1:]
+        uid = self.make_id('role')[1:]
         data = {
             'name': 'updated_' + uid,
         }
-        return self._update_object_v1("roles", rol_id, data)
+        return self._update_object_v1("roles", role_id, data)
 
-    def update_modifier_list(self, obj): # TODO try v1 endpoint in produciton env
+    def update_modifier_list(self, obj, version): # TODO try v1 endpoint in produciton env
+        obj_id = obj.get('id')
         body = {'batches': [{'objects': [{'id': obj_id,
                                          'type': 'MODIFIER_LIST',
                                           'version': version,

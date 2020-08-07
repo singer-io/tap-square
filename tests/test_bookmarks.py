@@ -23,8 +23,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts', # TODO
                 'settlements', # TODO
-                'employees',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
-                'roles',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3673
             }
         )
 
@@ -388,29 +386,24 @@ class TestSquareIncrementalReplication(TestSquareBase):
                         sync_record = sync_records[0]
 
                         if stream == 'payments':
-                            self.assertPaymentsEqual(updated_record, sync_record)
+                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'updated_at'})
                         elif stream == 'inventories':
-                            self.assertInventoriesEqual(updated_record, sync_record)
+                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'calculated_at'})
+                        elif stream in {'employees', 'roles'}:
+
+                            self.assertDictEqualWithOffKeys(updated_record, sync_record, {'created_at', 'updated_at'})
                         else:
                             self.assertDictEqual(updated_record, sync_record)
 
-    def assertInventoriesEqual(self, expected_record, sync_record):
+    def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
         self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
 
         # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
-        self.assertGreaterEqual(sync_record_copy.pop('calculated_at'),
-                                expected_record_copy.pop('calculated_at'))
-        self.assertDictEqual(expected_record_copy, sync_record_copy)
-
-    def assertPaymentsEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
-        expected_record_copy = deepcopy(expected_record)
-        sync_record_copy = deepcopy(sync_record)
-        # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
-        self.assertGreaterEqual(sync_record_copy.pop('updated_at'),
-                                expected_record_copy.pop('updated_at'))
+        for off_key in off_keys:
+            self.assertGreaterEqual(sync_record_copy.pop(off_key),
+                                    expected_record_copy.pop(off_key))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
 
 
