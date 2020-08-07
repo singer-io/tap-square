@@ -325,7 +325,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                                      "\tState: {}\n".format(first_sync_state) + \
                                      "\tBookmark: {}".format(first_state))
                     second_state = second_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual({}, second_state
+                    self.assertEqual({}, second_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))
