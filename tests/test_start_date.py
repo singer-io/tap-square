@@ -182,12 +182,14 @@ class TestSquareStartDate(TestSquareBase):
 
         state_2 = menagerie.get_state(conn_id)
 
+        replication_keys = self.expected_replication_keys()
+
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 replication_type = self.expected_replication_method().get(stream)
+                comparison_key = next(iter(replication_keys.get(stream, {'created_at'})))
                 record_count_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_2 = record_count_by_stream_2.get(stream, 0)
-
 
                 # Verify that the 2nd sync resutls in less records than the 1st sync.
                 self.assertLessEqual(record_count_2, record_count_1,
@@ -198,41 +200,32 @@ class TestSquareStartDate(TestSquareBase):
                                 "Sync 2 start_date: {} ".format(self.START_DATE_2) +
                                 "Sync 2 record_count: {}".format(record_count_2))
 
-
-                # Testing how FULL TABLE streams handle start date
-                if replication_type == self.FULL:
-
-                    # Verify that a bookmark doesn't exist for the stream.
-                    self.assertTrue(state_1.get(stream) is None,
-                                    msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
-                    self.assertTrue(state_2.get(stream) is None,
-                                    msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
-
-                    # TODO Why do full table streams not respect the start date?
-
-                # Testing how INCREMENTAL streams handle start date
-                elif replication_type == self.INCREMENTAL:
-
-                    # Verify 1st sync record count > 2nd sync record count since the 1st start date is older than the 2nd.
+                # Verify 1st sync record count > 2nd sync record count for incremental streams
+                if replication_type == self.INCREMENTAL:
                     self.assertGreater(replicated_row_count_1, replicated_row_count_2, msg="Expected less records on 2nd sync.")
 
-                    # Verify all data from first sync has bookmark values >= start_date .
-                    records_from_sync_1 = set(row.get('data').get('updated_at')
-                                              for row in synced_records_1.get(stream, []).get('messages', []))
-                    for record in records_from_sync_1:
-                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_1),
-                                                msg="Record was created prior to start date for 1st sync.\n" +
-                                                "Sync 1 start_date: {}\n".format(self.START_DATE_1) +
-                                                "Record bookmark: {} ".format(record))
-
-                    # Verify all data from second sync has bookmark values >= start_date 2.
-                    records_from_sync_2 = set(row.get('data').get('updated_at')
-                                              for row in synced_records_2.get(stream, {}).get('messages', []))
-                    for record in records_from_sync_2:
-                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
-                                                msg="Record was created prior to start date for 2nd sync.\n" +
-                                                "Sync 2 start_date: {}\n".format(self.START_DATE_2) +
-                                                "Record bookmark: {} ".format(record))
-                else:
+                elif replication_type != self.FULL:
                     raise Exception("Expectations are set incorrectly. {} cannot have a "
                                     "replication method of {}".format(stream, replication_type))
+
+                # Skip the remaining assertions for inventories since it is append only and has no reliable datetime field
+                if stream == 'inventories':
+                    continue
+
+                # Verify all data from first sync has bookmark values >= start_date .
+                records_from_sync_1 = set(row.get('data').get(comparison_key)
+                                          for row in synced_records_1.get(stream, []).get('messages', []))
+                for record in records_from_sync_1:
+                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_1),
+                                            msg="Record was created prior to start date for 1st sync.\n" +
+                                            "Sync 1 start_date: {}\n".format(self.START_DATE_1) +
+                                            "Record bookmark: {} ".format(record))
+
+                # Verify all data from second sync has bookmark values >= start_date 2.
+                records_from_sync_2 = set(row.get('data').get(comparison_key)
+                                          for row in synced_records_2.get(stream, {}).get('messages', []))
+                for record in records_from_sync_2:
+                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
+                                            msg="Record was created prior to start date for 2nd sync.\n" +
+                                            "Sync 2 start_date: {}\n".format(self.START_DATE_2) +
+                                            "Record bookmark: {} ".format(record))
