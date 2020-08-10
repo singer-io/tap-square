@@ -84,8 +84,8 @@ class TestSquareBase(unittest.TestCase):
         if environment in ['sandbox', 'production']:
             creds =  {
                 'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
-                'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
-                'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
+                'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
                 }
         else:
             raise Exception("Square Environment: {} is not supported.".format(environment))

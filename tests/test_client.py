@@ -62,8 +62,8 @@ class TestClient(SquareClient):
     def __init__(self, env):
         config = {
             'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
-            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
-            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+            'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID'),
+            'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET'),
             'sandbox' : 'true' if env  == 'sandbox' else 'false',
         }
 
