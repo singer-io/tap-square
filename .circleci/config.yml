@@ -29,6 +29,7 @@ jobs:
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
+          when: always
           name: 'Testing Discovery'
           command: |
             source dev_env.sh
@@ -43,6 +44,7 @@ jobs:
                      --client-id=50 \
                      tests/test_discovery.py
       - run:
+          when: always
           name: 'Testing Automatic Fields'
           command: |
             source dev_env.sh
@@ -57,6 +59,7 @@ jobs:
                      --client-id=50 \
                      tests/test_automatic_fields.py
       - run:
+          when: always
           name: 'Testing Schema and All Fields'
           command: |
             source dev_env.sh
@@ -71,6 +74,7 @@ jobs:
                      --client-id=50 \
                      tests/test_all_fields.py
       - run:
+          when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
           command: |
             source dev_env.sh
@@ -85,6 +89,7 @@ jobs:
                      --client-id=50 \
                      tests/test_bookmarks.py
       - run:
+          when: always
           name: 'Testing Bookmarks for Static Data Streams'
           command: |
             source dev_env.sh
@@ -99,6 +104,7 @@ jobs:
                      --client-id=50 \
                      tests/test_bookmarks_static.py
       - run:
+          when: always
           name: 'Testing Pagination'
           command: |
             source dev_env.sh
