@@ -25,19 +25,72 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json /usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/tap_square/schemas/*.json
       - run:
-          name: 'Integration Tests'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+      - run:
+          name: 'Testing Discovery'
+          command: |
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
-                     tests
+                     tests/test_discovery.py
+      - run:
+          name: 'Testing Automatic Fields'
+          command: |
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_automatic_fields.py
+      - run:
+          name: 'Testing Schema and All Fields'
+          command: |
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_all_fields.py
+      - run:
+          name: 'Testing Bookmarks for Dynamic Data Streams'
+          command: |
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks.py
+      - run:
+          name: 'Testing Bookmarks for Static Data Streams'
+          command: |
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks_static.py
+      - run:
+          name: 'Testing Pagination'
+          command: |
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_pagination.py
 
 workflows:
   version: 2
