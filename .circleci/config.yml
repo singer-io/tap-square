@@ -31,6 +31,7 @@ jobs:
       - run:
           name: 'Testing Discovery'
           command: |
+            set +e
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
