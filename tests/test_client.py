@@ -398,7 +398,7 @@ class TestClient(SquareClient):
 
         return payments
 
-    def _create_payment(self, autocomplete=False, source_key=None):
+    def _create_payment(self, autocomplete=False, source_key='card'):
         """
         Generate a pyament object
         : param autocomplete: boolean
@@ -406,14 +406,10 @@ class TestClient(SquareClient):
         """
         source = {
             'card': 'cnon:card-nonce-ok',
-            #'card_on_file': 'cnon:card-nonce-ok',
-            #'gift_card': 'cnon:gift-card-nonce-ok'
+            'card_on_file': 'cnon:card-nonce-ok',
+            'gift_card': 'cnon:gift-card-nonce-ok'
         }
-
-        if source_key:
-            source_id = source.get(source_key)
-        else:
-            source_id = random.choice(list(source.values()))
+        source_id = source.get(source_key)
         body ={'id': self.make_id('payment'),
                'idempotency_key': str(uuid.uuid4()),
                'amount_money': {'amount': random.randint(100,10000), # in cents
