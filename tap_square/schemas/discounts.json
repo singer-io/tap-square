@@ -54,6 +54,18 @@
             "string"
           ]
         },
+        "label_color": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "pin_required": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
         "percentage": {
           "type": [
             "null",
