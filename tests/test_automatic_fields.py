@@ -31,15 +31,18 @@ class TestAutomaticFields(TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.get_properties().get('start_date'))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.START_DATE)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.STATIC_START_DATE)
+        self.START_DATE = self.STATIC_START_DATE
+        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.START_DATE)
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.auto_fields_test(self.testable_streams().intersection(self.production_streams()), self.get_properties().get('start_date'))
+        self.START_DATE = self.get_properties().get('start_date')
+        self.auto_fields_test(self.testable_streams().intersection(self.production_streams()), self.START_DATE)
 
         # TODO Determine if static prod streams exist
 
@@ -158,7 +161,7 @@ class TestAutomaticFields(TestSquareBase):
                 # Verify the number of records match expectations
                 self.assertEqual(len(expected_records.get(stream)),
                                  len(actual_records),
-                                 msg="Number of actual records do match expectations. " +\
+                                 msg="Number of actual records do not match expectations. " +\
                                  "We probably have duplicate records.")
 
                 # Test by keys and values, that we replicated the expected records and nothing else
