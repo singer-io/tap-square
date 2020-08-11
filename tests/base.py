@@ -4,17 +4,17 @@ import unittest
 from datetime import datetime as dt
 from datetime import timedelta
 
+import singer
+
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
-
-import singer
 
 from test_client import TestClient
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareBase(unittest.TestCase):
+class TestSquareBase(unittest.TestCase): # pylint: disable=too-many-public-methods
     PRODUCTION = "production"
     SANDBOX = "sandbox"
     SQUARE_ENVIRONMENT = SANDBOX
@@ -59,14 +59,15 @@ class TestSquareBase(unittest.TestCase):
         self.client = TestClient(env=env)
         self.SQUARE_ENVIRONMENT = env
 
-    def get_environment(self):
+    @staticmethod
+    def get_environment():
         return os.environ['TAP_SQUARE_ENVIRONMENT']
 
-    def get_properties(self, original = True):
+    def get_properties(self, original=True):
         # Default values
         return_value = {
-            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
-            'sandbox' : 'true' if self.get_environment() == self.SANDBOX else 'false'
+            'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
+            'sandbox': 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
         if self.get_environment() == self.PRODUCTION:
             self.SQUARE_ENVIRONMENT = self.PRODUCTION
@@ -82,11 +83,11 @@ class TestSquareBase(unittest.TestCase):
     def get_credentials():
         environment = os.getenv('TAP_SQUARE_ENVIRONMENT')
         if environment in ['sandbox', 'production']:
-            creds =  {
+            creds = {
                 'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                 'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                 'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
-                }
+            }
         else:
             raise Exception("Square Environment: {} is not supported.".format(environment))
 
@@ -157,10 +158,6 @@ class TestSquareBase(unittest.TestCase):
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
-            "settlements": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL
-            },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL
@@ -182,7 +179,8 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def production_streams(self):
+    @staticmethod
+    def production_streams():
         """Some streams can only have data on the production app. We must test these separately"""
         return {
             'settlements',
@@ -195,7 +193,8 @@ class TestSquareBase(unittest.TestCase):
         """By default we will be testing streams in the sandbox"""
         return self.expected_streams().difference(self.production_streams())
 
-    def static_data_streams(self):
+    @staticmethod
+    def static_data_streams():
         """
         Some streams require use of a static data set, and should
         only be referenced in static tests.
@@ -242,7 +241,7 @@ class TestSquareBase(unittest.TestCase):
             auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
         return auto_fields
 
-    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
+    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=None):
         """Select all streams and all fields within streams"""
 
         for catalog in catalogs:
@@ -266,17 +265,19 @@ class TestSquareBase(unittest.TestCase):
                 non_selected_fields=non_selected_properties
             )
 
-    def get_selected_fields_from_metadata(self, metadata):
+    @staticmethod
+    def get_selected_fields_from_metadata(metadata):
         selected_fields = set()
         for field in metadata:
             is_field_metadata = len(field['breadcrumb']) > 1
             inclusion_automatic_or_selected = (field['metadata']['inclusion'] == 'automatic'
-                                               or field['metadata']['selected'] == True)
+                                               or field['metadata']['selected'] is True)
             if is_field_metadata and inclusion_automatic_or_selected:
                 selected_fields.add(field['breadcrumb'][1])
         return selected_fields
 
-    def _get_abs_path(self, path):
+    @staticmethod
+    def _get_abs_path(path):
         return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
     def _load_schemas(self, stream):
@@ -290,7 +291,8 @@ class TestSquareBase(unittest.TestCase):
 
         return schemas
 
-    def parse_date(self, date_value):
+    @staticmethod
+    def parse_date(date_value):
         """
         Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
         """
@@ -304,7 +306,8 @@ class TestSquareBase(unittest.TestCase):
             except ValueError:
                 raise NotImplementedError("We are not accounting for dates of this format: {}".format(date_value))
 
-    def date_check_and_parse(self, date_value):
+    @staticmethod
+    def date_check_and_parse(date_value):
         """
         Pass in any value and return that value. If the value is a string-formatted-datetime, parse
         the value and return it as an unformatted datetime object.
@@ -320,7 +323,6 @@ class TestSquareBase(unittest.TestCase):
                 return date_value
 
     def expected_schema_keys(self, stream):
-
         props = self._load_schemas(stream).get(stream).get('properties')
         assert props, "{} schema not configured proprerly"
 
@@ -334,9 +336,9 @@ class TestSquareBase(unittest.TestCase):
         """ Align expected data with how the tap _should_ emit them. """
         if isinstance(expected_record, dict):
             for key, value in expected_record.items(): # Modify a single record
-                if type(value) == dict:
+                if isinstance(value, dict):
                     self.modify_expected_record(value)
-                elif type(value) == list:
+                elif isinstance(value, list):
                     for item in value:
                         self.modify_expected_record(item)
                 else:
@@ -348,10 +350,11 @@ class TestSquareBase(unittest.TestCase):
         if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
             # key in ['updated_at', 'created_at']:
             raw_date = self.date_check_and_parse(value)
-            iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
+            iso_date = dt.strftime(raw_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
-    def align_number_type(self, record, key, value):
+    @staticmethod
+    def align_number_type(record, key, value):
         """float values must conform to json number formatting so we convert to Decimal"""
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
