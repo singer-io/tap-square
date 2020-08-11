@@ -14,7 +14,7 @@ from test_client import TestClient
 LOGGER = singer.get_logger()
 
 
-class TestSquareBase(unittest.TestCase): # pylint: disable=too-many-public-methods
+class TestSquareBase(unittest.TestCase):
     PRODUCTION = "production"
     SANDBOX = "sandbox"
     SQUARE_ENVIRONMENT = SANDBOX
