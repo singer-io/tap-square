@@ -362,7 +362,13 @@ class TestSquareBase(unittest.TestCase):
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
 
-    def create_test_data(self, testable_streams, start_date, start_date_2=None):
+    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
+        if min_required_num_records_per_stream == None:
+            min_required_num_records_per_stream = {
+                stream: 1
+                for stream in testable_streams
+            }
+
         if not start_date_2:
             start_date_2 = start_date
 
@@ -387,11 +393,14 @@ class TestSquareBase(unittest.TestCase):
             else:
                 rep_key = 'created_at'
 
-            if not any(
-                    [stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
-                     for stream_obj in expected_records[stream]]):
-                LOGGER.info("Data missing for stream %s, will create a record", stream)
-                created_records = self.client.create(stream, start_date=start_date)
+            if (not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
+                        for stream_obj in expected_records[stream]])
+                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]):
+
+                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(expected_records[stream]))
+
+                LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
+                created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
                 if isinstance(created_records, dict):
                     expected_records[stream].append(created_records)
