@@ -85,11 +85,6 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Ensure tested streams have existing records
         expected_records_first_sync = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
 
-        # Adjust expectations for datetime format
-        for stream, expected_records in expected_records_first_sync.items():
-            print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(expected_records)
-
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
 

@@ -382,4 +382,7 @@ class TestSquareBase(unittest.TestCase):
                 else:
                     raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
+            print("Adjust expectations for stream: {}".format(stream))
+            self.modify_expected_records(expected_records[stream])
+
         return expected_records
