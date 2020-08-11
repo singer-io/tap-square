@@ -31,35 +31,28 @@ class TestAutomaticFields(TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
-        self.auto_fields_test()
+        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.get_properties().get('start_date'))
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        self.auto_fields_test()
+        self.auto_fields_test(self.testable_streams().intersection(self.sandbox_streams()), self.STATIC_START_DATE)
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
-        self.auto_fields_test()
+        self.auto_fields_test(self.testable_streams().intersection(self.production_streams()), self.get_properties().get('start_date'))
 
         # TODO Determine if static prod streams exist
 
-
-    def auto_fields_test(self):
+    def auto_fields_test(self, testable_streams, start_date):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
         """
 
         print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
+        print("WITH STREAMS: {}\n\n".format(testable_streams))
 
-        records_with_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
+        records_with_all_fields = self.create_test_data(testable_streams, start_date)
 
         expected_records = {stream: [] for stream in self.expected_streams()}
         # Filter expected records to only have automatic fields
@@ -100,7 +93,7 @@ class TestAutomaticFields(TestSquareBase):
                 self.assertTrue(mdata and mdata['metadata']['inclusion'] == 'automatic')
 
         # Select testable streams. Deselect all available fields from all testable streams, keep automatic fields
-        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        exclude_streams = self.expected_streams().difference(testable_streams)
         self.select_all_streams_and_fields(
             conn_id=conn_id, catalogs=found_catalogs, select_all_fields=False, exclude_streams=exclude_streams
         )
@@ -114,7 +107,7 @@ class TestAutomaticFields(TestSquareBase):
             # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
-            if cat['stream_name'] not in self.TESTABLE_STREAMS:
+            if cat['stream_name'] not in testable_streams:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
@@ -146,7 +139,7 @@ class TestAutomaticFields(TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         # Test by Stream
-        for stream in self.TESTABLE_STREAMS:
+        for stream in testable_streams:
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
