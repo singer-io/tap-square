@@ -375,7 +375,7 @@ class TestSquareBase(unittest.TestCase):
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')
 
-        expected_records = {x: [] for x in self.expected_streams()}
+        expected_records = {stream: [] for stream in self.expected_streams()}
 
         for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)

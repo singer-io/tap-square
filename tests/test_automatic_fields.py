@@ -59,30 +59,16 @@ class TestAutomaticFields(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # ensure data exists for sync streams and set expectations
-        expected_records = {x: [] for x in self.expected_streams()}
-        for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            if not existing_objects:
-                print("Test data is not properly set for {}.".format(stream))
+        records_with_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
 
-                new_record = self.client.create(stream, start_date=self.START_DATE)
-                assert len(new_record) > 0, "Failed to create a {} record".format(stream)
-                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
-
-                expected_records[stream] += new_record
-
-            print("Data exists for stream: {}".format(stream))
-            for obj in existing_objects:
+        expected_records = {stream: [] for stream in self.expected_streams()}
+        # Filter expected records to only have automatic fields
+        for stream, records in records_with_all_fields.items():
+            for record in records:
                 expected_records[stream].append(
-                    {field: obj.get(field)
+                    {field: record.get(field)
                      for field in self.expected_automatic_fields().get(stream)}
                 )
-
-        # Adjust expectations for datetime format
-        for stream, records in expected_records.items():
-            print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(records)
 
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
