@@ -58,16 +58,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
-        self.bookmarks_test()
+        self.bookmarks_test(self.testable_streams().intersection(self.sandbox_streams()))
 
         self.set_environment(self.PRODUCTION)
-
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
-        self.bookmarks_test()
+        self.bookmarks_test(self.testable_streams().intersection(self.production_streams()))
 
-    def bookmarks_test(self):
+    def bookmarks_test(self, testable_streams):
         """
         Verify for each stream that you can do a sync which records bookmarks.
         Verify that the bookmark is the max value sent to the target for the `date` PK field
@@ -83,7 +80,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Ensure tested streams have existing records
-        expected_records_first_sync = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
+        expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -97,7 +94,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # Select all testable streams and no fields within streams
         found_catalogs = menagerie.get_catalogs(conn_id)
-        streams_to_select = self.TESTABLE_STREAMS
+        streams_to_select = testable_streams
         our_catalogs = [catalog for catalog in found_catalogs if
                         catalog.get('tap_stream_id') in streams_to_select]
         self.select_all_streams_and_fields(conn_id, our_catalogs)
@@ -124,13 +121,13 @@ class TestSquareIncrementalReplication(TestSquareBase):
         expected_records_second_sync = {x: [] for x in self.expected_streams()}
 
         # We should expect any records with rep-keys equal to the bookmark from the first sync to be returned by the second
-        if 'orders' in self.TESTABLE_STREAMS:
+        if 'orders' in testable_streams:
             for order in first_sync_records['orders']['messages']:
                 if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
                     expected_records_second_sync['orders'].append(order['data'])
 
-        streams_to_create_records = list(self.TESTABLE_STREAMS)
-        if 'payments' in self.TESTABLE_STREAMS:
+        streams_to_create_records = list(testable_streams)
+        if 'payments' in testable_streams:
             streams_to_create_records.remove('payments')
             streams_to_create_records.append('payments')
 
@@ -155,7 +152,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
 
-        for stream in self.TESTABLE_STREAMS.difference(self.cannot_update_streams()):
+        for stream in testable_streams.difference(self.cannot_update_streams()):
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
@@ -189,7 +186,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
             updated_records[stream] += updated_record
 
-        if 'payments' in self.TESTABLE_STREAMS:
+        if 'payments' in testable_streams:
             # Update a Payment AFTER all other streams have been updated
             # Payments which have already completed/cancelled can't be done so again so find first APPROVED payment
             first_rec = dict()
@@ -233,7 +230,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 self.modify_expected_records(expected_records)
 
         # ensure validity of expected_records_second_sync
-        for stream in self.TESTABLE_STREAMS:
+        for stream in testable_streams:
             if stream in self.expected_incremental_streams():
                 if stream in self.cannot_update_streams():
                     self.assertEqual(len(expected_records_second_sync.get(stream)), 1,
@@ -257,7 +254,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         second_sync_state = menagerie.get_state(conn_id)
 
         # Loop first_sync_records and compare against second_sync_records
-        for stream in self.TESTABLE_STREAMS:
+        for stream in testable_streams:
             with self.subTest(stream=stream):
 
                 second_sync_data = [record.get("data") for record

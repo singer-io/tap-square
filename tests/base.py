@@ -22,6 +22,7 @@ class TestSquareBase(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    START_DATE_KEY = 'start-date-key'
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
@@ -63,12 +64,15 @@ class TestSquareBase(unittest.TestCase):
     def get_environment():
         return os.environ['TAP_SQUARE_ENVIRONMENT']
 
-    def get_properties(self):
+    def get_properties(self, original=True):
         # Default values
         return_value = {
             'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox': 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
+
+        if not original:
+            return_value['start_date'] = self.START_DATE
 
         return return_value
 
@@ -133,6 +137,7 @@ class TestSquareBase(unittest.TestCase):
             "inventories": {
                 self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
+                self.START_DATE_KEY: 'calculated_at',
             },
             "refunds": {
                 self.PRIMARY_KEYS: {'id'},
@@ -227,6 +232,11 @@ class TestSquareBase(unittest.TestCase):
         return {table: properties.get(self.REPLICATION_KEYS, set())
                 for table, properties
                 in self.expected_metadata().items() if table in incremental_streams}
+
+    def expected_start_date_stream_to_key(self):
+        return {table: properties.get(self.START_DATE_KEY)
+                for table, properties in self.expected_metadata().items()
+                if properties.get(self.START_DATE_KEY)}
 
     def expected_automatic_fields(self):
         auto_fields = {}
@@ -369,9 +379,17 @@ class TestSquareBase(unittest.TestCase):
 
         for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)
-            rep_key = next(iter(self.expected_replication_keys().get(stream, set('created_at'))))
-            if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
-                        for stream_obj in expected_records[stream]]):
+
+            if self.expected_replication_keys().get(stream):
+                rep_key = next(iter(self.expected_replication_keys().get(stream)))
+            elif self.expected_start_date_stream_to_key().get(stream):
+                rep_key = self.expected_start_date_stream_to_key().get(stream)
+            else:
+                rep_key = 'created_at'
+
+            if not any(
+                    [stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
+                     for stream_obj in expected_records[stream]]):
                 LOGGER.info("Data missing for stream %s, will create a record", stream)
                 created_records = self.client.create(stream, start_date=start_date)
 
