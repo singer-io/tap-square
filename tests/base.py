@@ -63,19 +63,12 @@ class TestSquareBase(unittest.TestCase):
     def get_environment():
         return os.environ['TAP_SQUARE_ENVIRONMENT']
 
-    def get_properties(self, original=True):
+    def get_properties(self):
         # Default values
         return_value = {
             'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
             'sandbox': 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
-        if self.get_environment() == self.PRODUCTION:
-            self.SQUARE_ENVIRONMENT = self.PRODUCTION
-
-        if original:
-            return return_value
-
-        return_value['start_date'] = self.START_DATE
 
         return return_value
 

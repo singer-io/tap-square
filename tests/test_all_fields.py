@@ -2,8 +2,8 @@ import os
 import unittest
 
 import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
-import tap_tester.runner      as runner
+import tap_tester.menagerie as menagerie
+import tap_tester.runner as runner
 
 from base import TestSquareBase
 
@@ -12,7 +12,8 @@ class TestSquareAllFields(TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
     TESTABLE_STREAMS = set()
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_all_fields"
 
     def testable_streams(self):
@@ -37,24 +38,20 @@ class TestSquareAllFields(TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
-        self.all_fields_test()
+        self.all_fields_test(self.get_properties().get('start_date'))
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        self.all_fields_test()
+        self.all_fields_test(self.STATIC_START_DATE)
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
-        self.all_fields_test()
+        self.all_fields_test(self.get_properties().get('start_date'))
 
-
-    def all_fields_test(self):
+    def all_fields_test(self, start_date):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
@@ -66,7 +63,7 @@ class TestSquareAllFields(TestSquareBase):
         # ensure data exists for sync streams and set expectations
         expected_records = {x: [] for x in self.expected_streams()} # ids by stream
         for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
+            existing_objects = self.client.get_all(stream, start_date)
             if existing_objects:
                 print("Data exists for stream: {}".format(stream))
                 for obj in existing_objects:
@@ -94,7 +91,7 @@ class TestSquareAllFields(TestSquareBase):
         self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
+        diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
@@ -137,7 +134,7 @@ class TestSquareAllFields(TestSquareBase):
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-        replicated_row_count =  sum(first_record_count_by_stream.values())
+        replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         # Verify target has records for all synced streams
