@@ -232,7 +232,13 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
             location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
-            max_end_at = max([obj['end_at'] for obj in self.get_all('shifts', start_date)])
+            all_shifts = self.get_all('shifts', start_date)
+
+            if all_shifts:
+                max_end_at = max([obj['end_at'] for obj in all_shifts])
+            else:
+                max_end_at = start_date
+
             if start_date < max_end_at:
                 LOGGER.warning('Tried to create a Shift that overlapped another shift')
                 # Readjust start date and end date

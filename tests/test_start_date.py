@@ -75,7 +75,6 @@ class TestSquareStartDate(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.start_date_test()
 
-
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
