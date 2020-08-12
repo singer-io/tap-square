@@ -56,17 +56,7 @@ class TestSquareAllFields(TestSquareBase):
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # ensure data exists for sync streams and set expectations
-        expected_records = {x: [] for x in self.expected_streams()} # ids by stream
-        for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            if existing_objects:
-                print("Data exists for stream: {}".format(stream))
-                for obj in existing_objects:
-                    expected_records[stream].append(obj)
-            else:
-                print("Data does not exist for stream: {}".format(stream))
-                assert None, "more test functinality needed"
-
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
         # modify data set to conform to expectations (json standards)
         for stream, records in expected_records.items():
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
