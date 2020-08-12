@@ -31,7 +31,7 @@ class FullTableStream(Stream):
     def get_pages(self, bookmarked_cursor, start_time):
         raise NotImplementedError("Child classes of FullTableStreams require `get_pages` implementation")
 
-    def sync(self, start_time, bookmarked_cursor=None): #pylint: disable=no-self-use,unused-argument
+    def sync(self, start_time, bookmarked_cursor=None):
         for page, cursor in self.get_pages(bookmarked_cursor, start_time):
             for record in page:
                 yield record
@@ -82,9 +82,17 @@ class Employees(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use,unused-argument
+    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
         for page, cursor in self.client.get_employees(bookmarked_cursor):
             yield page, cursor
+
+    def sync(self, start_time, bookmarked_cursor=None):
+        for page, cursor in self.get_pages(bookmarked_cursor, start_time):
+            for record in page:
+                if record['updated_at'] >= start_time:
+                    yield record
+            singer.write_bookmark(self.state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(self.state)
 
 
 class ModifierLists(CatalogStream):
@@ -110,7 +118,7 @@ class Locations(FullTableStream):
 
         return all_location_ids
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument,no-self-use
+    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
         for page, cursor in self.client.get_locations():
             yield page, cursor
 
@@ -123,7 +131,7 @@ class BankAccounts(FullTableStream):
     replication_key = None
     object_type = 'BANK ACCOUNTS'
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument,no-self-use
+    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
         for page, cursor in self.client.get_bank_accounts():
             yield page, cursor
 
@@ -135,7 +143,7 @@ class Refunds(FullTableStream):
     replication_key = None
     object_type = 'REFUND'
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use
+    def get_pages(self, bookmarked_cursor, start_time):
         for page, cursor in self.client.get_refunds(start_time, bookmarked_cursor):
             yield page, cursor
 
@@ -148,7 +156,7 @@ class Payments(FullTableStream):
     replication_key = None
     object_type = 'PAYMENT'
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use
+    def get_pages(self, bookmarked_cursor, start_time):
         for page, cursor in self.client.get_payments(start_time, bookmarked_cursor):
             yield page, cursor
 
@@ -161,7 +169,7 @@ class Orders(Stream):
     replication_key = 'updated_at'
     object_type = 'ORDER'
 
-    def sync(self, start_time, bookmarked_cursor): #pylint: disable=no-self-use
+    def sync(self, start_time, bookmarked_cursor):
         locations = Locations(self.client, self.state)
         all_location_ids = locations.get_all_location_ids(start_time)
         for location_ids_chunk in chunks(all_location_ids, 10):
@@ -177,7 +185,7 @@ class Inventories(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use
+    def get_pages(self, bookmarked_cursor, start_time):
         for page, cursor in self.client.get_inventories(start_time, bookmarked_cursor):
             yield page, cursor
 
@@ -189,7 +197,7 @@ class Shifts(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, start_time, bookmarked_cursor): #pylint: disable=no-self-use, unused-argument
+    def sync(self, start_time, bookmarked_cursor): #pylint: disable=unused-argument
         for page, cursor in self.client.get_shifts():
             yield page, cursor
 
@@ -202,10 +210,17 @@ class Roles(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time):  #pylint: disable=unused-argument,no-self-use
-        # only yield if the updated_at is >= our bookmark?
+    def get_pages(self, bookmarked_cursor, start_time):  #pylint: disable=unused-argument
         for page, cursor in self.client.get_roles(bookmarked_cursor):
             yield page, cursor
+
+    def sync(self, start_time, bookmarked_cursor=None):
+        for page, cursor in self.get_pages(bookmarked_cursor, start_time):
+            for record in page:
+                if record['updated_at'] >= start_time:
+                    yield record
+            singer.write_bookmark(self.state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(self.state)
 
 
 class CashDrawerShifts(FullTableStream):
@@ -215,7 +230,7 @@ class CashDrawerShifts(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use
+    def get_pages(self, bookmarked_cursor, start_time):
         locations = Locations(self.client, self.state)
 
         for location_id in locations.get_all_location_ids(start_time):
@@ -231,7 +246,7 @@ class Settlements(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=no-self-use, unused-argument
+    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
         locations = Locations(self.client, self.state)
 
         for location_id in locations.get_all_location_ids(start_time):

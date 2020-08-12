@@ -108,19 +108,19 @@ class TestClient(SquareClient):
         elif stream == 'inventories':
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
-            orders = Orders()
-            return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
+            orders = Orders(self, {})
+            return [obj for page, _ in orders.sync(start_date, None) for obj in page]
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts() for obj in page
                     if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
-            settlements = Settlements()
-            return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
+            settlements = Settlements(self, {})
+            return [obj for page, _ in settlements.sync(start_date) for obj in page]
         elif stream == 'cash_drawer_shifts':
-            cash_drawer_shifts = CashDrawerShifts()
-            return [obj for page, _ in cash_drawer_shifts.sync(self, start_date, None) for obj in page]
+            cash_drawer_shifts = CashDrawerShifts(self, {})
+            return [obj for page, _ in cash_drawer_shifts.sync(start_date) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
