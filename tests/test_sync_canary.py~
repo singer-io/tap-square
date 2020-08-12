@@ -1,20 +1,21 @@
 import os
 import unittest
 
+import tap_tester.connections as connections
+import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase, DataType
+from base import TestSquareBase
 
 
 class TestSquareAllFields(TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
     TESTABLE_STREAMS = set()
 
-    @staticmethod
-    def name():
+    def name(self):
         return "tap_tester_square_all_fields"
 
-    def testable_streams_dynamic(self):
+    def testable_streams(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
                 'cash_drawer_shifts',
@@ -38,21 +39,22 @@ class TestSquareAllFields(TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
-        self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
+        self.all_fields_test()
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        self.all_fields_test(self.SANDBOX, DataType.STATIC)
+        self.all_fields_test()
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
-        self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
+        self.all_fields_test()
 
-    def all_fields_test(self, environment, data_type):
+
+    def all_fields_test(self):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
@@ -78,13 +80,64 @@ class TestSquareAllFields(TestSquareBase):
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
             self.modify_expected_records(records)
 
-        conn_id = self.run_initial_sync(environment, data_type)
+        # Instantiate connection with default start/end dates
+        conn_id = connections.ensure_connection(self)
+
+        # run in check mode
+        check_job_name = runner.run_check_mode(self, conn_id)
+
+        # verify check exit codes
+        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+
+        found_catalogs = menagerie.get_catalogs(conn_id)
+        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
+
+        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
+        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
+        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        print("discovered schemas are OK")
+
+        # Select all available fields from all testable streams
+        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
+
+        catalogs = menagerie.get_catalogs(conn_id)
+
+        # Ensure our selection worked
+        for cat in catalogs:
+            catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
+            # Verify all testable streams are selected
+            selected = catalog_entry.get('annotated-schema').get('selected')
+            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            if cat['stream_name'] not in self.TESTABLE_STREAMS:
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
+            self.assertTrue(selected, msg="Stream not selected.")
+
+            # Verify all fields within each selected stream are selected
+            for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
+                field_selected = field_props.get('selected')
+                print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                self.assertTrue(field_selected, msg="Field not selected.")
+
+        #clear state
+        menagerie.set_state(conn_id, {})
+
+        # run sync
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+
+        # Verify tap exit codes
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
         # read target output
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-        replicated_row_count = sum(first_record_count_by_stream.values())
+        replicated_row_count =  sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         # Verify target has records for all synced streams
@@ -141,6 +194,7 @@ class TestSquareAllFields(TestSquareBase):
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
                         self.assertDictEqual(actual_record, stream_expected_record)
+
 
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
