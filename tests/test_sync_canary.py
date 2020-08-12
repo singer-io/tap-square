@@ -14,12 +14,9 @@ class TestSyncCanary(TestSquareBase, TestCase):
     def testable_streams_static(self):
         return self.static_data_streams()
 
-    def setup(self):
-        super().setup()
+    def setUp(self):
+        super().setUp()
         self.START_DATE = self.get_properties().get('start_date')
-
-        # All streams should work in production, even though some don't work in sandbox
-        self.set_environment(self.PRODUCTION)
 
     def test_run(self):
         """
@@ -28,6 +25,10 @@ class TestSyncCanary(TestSquareBase, TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.expected_streams()))
 
+        self.set_environment(self.SANDBOX)
         self.run_initial_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_initial_sync(self.get_environment(), DataType.STATIC)
-        
+
+        self.set_environment(self.PRODUCTION)
+        self.run_initial_sync(self.get_environment(), DataType.DYNAMIC)
+        self.run_initial_sync(self.get_environment(), DataType.STATIC)
