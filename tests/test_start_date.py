@@ -75,7 +75,6 @@ class TestSquareStartDate(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.start_date_test()
 
-
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
@@ -167,8 +166,6 @@ class TestSquareStartDate(TestSquareBase):
             conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
         )
 
-        catalogs = menagerie.get_catalogs(conn_id)
-
         # clear state
         menagerie.set_state(conn_id, {})
 
@@ -196,15 +193,14 @@ class TestSquareStartDate(TestSquareBase):
                 record_count_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_2 = record_count_by_stream_2.get(stream, 0)
 
-
                 # Verify that the 2nd sync resutls in less records than the 1st sync.
                 self.assertLessEqual(record_count_2, record_count_1,
-                                msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
-                                "Second sync should result in fewer records\n" +
-                                "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                "Sync 1 record_count: {}\n".format(record_count_1) +
-                                "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                "Sync 2 record_count: {}".format(record_count_2))
+                                     msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
+                                     "Second sync should result in fewer records\n" +
+                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                     "Sync 1 record_count: {}\n".format(record_count_1) +
+                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                     "Sync 2 record_count: {}".format(record_count_2))
 
 
                 # Testing how FULL TABLE streams handle start date

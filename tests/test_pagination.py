@@ -85,22 +85,7 @@ class TestSquarePagination(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # Ensure tested streams have a record count which exceeds the API LIMIT
-        expected_records = {x: [] for x in self.expected_streams()}
-        for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            expected_records[stream] += existing_objects
-
-            if len(existing_objects) <= self.API_LIMIT.get(stream):
-                num_records = self.API_LIMIT.get(stream) + 1 - len(existing_objects)
-                LOGGER.info('%s: Will create %s records because there are now only %s records and the limit for this stream is %s', stream, num_records, len(existing_objects), self.API_LIMIT.get(stream))
-                new_objects = self.client.create(stream, start_date=self.START_DATE, num_records=num_records)
-
-                assert new_objects, "Failed to create any new records for stream {}".format(stream)
-                self.assertEqual(len(new_objects), num_records, "Mismatched number of new objects created for stream {}".format(stream))
-                expected_records[stream] += new_objects
-            else:
-                LOGGER.info('%s: Have sufficent amount of data to continue test', stream)
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in self.TESTABLE_STREAMS:

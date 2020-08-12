@@ -1,8 +1,8 @@
 import uuid
 import random
-import requests
 import os
 from datetime import datetime, timedelta, timezone
+import requests
 
 import singer
 
@@ -64,7 +64,7 @@ class TestClient(SquareClient):
             'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
             'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
             'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if env == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
-            'sandbox' : 'true' if env  == 'sandbox' else 'false',
+            'sandbox': 'true' if env == 'sandbox' else 'false',
         }
 
         super().__init__(config)
@@ -74,7 +74,7 @@ class TestClient(SquareClient):
     ##########################################################################
 
     def get_headers(self):
-        return {"Authorization":"Bearer {}".format(self._access_token),
+        return {"Authorization": "Bearer {}".format(self._access_token),
                 "Content-Type": "application/json"}
 
     def env_is_sandbox(self):
@@ -84,7 +84,7 @@ class TestClient(SquareClient):
     ### GETs
     ##########################################################################
 
-    def get_all(self, stream, start_date):
+    def get_all(self, stream, start_date): # pylint: disable=too-many-return-statements
         if stream == 'items':
             return [obj for page, _ in self.get_catalog('ITEM', start_date, None) for obj in page]
         elif stream == 'categories':
@@ -124,24 +124,24 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
-    def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=set(), **kwargs):
+    def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=frozenset(), **kwargs):
         while True:
             LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop', stream)
             all_objects = self.get_all(stream, start_date)
             found_object = [object for object in all_objects if object['id'] == object_id]
             if not found_object:
-                LOGGER.warn("Stream %s Object with id %s not found, retrying", stream, object_id)
+                LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
 
             if not set(found_object[0].keys()).issuperset(keys_exist):
-                LOGGER.warn("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
+                LOGGER.warning("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
                 continue
 
             if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
                 return found_object
             else:
-                LOGGER.warn("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0]) 
+                LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -196,7 +196,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
 
-    def create(self, stream, start_date, end_date=None, num_records=1):
+    def create(self, stream, start_date, end_date=None, num_records=1): # pylint: disable=too-many-return-statements
         if stream == 'items':
             return self._create_item(start_date=start_date, num_records=num_records).body.get('objects')
         elif stream == 'categories':
@@ -232,7 +232,13 @@ class TestClient(SquareClient):
         elif stream == 'shifts':
             employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
             location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
-            max_end_at = max([obj['end_at'] for obj in self.get_all('shifts', start_date)])
+            all_shifts = self.get_all('shifts', start_date)
+
+            if all_shifts:
+                max_end_at = max([obj['end_at'] for obj in all_shifts])
+            else:
+                max_end_at = start_date
+
             if start_date < max_end_at:
                 LOGGER.warning('Tried to create a Shift that overlapped another shift')
                 # Readjust start date and end date
@@ -242,7 +248,7 @@ class TestClient(SquareClient):
                 end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
 
             created_shifts = []
-            for i in range(num_records):
+            for _ in range(num_records):
                 created_shifts.append(self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift'))
                 start_date = end_date
                 # Bump by shift minutes to avoid any shift overlaps
@@ -258,7 +264,8 @@ class TestClient(SquareClient):
         date_datetime = date_parsed + timedelta(minutes=shift_minutes)
         return singer.utils.strftime(date_datetime)
 
-    def make_id(self, stream):
+    @staticmethod
+    def make_id(stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
     # TODO Go through each stream and ensure we are creating as many fiedls within records as possible
@@ -279,11 +286,11 @@ class TestClient(SquareClient):
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create an item
         items = self._create_item(start_date, num_records).body.get('objects', [])
-        assert(len(items) == num_records)
+        assert len(items) == num_records
 
         # Crate an item_variation and get it's ID
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
-        assert(len(item_variations) == num_records)
+        assert len(item_variations) == num_records
 
         all_locations = self.get_all('locations', start_date)
         changes = []
@@ -291,7 +298,7 @@ class TestClient(SquareClient):
             catalog_obj_id = item_variation.get('id')
 
             # Get a random location
-            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            location_id = all_locations[random.randint(0, len(all_locations) - 1)].get('id')
             changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
@@ -321,7 +328,7 @@ class TestClient(SquareClient):
         #                'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
         # to_state = random.choice(states)
         occurred_at = datetime.strftime(
-            datetime.now(tz=timezone.utc)-timedelta(hours=random.randint(1,12)), '%Y-%m-%dT%H:%M:%SZ')
+            datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
         return {
             'type': 'ADJUSTMENT',
             'adjustment': {
@@ -354,7 +361,7 @@ class TestClient(SquareClient):
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
-        upper_limit = 10 if 10 < payment_amount else payment_amount
+        upper_limit = 10 if payment_amount > 10 else payment_amount
         amount = random.randint(1, upper_limit)  # we must be careful not to refund more than the charge
         amount_money = {'amount': amount, # in cents
                         'currency': 'USD'}
@@ -393,7 +400,7 @@ class TestClient(SquareClient):
 
     def create_payments(self, num_records):
         payments = []
-        for n in range(num_records):
+        for _ in range(num_records):
             payments.append(self._create_payment())
 
         return payments
@@ -414,13 +421,15 @@ class TestClient(SquareClient):
             source_id = source.get(source_key)
         else:
             source_id = random.choice(list(source.values()))
-        body ={'id': self.make_id('payment'),
-               'idempotency_key': str(uuid.uuid4()),
-               'amount_money': {'amount': random.randint(100,10000), # in cents
-                               'currency': 'USD'},
-               'source_id': source_id,
-               'autocomplete': autocomplete,
-               'note': self.make_id('payment'),}
+        body = {
+            'id': self.make_id('payment'),
+            'idempotency_key': str(uuid.uuid4()),
+            'amount_money': {'amount': random.randint(100, 10000), # in cents
+                             'currency': 'USD'},
+            'source_id': source_id,
+            'autocomplete': autocomplete,
+            'note': self.make_id('payment'),
+        }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
             print("body: {}".format(body))
@@ -432,27 +441,30 @@ class TestClient(SquareClient):
 
     def create_modifier_list(self, num_records):
         objects = []
-        for n in range(num_records):
+        for _ in range(num_records):
             mod_id = self.make_id('modifier')
             list_id = self.make_id('modifier_lists')
             objects.append(
-                {'id': list_id,
-                'type': 'MODIFIER_LIST',
-                'modifier_list_data': {'name': list_id,
-                                        'ordinal': 1,
-                                        'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
-                                        "modifiers": [
-                                            {'id': mod_id,
-                                            'type': 'MODIFIER',
-                                            'modifier_data': {
-                                                'name': mod_id[1:],
-                                                'price_money': {
-                                                    'amount': 300,
-                                                    'currency': 'USD'},
-                                            },
-                                            'modifier_list_id': list_id,
-                                            'ordinal': 1}
-                                        ],}
+                {
+                    'id': list_id,
+                    'type': 'MODIFIER_LIST',
+                    'modifier_list_data': {
+                        'name': list_id,
+                        'ordinal': 1,
+                        'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
+                        "modifiers": [
+                            {'id': mod_id,
+                             'type': 'MODIFIER',
+                             'modifier_data': {
+                                 'name': mod_id[1:],
+                                 'price_money': {
+                                     'amount': 300,
+                                     'currency': 'USD'},
+                             },
+                             'modifier_list_id': list_id,
+                             'ordinal': 1}
+                        ],
+                    }
                 })
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
@@ -468,7 +480,7 @@ class TestClient(SquareClient):
         objects = [{'id': item_id,
                     'type': 'ITEM',
                     'item_data': {'name': item_id,
-                                  'modifier_list_info':[{
+                                  'modifier_list_info': [{
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
                                   }]}} for item_id in item_ids]
@@ -556,53 +568,74 @@ class TestClient(SquareClient):
 
     def create_locations(self):
         made_id = self.make_id('location')
-        website =  'https://get.stitchdata.com/stitch?utm_source=google' + \
+        website = 'https://get.stitchdata.com/stitch?utm_source=google' + \
             '&utm_medium=cpc&utm_campaign=stitch_ga_nam_en_dg_search_brand&utm_content' + \
             '=&utm_device=c&campaignid=10338160950&adgroupid=102105232759&gclid=' + \
             'EAIaIQobChMIivPt7f3j6gIVuwiICR1O_g6VEAAYAyAAEgJ2F_D_BwE'
-        body = {'location': {'name': made_id,
-                             'timezone': 'UTC',
-                             'status': 'ACTIVE', # 'INACTIVE'
-                             'language_code': 'en-US',
-                             'phone_number': '9999999999',
-                             'business_name': made_id,
-                             'type': random.choice(['PHYSICAL', 'MOBILE']),
-                             'business_hours': {
-                               'periods': [{'day_of_week': 'SUN',
-                                            'start_local_time': '10:00:00',
-                                            'end_local_time': '15:00:00',},
-                                           {'day_of_week': 'MON',
-                                            'start_local_time': '09:00:00',
-                                            'end_local_time': '17:00:00',},
-                                           {'day_of_week': 'TUE',
-                                            'start_local_time': '09:00:00',
-                                            'end_local_time': '17:00:00',},
-                                           {'day_of_week': 'WED',
-                                            'start_local_time': '09:00:00',
-                                            'end_local_time': '17:00:00',},
-                                           {'day_of_week': 'THU',
-                                            'start_local_time': '09:00:00',
-                                            'end_local_time': '17:00:00',},
-                                           {'day_of_week': 'FRI',
-                                            'start_local_time': '09:00:00',
-                                            'end_local_time': '17:00:00',},
-                                           {'day_of_week': 'SAT',
-                                            'start_local_time': '10:00:00',
-                                            'end_local_time': '15:00:00',},]
-                             },
-                             'business_email': 'fake_business@sttichdata.com',
-                             'description': 'This is a descriptino',
-                             'twitter_username': 'twitteruser',
-                             'instagram_username': 'iguser',
-                             'website_url': website,
-                             'coordinates': {
-                                 'latitude': 39.951130,
-                                 'longitude': -75.163120}}
+        body = {
+            'location': {
+                'name': made_id,
+                'timezone': 'UTC',
+                'status': 'ACTIVE', # 'INACTIVE'
+                'language_code': 'en-US',
+                'phone_number': '9999999999',
+                'business_name': made_id,
+                'type': random.choice(['PHYSICAL', 'MOBILE']),
+                'business_hours': {
+                    'periods': [
+                        {
+                            'day_of_week': 'SUN',
+                            'start_local_time': '10:00:00',
+                            'end_local_time': '15:00:00',
+                        },
+                        {
+                            'day_of_week': 'MON',
+                            'start_local_time': '09:00:00',
+                            'end_local_time': '17:00:00',
+                        },
+                        {
+                            'day_of_week': 'TUE',
+                            'start_local_time': '09:00:00',
+                            'end_local_time': '17:00:00',
+                        },
+                        {
+                            'day_of_week': 'WED',
+                            'start_local_time': '09:00:00',
+                            'end_local_time': '17:00:00',
+                        },
+                        {
+                            'day_of_week': 'THU',
+                            'start_local_time': '09:00:00',
+                            'end_local_time': '17:00:00',
+                        },
+                        {
+                            'day_of_week': 'FRI',
+                            'start_local_time': '09:00:00',
+                            'end_local_time': '17:00:00',
+                        },
+                        {
+                            'day_of_week': 'SAT',
+                            'start_local_time': '10:00:00',
+                            'end_local_time': '15:00:00',
+                        },
+                    ]
+                },
+                'business_email': 'fake_business@sttichdata.com',
+                'description': 'This is a descriptino',
+                'twitter_username': 'twitteruser',
+                'instagram_username': 'iguser',
+                'website_url': website,
+                'coordinates':
+                {
+                    'latitude': 39.951130,
+                    'longitude': -75.163120
+                }
+            }
         }
-        response =  self.post_location(body)
+        response = self.post_location(body)
         if response.is_error():
             print("body: {}".format(body))
-            print("response: {}".format(new_payment))
+            print("response: {}".format(response))
             raise RuntimeError(response.errors)
         return response
 
@@ -666,7 +699,7 @@ class TestClient(SquareClient):
     def _create_orders(self, location_id, num_records):
         # location id in body is merchant location id, one in create_order call is bussiness location id
         created_orders = []
-        for i in range(num_records):
+        for _ in range(num_records):
             body = {'order': {'location_id': location_id},
                     'idempotency_key': str(uuid.uuid4())}
             created_orders.append(self.post_order(body, location_id).body.get('order'))
@@ -688,20 +721,20 @@ class TestClient(SquareClient):
 
         if resp.is_error():
             raise RuntimeError(resp.errors)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+        LOGGER.info('Created a Shift with id %s', resp.body.get('shift', {}).get('id'))
         return resp
 
     ##########################################################################
     ### UPDATEs
     ##########################################################################
 
-    def update(self, stream, obj_id, version, obj=None):
+    def update(self, stream, obj_id, version, obj=None): # pylint: disable=too-many-return-statements
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work
         """
         if not obj_id and not obj:
-            raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and ".format(obj_id, obj))
+            raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and {}".format(obj_id, obj))
 
         if stream == 'items':
             return self.update_item(obj_id, version).body.get('objects')
@@ -752,7 +785,7 @@ class TestClient(SquareClient):
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
-            action = random.choice([ 'complete', 'cancel' ])
+            action = random.choice(['complete', 'cancel'])
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
@@ -802,7 +835,8 @@ class TestClient(SquareClient):
         response = self._update_object_v1("employees", employee_id, data)
         return self.convert_employees_v1_to_v2(response)
 
-    def convert_employees_v1_to_v2(self, employee_v1_response):
+    @staticmethod
+    def convert_employees_v1_to_v2(employee_v1_response):
         employee_v1_response['location_ids'] = employee_v1_response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
         del employee_v1_response['authorized_location_ids']
         del employee_v1_response['role_ids']  # role_ids exists in v1 only
@@ -819,46 +853,15 @@ class TestClient(SquareClient):
     def update_modifier_list(self, obj, version): # TODO try v1 endpoint in produciton env
         obj_id = obj.get('id')
         body = {'batches': [{'objects': [{'id': obj_id,
-                                         'type': 'MODIFIER_LIST',
+                                          'type': 'MODIFIER_LIST',
                                           'version': version,
                                           'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
 
-    def _update_items_by_modifier_list(self, obj_id):  # REFACTOR
-        # TODO use this as an update for the 'items' stream, not 'modifier_lists'
-
-        # Get all items
-        start_date = '2020-07-29T00:00:00Z'
-        items = self.get_all('items', start_date)
-
-        # Randomly select an item with an assigned modifier_list
-        items_with_mods = [i for i in items if i.get('item_data', {'modifier_list_info': False}).get('modifier_list_info')]
-        item = random.choice(items_with_mods)
-
-        # Set update base on existing data
-        item_data = item.get('item_data')
-        enabled = item_data.get('modifier_list_info')[0].get('enabled')
-        modifier_list_id = item_data.get('modifier_list_info')[0].get('modifier_list_id')
-        modifier = 'modifier_lists_to_disable' if enabled else 'modifier_lists_to_enable'
-
-        body = {'item_ids': [item.get('id')],
-                modifier: [modifier_list_id],
-        }
-
-        resp = self._client.catalog.update_item_modifier_lists(body)
-        if resp.is_error():
-            raise RuntimeError("Unable to UPDATE modifier_lists: {}".format(resp.errors))
-        # Updated modifier_lists return only the 'updated_at' in the response
-        # so we are grabbing the response body from a get to copare
-        mod_lists = self.get_all('modifier_lists', start_date)
-        updated_mod_lists = [ml for ml in mod_lists if ml.get('id') == modifier_list_id]
-        assert len(updated_mod_lists) == 1
-        return updated_mod_lists
-
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
-                                         'type': 'DISCOUNT',
+                                          'type': 'DISCOUNT',
                                           'version': version,
                                           'discount_data': {'name': self.make_id('discount'),
                                                             'discount_type': 'FIXED_AMOUNT',
@@ -911,7 +914,7 @@ class TestClient(SquareClient):
                 "end_at": obj['end_at'],
                 "wage": {
                     "title": self.make_id('shift'),
-                    "hourly_rate" : obj['wage']['hourly_rate']
+                    "hourly_rate": obj['wage']['hourly_rate']
                 }
             }
         }
@@ -919,7 +922,7 @@ class TestClient(SquareClient):
 
         if resp.is_error():
             raise RuntimeError(resp.errors)
-        LOGGER.info('Updated a Shift with id %s', resp.body.get('shift',{}).get('id'))
+        LOGGER.info('Updated a Shift with id %s', resp.body.get('shift', {}).get('id'))
         return resp
 
     def update_order(self, location_id, obj_id, version):
