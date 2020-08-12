@@ -18,11 +18,11 @@ class DiscoveryTest(TestSquareBase, TestCase):
 
     def testable_streams_dynamic(self):
         # Unused for discovery testing
-        pass
+        return set()
 
     def testable_streams_static(self):
         # Unused for discovery testing
-        pass
+        return set()
 
     def expected_replication_keys(self):
         """
