@@ -6,7 +6,7 @@ import tap_tester.runner      as runner
 from base import TestSquareBase, DataType
 
 
-class TestSquareAllFields(TestSquareBase):
+class TestSquareAllFields(TestSquareBase, unittest.TestCase):
     """Test that with all fields selected for a stream we replicate data as expected"""
     TESTABLE_STREAMS = set()
 

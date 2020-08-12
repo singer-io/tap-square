@@ -15,7 +15,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
     def name(self):
         return "tap_tester_square_automatic_fields"
 
-    def testable_streams(self):
+    def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(
             {  # STREAMS NOT CURRENTY TESTABLE
                 'cash_drawer_shifts',
@@ -34,7 +34,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.auto_fields_test()
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -46,7 +46,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test()
 
         # TODO Determine if static prod streams exist

@@ -4,16 +4,25 @@ Test tap discovery
 import re
 import os
 
+from unittest import TestCase
 from tap_tester import menagerie, connections, runner
 
 from base import TestSquareBase
 
 
-class DiscoveryTest(TestSquareBase):
+class DiscoveryTest(TestSquareBase, TestCase):
     """ Test the tap discovery """
 
     def name(self):
         return "tap_tester_square_discovery_test"
+
+    def testable_streams_dynamic(self):
+        # Unused for discovery testing
+        pass
+
+    def testable_streams_static(self):
+        # Unused for discovery testing
+        pass
 
     def expected_replication_keys(self):
         """
