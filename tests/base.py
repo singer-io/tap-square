@@ -1,6 +1,5 @@
 import os
 import json
-import unittest
 from datetime import datetime as dt
 from datetime import timedelta
 from abc import ABC, abstractmethod
@@ -22,7 +21,7 @@ class DataType(Enum):
     STATIC = 2
 
     
-class TestSquareBase(unittest.TestCase, ABC):
+class TestSquareBase(ABC):
     PRODUCTION = "production"
     SANDBOX = "sandbox"
     SQUARE_ENVIRONMENT = SANDBOX
@@ -228,11 +227,11 @@ class TestSquareBase(unittest.TestCase, ABC):
 
     @abstractmethod
     def testable_streams_dynamic(self):
-        raise NotImplementedError("all inherited classes must implement this")
+        pass
 
     @abstractmethod
     def testable_streams_static(self):
-        raise NotImplementedError("all inherited classes must implement this")
+        pass
 
     def testable_streams(self, environment='sandbox', data_type=DataType.DYNAMIC):
         allowed_environments = {self.SANDBOX, self.PRODUCTION} 
@@ -500,4 +499,9 @@ class TestSquareBase(unittest.TestCase, ABC):
         exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
         menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
 
-        return conn_id
+        # read target output
+        first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
+                                                                         self.expected_streams(),
+                                                                         self.expected_primary_keys())
+
+        return conn_id, first_record_count_by_stream

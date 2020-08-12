@@ -1,7 +1,8 @@
+from unittest import TestCase
 from base import TestSquareBase, DataType
 
 
-class TestSyncCanary(TestSquareBase):
+class TestSyncCanary(TestSquareBase, TestCase):
     """Test that sync code gets exercised for all streams regardless if we can't create data. Validates scopes, authorizations, sync code that can't yet be tested end-to-end."""
     @staticmethod
     def name():

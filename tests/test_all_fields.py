@@ -78,12 +78,8 @@ class TestSquareAllFields(TestSquareBase):
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
             self.modify_expected_records(records)
 
-        conn_id = self.run_initial_sync(environment, data_type)
+        (conn_id, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
-        # read target output
-        first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                         self.expected_streams(),
-                                                                         self.expected_primary_keys())
         replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
