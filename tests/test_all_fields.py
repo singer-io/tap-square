@@ -18,6 +18,7 @@ class TestSquareAllFields(TestSquareBase):
     def testable_streams(self):
         return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
             'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
+            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
         })
 
 
@@ -108,7 +109,8 @@ class TestSquareAllFields(TestSquareBase):
                 self.assertTrue(field_selected, msg="Field not selected.")
 
         #clear state
-        menagerie.set_state(conn_id, {})
+        version = menagerie.get_state_version(conn_id)
+        menagerie.set_state(conn_id, {}, version)
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)

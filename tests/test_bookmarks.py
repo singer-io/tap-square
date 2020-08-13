@@ -19,9 +19,10 @@ class TestSquareIncrementalReplication(TestSquareBase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference(
-            {'orders'}  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
+            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
+            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
+        })
 
     def cannot_update_streams(self):
         return {
