@@ -681,7 +681,7 @@ class TestClient(SquareClient):
         # location id in body is merchant location id, one in create_order call is bussiness location id
         created_orders = []
         all_locations = self.get_all('locations', start_date)
-        for i in range(num_records):
+        for _ in range(num_records):
             location_id = random.choice(all_locations).get('id')
             body = {'order': {'location_id': location_id,},
                     'idempotency_key': str(uuid.uuid4())}
@@ -697,8 +697,8 @@ class TestClient(SquareClient):
                     'recipient': {
                         'display_name': 'display name 42',
                     }
-                 },
-                 'state': 'PROPOSED'
+                },
+                'state': 'PROPOSED'
             }]
             created_orders.append(self.post_order(body, location_id).body.get('order'))
 

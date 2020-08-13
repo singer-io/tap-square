@@ -19,11 +19,8 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts', # TODO
-                'settlements', # TODO
-            }
+        return self.dynamic_data_streams().difference(self.untestable_streams()).difference(
+            {'orders'}  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
         )
 
     def testable_streams_static(self):
