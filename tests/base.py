@@ -232,6 +232,15 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
+    def makeshift_primary_keys(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of primary key fields
+        """
+        return {
+            'inventories': {'catalog_object_id', 'location_id', 'state'}
+        }
+
     def expected_replication_keys(self):
         incremental_streams = self.expected_incremental_streams()
         return {table: properties.get(self.REPLICATION_KEYS, set())

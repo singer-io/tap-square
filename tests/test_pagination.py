@@ -117,7 +117,8 @@ class TestSquarePagination(TestSquareBase):
                                            exclude_streams=exclude_streams)
 
         #clear state
-        menagerie.set_state(conn_id, {})
+        version = menagerie.get_state_version(conn_id)
+        menagerie.set_state(conn_id, {}, version)
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -153,69 +154,37 @@ class TestSquarePagination(TestSquareBase):
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
                 primary_keys = self.expected_primary_keys().get(stream)
-                pk = list(primary_keys)[0] if primary_keys else None
+                pks = list(primary_keys) if primary_keys else None
+                if not pks:
+                    pks = self.makeshift_primary_keys().get(stream)
 
-                if pk:
-
-                    # Verify by pks that the replicated records match our expectations
-                    self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records, pk)
+                # Verify by pks that the replicated records match our expectations
+                self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records, pks)
 
                 # Verify the expected number of records were replicated
                 self.assertEqual(len(expected_records.get(stream)), len(actual_records))
 
 
-                if stream == 'inventories': # We can not compare by pks for this stream so we make a less strict assertion
+    def assertRecordsEqualByPK(self, stream, expected_records, actual_records, pks):
+        """Compare expected and actual records by their primary key."""
 
-                    # Verify the pages contain unique data sets (verify we don't duplicate pages)
-                    page_size = self.API_LIMIT.get(stream)
-                    num_full_pages = len(actual_records) // page_size
-                    num_pages = num_full_pages if len(actual_records) % page_size == 0 else num_full_pages + 1
+        # Verify there are no duplicate pks in the target
+        actual_pks = [tuple(actual_record.get(pk) for pk in pks) for actual_record in actual_records]
+        actual_pks_set = set(actual_pks)
+        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
 
-                    pages_to_compare = []
-                    for page in range(num_pages):  # break the data into pages
-                        start = page*page_size
-                        end = start + page_size - 1
-                        pages_to_compare.append(actual_records[start:end])
+        # Verify there are no duplicate pks in our expectations
+        expected_pks = [tuple(expected_record.get(pk) for pk in pks) for expected_record in expected_records]
+        expected_pks_set = set(expected_pks)
+        self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
 
-                    instances = 0
-                    for page_data in pages_to_compare: # count instances of a page of data
-                        for page in pages_to_compare:
-                            if page_data == page:
-                                instances += 1
+        # Verify that all expected records were replicated
+        self.assertEqual(set(), expected_pks_set.difference(actual_pks_set),
+                         msg="Our expectations have more unique records than the tap replicated.")
 
-                        # Verify there is only 1 instance of a given page of data in the target
-                        self.assertEqual(1, instances, msg="There are duplicate pages of data")
-
-                        instances = 0
-
-    def assertRecordsEqualByPK(self, stream, expected_records, actual_records, pk):
-        """
-        Verify all replicated records are accounted for in our expectations.
-        Verfy all expected records were replicated.
-
-        Make these assertions by comparing records by their primary key
-        """
-        # Verify that actual records were in our expectations
-        for actual_record in actual_records:
-            stream_expected_records = [record.get(pk) for record in expected_records
-                                       if actual_record.get(pk) == record.get(pk)]
-            self.assertTrue(len(stream_expected_records),
-                            msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-            self.assertEqual(1, len(stream_expected_records),
-                             msg="A duplicate record was found in our expectations for {}.".format(stream))
-            stream_expected_record = stream_expected_records[0]
-            self.assertEqual(stream_expected_record, actual_record.get(pk))
-
-        # Verify that our expected records were replicated by the tap
-        for expected_record in expected_records:
-            stream_actual_records = [record.get(pk) for record in actual_records
-                                     if expected_record.get(pk) == record.get(pk)]
-            self.assertTrue(len(stream_actual_records),
-                            msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-            self.assertEqual(1, len(stream_actual_records),
-                             msg="A duplicate record was found in the sync for {}.".format(stream))
-            stream_actual_record = stream_actual_records[0]
-            self.assertEqual(expected_record.get(pk), stream_actual_record)
+        # Verify ONLY expected records were replicated
+        self.assertEqual(set(), actual_pks_set.difference(expected_pks_set),
+                         msg="The tap replicated data that was not in our expectations.")
 
 
 if __name__ == '__main__':

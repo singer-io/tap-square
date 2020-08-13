@@ -207,7 +207,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
             if stream == 'inventories':
-                primary_keys = {'catalog_object_id', 'location_id', 'state'}
+                primary_keys = self.makeshift_primary_keys().get(stream)
             else:
                 primary_keys = list(self.expected_primary_keys().get(stream))
 

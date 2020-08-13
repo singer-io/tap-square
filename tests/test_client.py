@@ -412,7 +412,7 @@ class TestClient(SquareClient):
 
     def create_modifier_list(self, num_records):
         objects = []
-        for _ in range(num_records):
+        for n in range(num_records):
             mod_id = self.make_id('modifier')
             list_id = self.make_id('modifier_lists')
             objects.append(
