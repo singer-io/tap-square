@@ -17,11 +17,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def testable_streams_dynamic(self):
         return set()
@@ -93,7 +89,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         first_sync_record_count = self.run_sync(conn_id)
 
         # verify that the sync only sent records to the target for selected streams (catalogs)
-        self.assertEqual(set(first_sync_record_count.keys()), streams_to_select,
+        self.assertEqual(streams_to_select, set(first_sync_record_count.keys()),
                          msg="Expect first_sync_record_count keys {} to equal testable streams {},"
                          " first_sync_record_count was {}".format(
                              first_sync_record_count.keys(),
@@ -155,12 +151,12 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                     # Verify no bookmarks are present
                     first_state = first_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(first_state, {},
+                    self.assertEqual({}, first_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(first_sync_state) + \
                                      "\tBookmark: {}".format(first_state))
                     second_state = second_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(second_state, {},
+                    self.assertEqual({}, second_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))

@@ -37,20 +37,12 @@ class TestSquarePagination(TestSquareBase, TestCase):
         return "tap_tester_square_pagination_test"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts',  # TODO determine if testable
-                'settlements',  # TODO determine if testable
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'locations',  # Only 300 locations can be created, and 300 are returned in a single request
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams()).difference({
+            'locations',  # This stream does not paginate in the sync (See Above)
+        })
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -59,11 +51,11 @@ class TestSquarePagination(TestSquareBase, TestCase):
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.pagination_test()
 
-        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # TODO Uncomment once TASK addressed https://stitchdata.atlassian.net/browse/SRCE-3575
-        # self.START_DATE = self.STATIC_START_DATE
-        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        # self.pagination_test()
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
         self.set_environment(self.PRODUCTION)
 
@@ -72,6 +64,11 @@ class TestSquarePagination(TestSquareBase, TestCase):
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.pagination_test()
 
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
     def pagination_test(self):
         """
@@ -113,7 +110,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
 
         diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
         #select all catalogs
@@ -122,7 +119,8 @@ class TestSquarePagination(TestSquareBase, TestCase):
                                            exclude_streams=exclude_streams)
 
         #clear state
-        menagerie.set_state(conn_id, {})
+        version = menagerie.get_state_version(conn_id)
+        menagerie.set_state(conn_id, {}, version)
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -143,6 +141,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
                                    msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
 
                 data = synced_records.get(stream, [])
+                actual_records = [row['data'] for row in data['messages']]
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
                 auto_fields = self.expected_automatic_fields().get(stream)
 
@@ -153,16 +152,37 @@ class TestSquarePagination(TestSquareBase, TestCase):
                                     msg="A paginated synced stream has a record that is missing automatic fields.")
 
                     # Verify we have more fields sent to the target than just automatic fields (this is set above)
-                    self.assertEqual(auto_fields.difference(actual_keys),
-                                     set(), msg="A paginated synced stream has a record that is missing expected fields.")
+                    self.assertEqual(set(), auto_fields.difference(actual_keys),
+                                     msg="A paginated synced stream has a record that is missing expected fields.")
 
-                # TODO ADD CHECK ON IDS
-                # Verify by pks that the data replicated matches what we expect
+                primary_keys = self.expected_primary_keys().get(stream)
+                pks = list(primary_keys) if primary_keys else None
+                if not pks:
+                    pks = self.makeshift_primary_keys().get(stream)
+
+                # Verify by pks that the replicated records match our expectations
+                self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records, pks)
+
+                # Verify the expected number of records were replicated
+                self.assertEqual(len(expected_records.get(stream)), len(actual_records))
 
 
-        print("\n\n\t TODO STREAMS NOT UNDER TEST: {}".format(
-            self.expected_streams().difference(self.TESTABLE_STREAMS))
-        )
+    def assertRecordsEqualByPK(self, stream, expected_records, actual_records, pks):
+        """Compare expected and actual records by their primary key."""
+
+        # Verify there are no duplicate pks in the target
+        actual_pks = [tuple(actual_record.get(pk) for pk in pks) for actual_record in actual_records]
+        actual_pks_set = set(actual_pks)
+        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
+
+        # Verify there are no duplicate pks in our expectations
+        expected_pks = [tuple(expected_record.get(pk) for pk in pks) for expected_record in expected_records]
+        expected_pks_set = set(expected_pks)
+        self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
+
+        # Verify that all expected records and ONLY the expected records were replicated
+        self.assertEqual(expected_pks_set, actual_pks_set)
+
 
 if __name__ == '__main__':
     unittest.main()

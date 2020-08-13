@@ -24,7 +24,7 @@ typesToKeyMap = {
 class TestClient(SquareClient):
     # This is the duration of a shift, we make this constant so we can
     # ensure the shifts don't overlap
-    SHIFT_MINUTES = 2
+    SHIFT_MINUTES = 10
 
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
@@ -213,7 +213,7 @@ class TestClient(SquareClient):
             return self.create_employees_v1(num_records)
         elif stream == 'roles':
             return self.create_roles_v1(num_records)
-        elif stream == 'inventories':
+        elif stream == 'inventories':  # TODO ensure as many fields as possible are covered by the creates
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             if num_records != 1:
@@ -253,7 +253,6 @@ class TestClient(SquareClient):
     def make_id(stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
-    # TODO Go through each stream and ensure we are creating as many fiedls within records as possible
     def get_catalog_object(self, obj_id):
         response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
         if response.is_error():
@@ -269,11 +268,13 @@ class TestClient(SquareClient):
         return response
 
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
-        # Create an item
+        # Create item object(s)
+        # This is needed to get an item ID in order to perform an item_variation
         items = self._create_item(start_date, num_records).body.get('objects', [])
         assert len(items) == num_records
 
-        # Crate an item_variation and get it's ID
+        # Crate item_variation(s)
+        # This is needed to acquire a catalog_object_id to perform the inventory_adjustment
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
         assert len(item_variations) == num_records
 
@@ -282,8 +283,8 @@ class TestClient(SquareClient):
         for item_variation in item_variations:
             catalog_obj_id = item_variation.get('id')
 
-            # Get a random location
-            location_id = all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            # Get a random location to apply the adjustment
+            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
             changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
@@ -306,6 +307,7 @@ class TestClient(SquareClient):
 
     @staticmethod
     def _inventory_adjustment_change(catalog_obj_id, location_id):
+        # TODO
         # states = ['SOLD'] # WASTE SOLD_ONLINE
         #else:
         #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
@@ -409,7 +411,7 @@ class TestClient(SquareClient):
 
     def create_modifier_list(self, num_records):
         objects = []
-        for _ in range(num_records):
+        for n in range(num_records):
             mod_id = self.make_id('modifier')
             list_id = self.make_id('modifier_lists')
             objects.append(
@@ -418,7 +420,7 @@ class TestClient(SquareClient):
                     'type': 'MODIFIER_LIST',
                     'modifier_list_data': {
                         'name': list_id,
-                        'ordinal': 1,
+                        'ordinal': n,
                         'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
                         "modifiers": [
                             {'id': mod_id,
@@ -430,7 +432,7 @@ class TestClient(SquareClient):
                                      'currency': 'USD'},
                              },
                              'modifier_list_id': list_id,
-                             'ordinal': 1}
+                             'ordinal': n}
                         ],
                     }
                 })
@@ -706,7 +708,7 @@ class TestClient(SquareClient):
 
     def create_shift(self, start_date, end_date, num_records):
         employee_id = self.get_first_found('employees', None)['id']
-        
+
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
 
@@ -727,6 +729,14 @@ class TestClient(SquareClient):
                     'location_id': location_id,
                     'start_at': start_at, # This can probably be derived from the test's start date
                     'end_at': end_at,
+                    'breaks': [{
+                        "start_at": self.shift_date(start_at, 1),
+                        "end_at": self.shift_date(start_at, 2),
+                        "name": "Tea Break",
+                        "expected_duration": "PT5M",
+                        "break_type_id": self.make_id('shift.break'),
+                        "is_paid": True
+                    }],
                     'wage': {
                         'title': self.make_id('shift'),
                         'hourly_rate' : {
@@ -790,6 +800,8 @@ class TestClient(SquareClient):
             raise NotImplementedError("{} is not implmented".format(stream))
 
     def update_item(self, obj_id, version):
+        # TODO add a category
+        # TODO add a tax
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -932,7 +944,7 @@ class TestClient(SquareClient):
 
     def update_shift(self, obj):
         body = {
-            "shift": { # TODO: Can this be obj with the title updated?
+            "shift": {
                 "employee_id": obj['employee_id'],
                 "location_id": obj['location_id'],
                 "start_at": obj['start_at'],

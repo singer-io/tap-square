@@ -19,9 +19,10 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference(
-            {'orders'}  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
+            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
+            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
+        })
 
     def testable_streams_static(self):
         """ No static streams marked for incremental. """
@@ -104,7 +105,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         first_sync_record_count = self.run_sync(conn_id)
 
         # verify that the sync only sent records to the target for selected streams (catalogs)
-        self.assertEqual(set(first_sync_record_count.keys()), streams_to_select,
+        self.assertEqual(streams_to_select, set(first_sync_record_count.keys()),
                          msg="Expect first_sync_record_count keys {} to equal testable streams {},"
                          " first_sync_record_count was {}".format(
                              first_sync_record_count.keys(),
@@ -211,7 +212,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
             if stream == 'inventories':
-                primary_keys = {'catalog_object_id', 'location_id', 'state'}
+                primary_keys = self.makeshift_primary_keys().get(stream)
             else:
                 primary_keys = list(self.expected_primary_keys().get(stream))
 
@@ -234,13 +235,13 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         for stream in testable_streams:
             if stream in self.expected_incremental_streams():
                 if stream in self.cannot_update_streams():
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 1,
+                    self.assertEqual(1, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 elif stream == 'orders': # ORDERS are returned inclusive on the datetime queried
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 3,
+                    self.assertEqual(3, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 else:  # Most streams will have 2 records from the Update and Insert
-                    self.assertEqual(len(expected_records_second_sync.get(stream)), 2,
+                    self.assertEqual(2, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
                 self.assertEqual(len(expected_records_second_sync.get(stream)), len(expected_records_first_sync.get(stream)) + len(created_records[stream]),
@@ -306,12 +307,12 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                     # Verify no bookmarks are present
                     first_state = first_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(first_state, {},
+                    self.assertEqual({}, first_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(first_sync_state) + \
                                      "\tBookmark: {}".format(first_state))
                     second_state = second_sync_state.get('bookmarks', {}).get(stream)
-                    self.assertEqual(second_state, {},
+                    self.assertEqual({}, second_state,
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))
@@ -349,7 +350,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                                     if tuple([sync_record.get(pk) for pk in primary_keys]) == record_pk_values]
                     self.assertTrue(len(sync_records),
                                     msg="An inserted record is missing from our sync: \nRECORD: {}".format(created_record))
-                    self.assertEqual(len(sync_records), 1,
+                    self.assertEqual(1, len(sync_records),
                                      msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                     sync_record = sync_records[0]
                     self.assertRecordsEqual(stream, created_record, sync_record)
@@ -363,7 +364,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                         if stream != 'modifier_lists':
                             self.assertTrue(len(sync_records),
                                             msg="An updated record is missing from our sync: \nRECORD: {}".format(updated_record))
-                            self.assertEqual(len(sync_records), 1,
+                            self.assertEqual(1, len(sync_records),
                                              msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
 
                         sync_record = sync_records[0]
@@ -381,11 +382,14 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             self.assertDictEqual(expected_record, sync_record)
 
     def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()), "Expected keys in expected_record to equal keys in sync_record. [expected_record={}][sync_record={}]".format(expected_record, sync_record))
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
 
-        # Square api workflow updates these values so they're a few seconds different between the time the record is created and the tap syncs, but other fields are the same
+        # Square api workflow updates these values so they're a few seconds different between
+        # the time the record is created and the tap syncs, but other fields are the same
         for off_key in off_keys:
             self.assertGreaterEqual(sync_record_copy.pop(off_key),
                                     expected_record_copy.pop(off_key))
