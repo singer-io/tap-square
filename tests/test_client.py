@@ -94,7 +94,8 @@ class TestClient(SquareClient):
         elif stream == 'taxes':
             return [obj for page, _ in self.get_catalog('TAX', start_date, None) for obj in page]
         elif stream == 'employees':
-            return [obj for page, _ in self.get_employees(None) for obj in page]
+            return [obj for page, _ in self.get_employees(None) for obj in page
+                    if obj['updated_at'] >= start_date]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'bank_accounts':
@@ -111,7 +112,8 @@ class TestClient(SquareClient):
             orders = Orders(self, {})
             return [obj for page, _ in orders.sync(start_date, None) for obj in page]
         elif stream == 'roles':
-            return [obj for page, _ in self.get_roles(None) for obj in page]
+            return [obj for page, _ in self.get_roles(None) for obj in page
+                    if obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts() for obj in page
                     if obj['updated_at'] >= start_date]
