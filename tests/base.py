@@ -20,7 +20,7 @@ class DataType(Enum):
     DYNAMIC = 1
     STATIC = 2
 
-    
+
 class TestSquareBase(ABC):
     PRODUCTION = "production"
     SANDBOX = "sandbox"
@@ -234,7 +234,7 @@ class TestSquareBase(ABC):
         pass
 
     def testable_streams(self, environment='sandbox', data_type=DataType.DYNAMIC):
-        allowed_environments = {self.SANDBOX, self.PRODUCTION} 
+        allowed_environments = {self.SANDBOX, self.PRODUCTION}
         if environment not in allowed_environments:
             raise NotImplementedError("Environment can only be one of {}, but {} provided".format(allowed_environments, environment))
 
@@ -394,7 +394,7 @@ class TestSquareBase(ABC):
             record[key] = str(value)
 
     def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
-        if min_required_num_records_per_stream == None:
+        if min_required_num_records_per_stream is None:
             min_required_num_records_per_stream = {
                 stream: 1
                 for stream in testable_streams
@@ -405,9 +405,8 @@ class TestSquareBase(ABC):
 
         # Force modifier_lists to go first and payments to go last
         create_test_data_streams = list(testable_streams)
-        if 'modifier_lists' in testable_streams:
-            create_test_data_streams.remove('modifier_lists')
-            create_test_data_streams.insert(0, 'modifier_lists')
+        self._shift_to_start_of_list('employees', create_test_data_streams)
+        self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
         if 'payments' in testable_streams:
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')
@@ -444,6 +443,16 @@ class TestSquareBase(ABC):
             self.modify_expected_records(expected_records[stream])
 
         return expected_records
+
+    @staticmethod
+    def _shift_to_start_of_list(key, values):
+        new_list = values.copy()
+
+        if key in values:
+            new_list.remove(key)
+            new_list.insert(0, key)
+
+        return new_list
 
     def run_initial_sync(self, environment, data_type):
         # Instantiate connection with default start/end dates
