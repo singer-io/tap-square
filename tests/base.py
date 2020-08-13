@@ -97,10 +97,9 @@ class TestSquareBase(unittest.TestCase):
         """The expected streams and metadata about the streams"""
 
         return {
-            "items": {
+            "bank_accounts": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
+                self.REPLICATION_METHOD: self.FULL,
             },
             "cash_drawer_shifts": {
                 self.PRIMARY_KEYS: {'id'},
@@ -116,34 +115,21 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "taxes": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.INCREMENTAL,
-                self.REPLICATION_KEYS: {'updated_at'}
-            },
             "employees": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
-            "locations": {
-                self.PRIMARY_KEYS: {'id'},
+           "inventories": {
+                self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
+               self.START_DATE_KEY: 'calculated_at',
             },
-            "orders": {
+            "items": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "inventories": {
-                self.PRIMARY_KEYS: set(),
-                self.REPLICATION_METHOD: self.FULL,
-                self.START_DATE_KEY: 'calculated_at',
-            },
-            "refunds": {
-                self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL,
-            },
-            "payments": {
+            "locations": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
@@ -152,7 +138,16 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
-            "bank_accounts": {
+            "orders": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
+            "payments": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.FULL,
+            },
+            "refunds": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
             },
@@ -169,6 +164,11 @@ class TestSquareBase(unittest.TestCase):
                 self.REPLICATION_METHOD: self.INCREMENTAL,
                 self.REPLICATION_KEYS: {'updated_at'}
             },
+            "taxes": {
+                self.PRIMARY_KEYS: {'id'},
+                self.REPLICATION_METHOD: self.INCREMENTAL,
+                self.REPLICATION_KEYS: {'updated_at'}
+            },
         }
 
     def expected_replication_method(self):
@@ -181,8 +181,6 @@ class TestSquareBase(unittest.TestCase):
     def production_streams():
         """Some streams can only have data on the production app. We must test these separately"""
         return {
-            'settlements',
-            'bank_accounts',
             'employees',
             'roles',
         }
@@ -199,7 +197,14 @@ class TestSquareBase(unittest.TestCase):
         """
         return {
             'locations',  # Limit 300 objects, DELETES not supported
+        }
+
+    def untestable_streams(self):
+        """STREAMS THAT CANNOT CURRENTLY BE TESTED"""
+        return {
             'bank_accounts',  # No endpoints for CREATE or UPDATE
+            'cash_drawer_shifts',  # Require cash transactions (not supported by API)
+            'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
         }
 
     def dynamic_data_streams(self):
@@ -226,6 +231,15 @@ class TestSquareBase(unittest.TestCase):
         return {table: properties.get(self.PRIMARY_KEYS, set())
                 for table, properties
                 in self.expected_metadata().items()}
+
+    def makeshift_primary_keys(self):
+        """
+        return a dictionary with key of table name
+        and value as a set of primary key fields
+        """
+        return {
+            'inventories': {'catalog_object_id', 'location_id', 'state'}
+        }
 
     def expected_replication_keys(self):
         incremental_streams = self.expected_incremental_streams()
@@ -351,7 +365,6 @@ class TestSquareBase(unittest.TestCase):
     def align_date_type(self, record, key, value):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
         if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
-            # key in ['updated_at', 'created_at']:
             raw_date = self.date_check_and_parse(value)
             iso_date = dt.strftime(raw_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date

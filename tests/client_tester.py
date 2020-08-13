@@ -13,7 +13,7 @@ from test_client import TestClient
 # Testing the TestCLient
 ##########################################################################
 if __name__ == "__main__":
-    client = TestClient(env='production')
+    client = TestClient(env='sandbox')
     # START_DATE = '2020-06-24T00:00:00Z'
     START_DATE = datetime.strftime(datetime.utcnow(), '%Y-%m-%dT00:00:00Z')
 
@@ -33,11 +33,13 @@ if __name__ == "__main__":
         # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+        # 'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'employees',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
+        # 'orders'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
+        'shifts'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
     ]
     print("********** Testing basic functions of test client **********")
     if test_gets:
@@ -56,7 +58,7 @@ if __name__ == "__main__":
         for _ in range(1):
             for obj in objects_to_test:
                 print("Testing CREATE: {}".format(obj))
-                import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
+                # import pdb; pdb.set_trace() # UNCOMMENT TO RUN 'INTERACTIVELY'
                 if obj == 'refunds':
                     payments = client.get_all('payments', start_date=START_DATE)
                 created_obj = client.create(obj, start_date=START_DATE)

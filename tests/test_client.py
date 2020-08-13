@@ -24,7 +24,7 @@ typesToKeyMap = {
 class TestClient(SquareClient):
     # This is the duration of a shift, we make this constant so we can
     # ensure the shifts don't overlap
-    SHIFT_MINUTES = 2
+    SHIFT_MINUTES = 10
 
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
@@ -191,7 +191,7 @@ class TestClient(SquareClient):
         resp = self._client.orders.create_order(location_id=business_location_id, body=body)
 
         if resp.is_error():
-            stream_name = body['batches'][0]['objects'][0]['type']
+            stream_name = 'orders'
             raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
         LOGGER.info('Created Order with id %s', resp.body['order'].get('id'))
         return resp
@@ -211,7 +211,7 @@ class TestClient(SquareClient):
             return self.create_employees_v1(num_records)
         elif stream == 'roles':
             return self.create_roles_v1(num_records)
-        elif stream == 'inventories':
+        elif stream == 'inventories':  # TODO ensure as many fields as possible are covered by the creates
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             if num_records != 1:
@@ -219,8 +219,7 @@ class TestClient(SquareClient):
 
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
-            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
-            return self._create_orders(location_id, num_records)
+            return self._create_orders(start_date=start_date, num_records=num_records)
         elif stream == 'refunds':
             refunds = []
             for _ in range(num_records):
@@ -230,31 +229,7 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
-            employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
-            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
-            all_shifts = self.get_all('shifts', start_date)
-
-            if all_shifts:
-                max_end_at = max([obj['end_at'] for obj in all_shifts])
-            else:
-                max_end_at = start_date
-
-            if start_date < max_end_at:
-                LOGGER.warning('Tried to create a Shift that overlapped another shift')
-                # Readjust start date and end date
-                start_date = max_end_at
-
-            if not end_date:
-                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
-
-            created_shifts = []
-            for _ in range(num_records):
-                created_shifts.append(self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift'))
-                start_date = end_date
-                # Bump by shift minutes to avoid any shift overlaps
-                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
-
-            return created_shifts
+            return self.create_shift(start_date, end_date, num_records)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
@@ -268,7 +243,6 @@ class TestClient(SquareClient):
     def make_id(stream):
         return '#{}_{}'.format(stream, datetime.now().strftime('%Y%m%d%H%M%S%fZ'))
 
-    # TODO Go through each stream and ensure we are creating as many fiedls within records as possible
     def get_catalog_object(self, obj_id):
         response = self._client.catalog.retrieve_catalog_object(object_id=obj_id)
         if response.is_error():
@@ -284,11 +258,13 @@ class TestClient(SquareClient):
         return response
 
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
-        # Create an item
+        # Create item object(s)
+        # This is needed to get an item ID in order to perform an item_variation
         items = self._create_item(start_date, num_records).body.get('objects', [])
         assert len(items) == num_records
 
-        # Crate an item_variation and get it's ID
+        # Crate item_variation(s)
+        # This is needed to acquire a catalog_object_id to perform the inventory_adjustment
         item_variations = self.create_item_variation([item.get('id') for item in items]).body.get('objects', [])
         assert len(item_variations) == num_records
 
@@ -297,8 +273,8 @@ class TestClient(SquareClient):
         for item_variation in item_variations:
             catalog_obj_id = item_variation.get('id')
 
-            # Get a random location
-            location_id = all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            # Get a random location to apply the adjustment
+            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
             changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
@@ -321,6 +297,7 @@ class TestClient(SquareClient):
 
     @staticmethod
     def _inventory_adjustment_change(catalog_obj_id, location_id):
+        # TODO
         # states = ['SOLD'] # WASTE SOLD_ONLINE
         #else:
         #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
@@ -405,7 +382,7 @@ class TestClient(SquareClient):
 
         return payments
 
-    def _create_payment(self, autocomplete=False, source_key=None):
+    def _create_payment(self, autocomplete=False, source_key='card'):
         """
         Generate a pyament object
         : param autocomplete: boolean
@@ -413,23 +390,17 @@ class TestClient(SquareClient):
         """
         source = {
             'card': 'cnon:card-nonce-ok',
-            #'card_on_file': 'cnon:card-nonce-ok',
-            #'gift_card': 'cnon:gift-card-nonce-ok'
+            'card_on_file': 'cnon:card-nonce-ok',
+            'gift_card': 'cnon:gift-card-nonce-ok'
         }
-
-        if source_key:
-            source_id = source.get(source_key)
-        else:
-            source_id = random.choice(list(source.values()))
-        body = {
-            'id': self.make_id('payment'),
-            'idempotency_key': str(uuid.uuid4()),
-            'amount_money': {'amount': random.randint(100, 10000), # in cents
-                             'currency': 'USD'},
-            'source_id': source_id,
-            'autocomplete': autocomplete,
-            'note': self.make_id('payment'),
-        }
+        source_id = source.get(source_key)
+        body ={'id': self.make_id('payment'),
+               'idempotency_key': str(uuid.uuid4()),
+               'amount_money': {'amount': random.randint(100,10000), # in cents
+                               'currency': 'USD'},
+               'source_id': source_id,
+               'autocomplete': autocomplete,
+               'note': self.make_id('payment'),}
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
             print("body: {}".format(body))
@@ -441,7 +412,7 @@ class TestClient(SquareClient):
 
     def create_modifier_list(self, num_records):
         objects = []
-        for _ in range(num_records):
+        for n in range(num_records):
             mod_id = self.make_id('modifier')
             list_id = self.make_id('modifier_lists')
             objects.append(
@@ -450,7 +421,7 @@ class TestClient(SquareClient):
                     'type': 'MODIFIER_LIST',
                     'modifier_list_data': {
                         'name': list_id,
-                        'ordinal': 1,
+                        'ordinal': n,
                         'selection_type': random.choice(['SINGLE', 'MULTIPLE']),
                         "modifiers": [
                             {'id': mod_id,
@@ -462,7 +433,7 @@ class TestClient(SquareClient):
                                      'currency': 'USD'},
                              },
                              'modifier_list_id': list_id,
-                             'ordinal': 1}
+                             'ordinal': n}
                         ],
                     }
                 })
@@ -479,8 +450,16 @@ class TestClient(SquareClient):
         item_ids = [self.make_id('item') for n in range(num_records)]
         objects = [{'id': item_id,
                     'type': 'ITEM',
+                    'present_at_all_locations': True,
                     'item_data': {'name': item_id,
-                                  'modifier_list_info': [{
+                                  'description': 'Nondesciptive descriptions',
+                                  'label_color': '808080',
+                                  'available_electronically': True,
+                                  'available_online': False,
+                                  'available_for_pickup': True,
+                                  'product_type': random.choice(['REGULAR', 'APPOINTMENTS_SERVICE']),
+                                  'skip_modifiere_screen': False,
+                                  'modifier_list_info':[{
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
                                   }]}} for item_id in item_ids]
@@ -526,6 +505,8 @@ class TestClient(SquareClient):
                     'type': 'DISCOUNT',
                     'discount_data': {'name': discount_id,
                                       'discount_type': 'FIXED_AMOUNT',
+                                      'label_color': '808080',
+                                      'pin_required': False,
                                       'amount_money': {'amount': 34500,
                                                        'currency': 'USD'}}} for discount_id in discount_ids]
         body = {'batches': [{'objects': object_chunk}
@@ -538,7 +519,10 @@ class TestClient(SquareClient):
         tax_ids = [self.make_id('tax') for n in range(num_records)]
         objects = [{'id': tax_id,
                     'type': 'TAX',
-                    'tax_data': {'name': tax_id}} for tax_id in tax_ids]
+                    'tax_data': {'percentage': '6.5',
+                                 'inclusion_type': 'ADDITIVE',
+                                 'calculation_phase': 'TAX_SUBTOTAL_PHASE',
+                                 'name': tax_id}} for tax_id in tax_ids]
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
@@ -696,33 +680,85 @@ class TestClient(SquareClient):
             roles.append(resp.json())
         return roles
 
-    def _create_orders(self, location_id, num_records):
+    def _create_orders(self, num_records, start_date):
         # location id in body is merchant location id, one in create_order call is bussiness location id
         created_orders = []
-        for _ in range(num_records):
-            body = {'order': {'location_id': location_id},
+        all_locations = self.get_all('locations', start_date)
+        for i in range(num_records):
+            location_id = random.choice(all_locations).get('id')
+            body = {'order': {'location_id': location_id,},
                     'idempotency_key': str(uuid.uuid4())}
+            now = datetime.now(tz=timezone.utc)
+            expires_at = datetime.strftime(now + timedelta(hours=random.randint(2,24)), '%Y-%m-%dT%H:%M:%SZ')
+            pickup_at = datetime.strftime(now + timedelta(hours=1), '%Y-%m-%dT%H:%M:%SZ')
+            body['order']['fulfillments'] = [{
+                'type': 'PICKUP',
+                'pickup_details': {
+                    'note': 'Pickup note',
+                    'expires_at': expires_at,
+                    'pickup_at': pickup_at,
+                    'recipient': {
+                        'display_name': 'display name 42',
+                    }
+                 },
+                 'state': 'PROPOSED'
+            }]
             created_orders.append(self.post_order(body, location_id).body.get('order'))
 
         return created_orders
 
-    def create_shift(self, employee_id, location_id, start_date, end_date):
-        body = {
-            'idempotency_key': str(uuid.uuid4()),
-            'shift': {
-                'employee_id': employee_id, # This is the only employee we have on the sandbox
-                'location_id': location_id, # Should we vary this?
-                'start_at': start_date, # This can probably be derived from the test's start date
-                'end_at': end_date # This can be some short time after the start time
+    def create_shift(self, start_date, end_date, num_records):
+        employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
+        all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
+        all_shifts = self.get_all('shifts', start_date)
+
+        max_end_at = max([obj['end_at'] for obj in all_shifts]) if all_shifts else start_date
+        if start_date < max_end_at:
+            LOGGER.warning('Tried to create a Shift that overlapped another shift')
+
+        start_at = max_end_at
+        end_at = self.shift_date(start_at, self.SHIFT_MINUTES) if not end_date else end_date
+
+        created_shifts = []
+        for _ in range(num_records):
+            location_id = random.choice(all_location_ids)
+            body = {
+                'idempotency_key': str(uuid.uuid4()),
+                'shift': {
+                    'employee_id': employee_id,
+                    'location_id': location_id,
+                    'start_at': start_at, # This can probably be derived from the test's start date
+                    'end_at': end_at,
+                    'breaks': [{
+                        "start_at": self.shift_date(start_at, 1),
+                        "end_at": self.shift_date(start_at, 2),
+                        "name": "Tea Break",
+                        "expected_duration": "PT5M",
+                        "break_type_id": self.make_id('shift.break'),
+                        "is_paid": True
+                    }],
+                    'wage': {
+                        'title': self.make_id('shift'),
+                        'hourly_rate' : {
+                            'amount_money': 1100,
+                            'currency': 'USD'
+                        }
+                    }
+                }
             }
-        }
 
-        resp = self._client.labor.create_shift(body=body)
+            resp = self._client.labor.create_shift(body=body)
+            if resp.is_error():
+                raise RuntimeError(resp.errors)
+            LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
 
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift', {}).get('id'))
-        return resp
+            created_shifts.append(resp.body.get('shift'))
+
+            start_at = end_at
+            # Bump by shift minutes to avoid any shift overlaps
+            end_at = self.shift_date(start_at, self.SHIFT_MINUTES)
+
+        return created_shifts
 
     ##########################################################################
     ### UPDATEs
@@ -755,8 +791,7 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             return [self.update_locations(obj_id).body.get('location')]
         elif stream == 'orders':
-            location_id = obj.get('location_id')
-            return [self.update_order(location_id, obj_id, version).body.get('order')]
+            return [self.update_order(obj).body.get('order')]
         elif stream == 'payments':
             return [self._update_payment(obj_id)]
         elif stream == 'shifts':
@@ -765,6 +800,8 @@ class TestClient(SquareClient):
             raise NotImplementedError("{} is not implmented".format(stream))
 
     def update_item(self, obj_id, version):
+        # TODO add a category
+        # TODO add a tax
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -907,7 +944,7 @@ class TestClient(SquareClient):
 
     def update_shift(self, obj):
         body = {
-            "shift": { # TODO: Can this be obj with the title updated?
+            "shift": {
                 "employee_id": obj['employee_id'],
                 "location_id": obj['location_id'],
                 "start_at": obj['start_at'],
@@ -925,10 +962,28 @@ class TestClient(SquareClient):
         LOGGER.info('Updated a Shift with id %s', resp.body.get('shift', {}).get('id'))
         return resp
 
-    def update_order(self, location_id, obj_id, version):
-        body = {'order': {'note': self.make_id('order'),
-                          'version': version},
+    def update_order(self, obj):
+        states = ['CANCELED', 'FAILED']
+        # 'RESERVED', # Fulfillments cannot be moved out of the PROPOSED state before the order is paid for.
+        # 'PREPARED', # same ^
+        # 'COMPLETED',# same ^
+        state = random.choice(states)
+        location_id = obj.get('location_id')
+        obj_id = obj.get('id')
+        version = obj.get('version')
+
+        body = {'order': {'version': version},
                 'idempotency_key': str(uuid.uuid4())}
+
+        # Change fulfillments status if current status is 'proposed' and update the order note
+        if obj.get('fulfillments') and obj.get('fulfillments')[0].get('state') == 'PROPOSED':
+            body['order']['fulfillments'] = obj.get('fulfillments')
+            body['order']['fulfillments'][0]['state'] = state
+            body['order']['note'] = obj.get('fulfillments')[0].get('state') + " -> " + state
+
+        else: # if there is no fulfillment record, just update the order note
+            body['order']['note'] = "Updated Order " + self.make_id('orders')
+
         resp = self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
         if resp.is_error():
             raise RuntimeError(resp.errors)

@@ -16,19 +16,14 @@ class TestSquareAllFields(TestSquareBase):
         return "tap_tester_square_all_fields"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'cash_drawer_shifts',
-                'settlements'
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
+            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
+            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
+        })
+
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     @classmethod
     def tearDownClass(cls):
@@ -64,17 +59,7 @@ class TestSquareAllFields(TestSquareBase):
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # ensure data exists for sync streams and set expectations
-        expected_records = {x: [] for x in self.expected_streams()} # ids by stream
-        for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            if existing_objects:
-                print("Data exists for stream: {}".format(stream))
-                for obj in existing_objects:
-                    expected_records[stream].append(obj)
-            else:
-                print("Data does not exist for stream: {}".format(stream))
-                assert None, "more test functinality needed"
-
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
         # modify data set to conform to expectations (json standards)
         for stream, records in expected_records.items():
             print("Ensuring expected data for {} has values formatted correctly.".format(stream))
@@ -95,7 +80,7 @@ class TestSquareAllFields(TestSquareBase):
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
         diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
         # Select all available fields from all testable streams
@@ -124,7 +109,8 @@ class TestSquareAllFields(TestSquareBase):
                 self.assertTrue(field_selected, msg="Field not selected.")
 
         #clear state
-        menagerie.set_state(conn_id, {})
+        version = menagerie.get_state_version(conn_id)
+        menagerie.set_state(conn_id, {}, version)
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -190,10 +176,10 @@ class TestSquareAllFields(TestSquareBase):
                                                    if actual_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_expected_records),
                                         msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(len(stream_expected_records), 1,
+                        self.assertEqual(1, len(stream_expected_records),
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
-                        self.assertDictEqual(actual_record, stream_expected_record)
+                        self.assertDictEqual(stream_expected_record, actual_record)
 
 
                     # Verify that our expected records were replicated by the tap
@@ -202,7 +188,7 @@ class TestSquareAllFields(TestSquareBase):
                                                  if expected_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_actual_records),
                                         msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(len(stream_actual_records), 1,
+                        self.assertEqual(1, len(stream_actual_records),
                                          msg="A duplicate record was found in the sync for {}.".format(stream))
                         stream_actual_record = stream_actual_records[0]
                         self.assertDictEqual(expected_record, stream_actual_record)

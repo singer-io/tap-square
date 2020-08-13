@@ -14,19 +14,11 @@ class TestAutomaticFields(TestSquareBase):
         return "tap_tester_square_automatic_fields"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS NOT CURRENTY TESTABLE
-                'cash_drawer_shifts',
-                'settlements',
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
+
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # data cannot be created via API
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -46,8 +38,6 @@ class TestAutomaticFields(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.auto_fields_test()
-
-        # TODO Determine if static prod streams exist
 
 
     def auto_fields_test(self):
@@ -76,7 +66,7 @@ class TestAutomaticFields(TestSquareBase):
             for obj in existing_objects:
                 expected_records[stream].append(
                     {field: obj.get(field)
-                     for field in self.expected_automatic_fields().get(stream)}
+                    for field in self.expected_automatic_fields().get(stream)}
                 )
 
         # Adjust expectations for datetime format
@@ -170,9 +160,9 @@ class TestAutomaticFields(TestSquareBase):
 
                 # Verify that only the automatic fields are sent to the target
                 for actual_keys in record_messages_keys:
-                    self.assertEqual(
-                        actual_keys.symmetric_difference(expected_keys), set(),
-                        msg="Expected automatic fields and nothing else.")
+                    self.assertEqual(set(),
+                                     actual_keys.symmetric_difference(expected_keys),
+                                     msg="Expected automatic fields and nothing else.")
 
                 actual_records = [row['data'] for row in data['messages']]
 
@@ -192,10 +182,10 @@ class TestAutomaticFields(TestSquareBase):
                                                    if actual_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_expected_records),
                                         msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(len(stream_expected_records), 1,
+                        self.assertEqual(1, len(stream_expected_records),
                                          msg="A duplicate record was found in our expectations for {}.".format(stream))
                         stream_expected_record = stream_expected_records[0]
-                        self.assertDictEqual(actual_record, stream_expected_record)
+                        self.assertDictEqual(stream_expected_record, actual_record)
 
                     # Verify that our expected records were replicated by the tap
                     for expected_record in expected_records.get(stream):
@@ -203,7 +193,7 @@ class TestAutomaticFields(TestSquareBase):
                                                  if expected_record.get(pk) == record.get(pk)]
                         self.assertTrue(len(stream_actual_records),
                                         msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(len(stream_actual_records), 1,
+                        self.assertEqual(1, len(stream_actual_records),
                                          msg="A duplicate record was found in the sync for {}.".format(stream))
                         stream_actual_record = stream_actual_records[0]
                     self.assertDictEqual(expected_record, stream_actual_record)

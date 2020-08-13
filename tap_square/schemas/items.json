@@ -25,6 +25,18 @@
         ]
       }
     },
+    "absent_at_location_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
     "version": {
       "type": [
         "null",
@@ -222,6 +234,30 @@
             "string"
           ]
         },
+        "abbreviation": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "available_electronically": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "available_for_pickup": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
+        "available_online": {
+          "type": [
+            "null",
+            "boolean"
+          ]
+        },
         "skip_modifier_screen": {
           "type": [
             "null",
@@ -233,6 +269,24 @@
             "null",
             "string"
           ]
+        },
+        "label_color": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "tax_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
         },
         "modifier_list_info": {
           "type": [
@@ -247,6 +301,20 @@
               ]
             },
             "modifier_list_id": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        },
+        "item_options": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "item_option_id": {
               "type": [
                 "null",
                 "string"

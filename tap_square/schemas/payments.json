@@ -56,12 +56,6 @@
         "string"
       ]
     },
-    "note": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
     "delay_duration": {
       "type": [
         "null",
@@ -189,6 +183,12 @@
             "string"
           ]
         },
+        "auth_result_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "errors": {
           "type": [
             "null",
@@ -230,6 +230,18 @@
       ]
     },
     "order_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "customer_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "reference_id": {
       "type": [
         "null",
         "string"

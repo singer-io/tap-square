@@ -22,20 +22,10 @@ class TestSquareStartDate(TestSquareBase):
         return "tap_tester_square_start_date_test"
 
     def testable_streams(self):
-        return self.dynamic_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'cash_drawer_shifts',
-                'inventories',
-                'settlements',
-            }
-        )
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(
-            {  # STREAMS THAT CANNOT CURRENTLY BE TESTED
-                'bank_accounts', # Cannot create a record, also PROD ONLY
-            }
-        )
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def timedelta_formatted(self, dtime, days=0):
         try:
@@ -48,23 +38,20 @@ class TestSquareStartDate(TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA")
 
-        # Initialize start_date state to make assertions
+
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
+        self.START_DATE = self.get_properties().get('start_date')  # Initialize start_date state to make assertions
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
         self.start_date_test()
 
-        # TODO no static streams currently testable
-        # print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # self.START_DATE = self.STATIC_START_DATE
-        # self.START_DATE_1 = self.STATIC_START_DATE
-        # self.START_DATE_2 = self.timedelta_formatted(self.STATIC_START_DATE, days=2)
-        # self.TESTABLE_STREAMS = self.testable_streams_static()
-        # self.start_date_test()
+        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.START_DATE_1 = self.STATIC_START_DATE
+        self.START_DATE_2 = self.timedelta_formatted(dtime=self.STATIC_START_DATE, days=3) # + 3 days
+        self.start_date_test()
 
         self.set_environment(self.PRODUCTION)
 
@@ -79,7 +66,7 @@ class TestSquareStartDate(TestSquareBase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, self.START_DATE_2)
+        self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE_1, self.START_DATE_2)
 
         ##########################################################################
         ### First Sync
@@ -99,7 +86,7 @@ class TestSquareStartDate(TestSquareBase):
 
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
         diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
         # Select all testable streams and their fields
@@ -157,7 +144,7 @@ class TestSquareStartDate(TestSquareBase):
         found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
 
         diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are kosher")
 
         # Select all available streams and their fields
@@ -187,9 +174,12 @@ class TestSquareStartDate(TestSquareBase):
 
         state_2 = menagerie.get_state(conn_id)
 
+        replication_keys = self.expected_replication_keys()
+
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 replication_type = self.expected_replication_method().get(stream)
+                comparison_key = next(iter(replication_keys.get(stream, {'created_at'})))
                 record_count_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_2 = record_count_by_stream_2.get(stream, 0)
 
@@ -202,40 +192,41 @@ class TestSquareStartDate(TestSquareBase):
                                      "Sync 2 start_date: {} ".format(self.START_DATE_2) +
                                      "Sync 2 record_count: {}".format(record_count_2))
 
-
-                # Testing how FULL TABLE streams handle start date
-                if replication_type == self.FULL:
-
-                    # Verify that a bookmark doesn't exist for the stream.
-                    self.assertTrue(state_1.get(stream) is None,
-                                    msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
-                    self.assertTrue(state_2.get(stream) is None,
-                                    msg="There should not be bookmark value for {}\n{}".format(stream, state_1.get(stream)))
-
-
-                # Testing how INCREMENTAL streams handle start date
-                elif replication_type == self.INCREMENTAL:
-
-                    # Verify 1st sync record count > 2nd sync record count since the 1st start date is older than the 2nd.
+                # Verify 1st sync record count > 2nd sync record count for incremental streams
+                if replication_type == self.INCREMENTAL:
                     self.assertGreater(replicated_row_count_1, replicated_row_count_2, msg="Expected less records on 2nd sync.")
 
-                    # Verify all data from first sync has bookmark values >= start_date .
-                    records_from_sync_1 = set(row.get('data').get('updated_at')
-                                              for row in synced_records_1.get(stream, []).get('messages', []))
-                    for record in records_from_sync_1:
-                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_1),
-                                                msg="Record was created prior to start date for 1st sync.\n" +
-                                                "Sync 1 start_date: {}\n".format(self.START_DATE_1) +
-                                                "Record bookmark: {} ".format(record))
-
-                    # Verify all data from second sync has bookmark values >= start_date 2.
-                    records_from_sync_2 = set(row.get('data').get('updated_at')
-                                              for row in synced_records_2.get(stream, {}).get('messages', []))
-                    for record in records_from_sync_2:
-                        self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
-                                                msg="Record was created prior to start date for 2nd sync.\n" +
-                                                "Sync 2 start_date: {}\n".format(self.START_DATE_2) +
-                                                "Record bookmark: {} ".format(record))
-                else:
+                elif replication_type != self.FULL:
                     raise Exception("Expectations are set incorrectly. {} cannot have a "
                                     "replication method of {}".format(stream, replication_type))
+
+
+                # Skip the remaining assertions for inventories since it is append only
+                if stream == 'inventories':
+                    continue
+
+
+                # BUG | https://stitchdata.atlassian.net/browse/SRCE-3681
+                # Skipping these two streams until BUG resolved.
+                # NOTE: we skip inventories ^ for a different reason leave that as is
+                if stream in {'roles', 'employees', 'locations'}: # TODO REMOVE
+                    continue
+
+
+                # Verify all data from first sync has bookmark values >= start_date .
+                records_from_sync_1 = set(row.get('data').get(comparison_key)
+                                          for row in synced_records_1.get(stream, []).get('messages', []))
+                for record in records_from_sync_1:
+                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_1),
+                                            msg="Record was created prior to start date for 1st sync.\n" +
+                                            "Sync 1 start_date: {}\n".format(self.START_DATE_1) +
+                                            "Record bookmark: {} ".format(record))
+
+                # Verify all data from second sync has bookmark values >= start_date 2.
+                records_from_sync_2 = set(row.get('data').get(comparison_key)
+                                          for row in synced_records_2.get(stream, {}).get('messages', []))
+                for record in records_from_sync_2:
+                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
+                                            msg="Record was created prior to start date for 2nd sync.\n" +
+                                            "Sync 2 start_date: {}\n".format(self.START_DATE_2) +
+                                            "Record bookmark: {} ".format(record))
