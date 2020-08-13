@@ -158,7 +158,7 @@ class TestSquarePagination(TestSquareBase):
                 if pk:
 
                     # Verify by pks that the replicated records match our expectations
-                    self.assertRecordsEqualByPK(expected_records.get(stream), actual_records, pk)
+                    self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records, pk)
 
                 # Verify the expected number of records were replicated
                 self.assertEqual(len(expected_records.get(stream)), len(actual_records))
@@ -188,7 +188,7 @@ class TestSquarePagination(TestSquareBase):
 
                         instances = 0
 
-    def assertRecordsEqualByPK(self, expected_records, actual_records, pk):
+    def assertRecordsEqualByPK(self, stream, expected_records, actual_records, pk):
         """
         Verify all replicated records are accounted for in our expectations.
         Verfy all expected records were replicated.
