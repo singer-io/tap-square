@@ -4,10 +4,10 @@ import unittest
 from datetime import datetime as dt
 from datetime import timedelta
 
+import singer
+
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
-
-import singer
 
 from test_client import TestClient
 
@@ -22,6 +22,7 @@ class TestSquareBase(unittest.TestCase):
     PRIMARY_KEYS = "table-key-properties"
     FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
+    START_DATE_KEY = 'start-date-key'
     API_LIMIT = "max-row-limit"
     INCREMENTAL = "INCREMENTAL"
     FULL = "FULL_TABLE"
@@ -59,22 +60,19 @@ class TestSquareBase(unittest.TestCase):
         self.client = TestClient(env=env)
         self.SQUARE_ENVIRONMENT = env
 
-    def get_environment(self):
+    @staticmethod
+    def get_environment():
         return os.environ['TAP_SQUARE_ENVIRONMENT']
 
-    def get_properties(self, original = True):
+    def get_properties(self, original=True):
         # Default values
         return_value = {
-            'start_date' : dt.strftime(dt.utcnow()-timedelta(days=3), self.START_DATE_FORMAT),
-            'sandbox' : 'true' if self.get_environment() == self.SANDBOX else 'false'
+            'start_date': dt.strftime(dt.utcnow() - timedelta(days=3), self.START_DATE_FORMAT),
+            'sandbox': 'true' if self.get_environment() == self.SANDBOX else 'false'
         }
-        if self.get_environment() == self.PRODUCTION:
-            self.SQUARE_ENVIRONMENT = self.PRODUCTION
 
-        if original:
-            return return_value
-
-        return_value['start_date'] = self.START_DATE
+        if not original:
+            return_value['start_date'] = self.START_DATE
 
         return return_value
 
@@ -82,11 +80,11 @@ class TestSquareBase(unittest.TestCase):
     def get_credentials():
         environment = os.getenv('TAP_SQUARE_ENVIRONMENT')
         if environment in ['sandbox', 'production']:
-            creds =  {
+            creds = {
                 'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                 'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                 'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
-                }
+            }
         else:
             raise Exception("Square Environment: {} is not supported.".format(environment))
 
@@ -124,6 +122,7 @@ class TestSquareBase(unittest.TestCase):
            "inventories": {
                 self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
+               self.START_DATE_KEY: 'calculated_at',
             },
             "items": {
                 self.PRIMARY_KEYS: {'id'},
@@ -178,7 +177,8 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items()}
 
-    def production_streams(self):
+    @staticmethod
+    def production_streams():
         """Some streams can only have data on the production app. We must test these separately"""
         return {
             'employees',
@@ -189,7 +189,8 @@ class TestSquareBase(unittest.TestCase):
         """By default we will be testing streams in the sandbox"""
         return self.expected_streams().difference(self.production_streams())
 
-    def static_data_streams(self):
+    @staticmethod
+    def static_data_streams():
         """
         Some streams require use of a static data set, and should
         only be referenced in static tests.
@@ -237,13 +238,18 @@ class TestSquareBase(unittest.TestCase):
                 for table, properties
                 in self.expected_metadata().items() if table in incremental_streams}
 
+    def expected_start_date_stream_to_key(self):
+        return {table: properties.get(self.START_DATE_KEY)
+                for table, properties in self.expected_metadata().items()
+                if properties.get(self.START_DATE_KEY)}
+
     def expected_automatic_fields(self):
         auto_fields = {}
         for k, v in self.expected_metadata().items():
             auto_fields[k] = v.get(self.PRIMARY_KEYS, set()) | v.get(self.REPLICATION_KEYS, set())
         return auto_fields
 
-    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=[]):
+    def select_all_streams_and_fields(self, conn_id, catalogs, select_all_fields: bool = True, exclude_streams=None):
         """Select all streams and all fields within streams"""
 
         for catalog in catalogs:
@@ -267,17 +273,19 @@ class TestSquareBase(unittest.TestCase):
                 non_selected_fields=non_selected_properties
             )
 
-    def get_selected_fields_from_metadata(self, metadata):
+    @staticmethod
+    def get_selected_fields_from_metadata(metadata):
         selected_fields = set()
         for field in metadata:
             is_field_metadata = len(field['breadcrumb']) > 1
             inclusion_automatic_or_selected = (field['metadata']['inclusion'] == 'automatic'
-                                               or field['metadata']['selected'] == True)
+                                               or field['metadata']['selected'] is True)
             if is_field_metadata and inclusion_automatic_or_selected:
                 selected_fields.add(field['breadcrumb'][1])
         return selected_fields
 
-    def _get_abs_path(self, path):
+    @staticmethod
+    def _get_abs_path(path):
         return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
     def _load_schemas(self, stream):
@@ -291,7 +299,8 @@ class TestSquareBase(unittest.TestCase):
 
         return schemas
 
-    def parse_date(self, date_value):
+    @staticmethod
+    def parse_date(date_value):
         """
         Pass in string-formatted-datetime, parse the value, and return it as an unformatted datetime object.
         """
@@ -305,7 +314,8 @@ class TestSquareBase(unittest.TestCase):
             except ValueError:
                 raise NotImplementedError("We are not accounting for dates of this format: {}".format(date_value))
 
-    def date_check_and_parse(self, date_value):
+    @staticmethod
+    def date_check_and_parse(date_value):
         """
         Pass in any value and return that value. If the value is a string-formatted-datetime, parse
         the value and return it as an unformatted datetime object.
@@ -321,7 +331,6 @@ class TestSquareBase(unittest.TestCase):
                 return date_value
 
     def expected_schema_keys(self, stream):
-
         props = self._load_schemas(stream).get(stream).get('properties')
         assert props, "{} schema not configured proprerly"
 
@@ -335,9 +344,9 @@ class TestSquareBase(unittest.TestCase):
         """ Align expected data with how the tap _should_ emit them. """
         if isinstance(expected_record, dict):
             for key, value in expected_record.items(): # Modify a single record
-                if type(value) == dict:
+                if isinstance(value, dict):
                     self.modify_expected_record(value)
-                elif type(value) == list:
+                elif isinstance(value, list):
                     for item in value:
                         self.modify_expected_record(item)
                 else:
@@ -348,15 +357,22 @@ class TestSquareBase(unittest.TestCase):
         """datetime values must conform to ISO-8601 or they will be rejected by the gate"""
         if isinstance(value, str) and isinstance(self.date_check_and_parse(value), dt):
             raw_date = self.date_check_and_parse(value)
-            iso_date = dt.strftime(raw_date,  "%Y-%m-%dT%H:%M:%S.%fZ")
+            iso_date = dt.strftime(raw_date, "%Y-%m-%dT%H:%M:%S.%fZ")
             record[key] = iso_date
 
-    def align_number_type(self, record, key, value):
+    @staticmethod
+    def align_number_type(record, key, value):
         """float values must conform to json number formatting so we convert to Decimal"""
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
 
-    def create_test_data(self, testable_streams, start_date, start_date_2=None):
+    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
+        if min_required_num_records_per_stream == None:
+            min_required_num_records_per_stream = {
+                stream: 1
+                for stream in testable_streams
+            }
+
         if not start_date_2:
             start_date_2 = start_date
 
@@ -369,15 +385,26 @@ class TestSquareBase(unittest.TestCase):
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')
 
-        expected_records = {x: [] for x in self.expected_streams()}
+        expected_records = {stream: [] for stream in self.expected_streams()}
 
         for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)
-            rep_key = next(iter(self.expected_replication_keys().get(stream, {'created_at'})))
-            if not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
-                        for stream_obj in expected_records[stream]]):
-                LOGGER.info("Data missing for stream %s, will create a record", stream)
-                created_records = self.client.create(stream, start_date=start_date)
+
+            if self.expected_replication_keys().get(stream):
+                rep_key = next(iter(self.expected_replication_keys().get(stream)))
+            elif self.expected_start_date_stream_to_key().get(stream):
+                rep_key = self.expected_start_date_stream_to_key().get(stream)
+            else:
+                rep_key = 'created_at'
+
+            if (not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
+                        for stream_obj in expected_records[stream]])
+                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]):
+
+                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(expected_records[stream]))
+
+                LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
+                created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
                 if isinstance(created_records, dict):
                     expected_records[stream].append(created_records)
@@ -385,5 +412,8 @@ class TestSquareBase(unittest.TestCase):
                     expected_records[stream].extend(created_records)
                 else:
                     raise NotImplementedError("created_records unknown type: {}".format(created_records))
+
+            print("Adjust expectations for stream: {}".format(stream))
+            self.modify_expected_records(expected_records[stream])
 
         return expected_records

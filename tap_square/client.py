@@ -231,7 +231,7 @@ class SquareClient():
         if bookmarked_cursor:
             params['batch_token'] = bookmarked_cursor
 
-        with singer.http_request_timer('GET payments'):
+        with singer.http_request_timer('GET roles'):
             result = requests.get(url, headers=headers, params=params)
 
         if result.status_code != 200:
@@ -243,7 +243,7 @@ class SquareClient():
 
         while batch_token:
             params['batch_token'] = batch_token
-            with singer.http_request_timer('GET payments'):
+            with singer.http_request_timer('GET roles'):
                 result = requests.get(url, headers=headers, params=params)
 
             if result.status_code != 200:

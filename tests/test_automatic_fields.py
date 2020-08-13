@@ -119,7 +119,7 @@ class TestAutomaticFields(TestSquareBase):
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
             if cat['stream_name'] not in self.TESTABLE_STREAMS:
-                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                self.assertFalse(selected, msg="Stream `{}` selected, but not testable.".format(cat["stream_name"]))
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
             # Verify only automatic fields are selected

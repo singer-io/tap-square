@@ -63,20 +63,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.START_DATE = self.STATIC_START_DATE
 
         # Ensure tested streams have data
-        expected_records_1 = {x: [] for x in self.expected_streams()}
-        for stream in self.testable_streams():
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-
-            if len(existing_objects) == 0:
-                assert None, "NO DATA EXISTS FOR {}, TEST WILL FAIL".format(stream)
-
-            expected_records_1[stream] += existing_objects
-            print('{}: Have sufficent amount of data to continue test'.format(stream))
-
-        # Adjust expectations for datetime format
-        for stream, expected_records in expected_records_1.items():
-            print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(expected_records)
+        expected_records_first_sync = self.create_test_data(self.testable_streams(), self.START_DATE)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -112,12 +99,12 @@ class TestSquareIncrementalReplication(TestSquareBase):
         first_sync_records = runner.get_records_from_target_output()
 
         # Set expectations for 2nd sync
-        expected_records_2 = {x: [] for x in self.expected_streams()}
+        expected_records_second_sync = {x: [] for x in self.expected_streams()}
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.testable_streams():
             if stream in self.expected_full_table_streams():
-                for record in expected_records_1.get(stream, []):
-                    expected_records_2[stream].append(record)
+                for record in expected_records_first_sync.get(stream, []):
+                    expected_records_second_sync[stream].append(record)
 
         # Run a second sync job using orchestrator
         second_sync_record_count = self.run_sync(conn_id)
@@ -176,7 +163,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
                 # Verify that the expected records are replicated in the 2nd sync
                 # For incremental streams we should see 0 records
                 # For full table streams we should see the same records from the first sync
-                expected_records = expected_records_2.get(stream, [])
+                expected_records = expected_records_second_sync.get(stream, [])
                 self.assertEqual(len(expected_records), len(second_sync_data),
                                  msg="Expected number of records do not match actual for 2nd sync.\n" +
                                  "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))

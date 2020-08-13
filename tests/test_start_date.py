@@ -62,12 +62,6 @@ class TestSquareStartDate(TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
         self.start_date_test()
 
-        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
-        self.assertEqual(set(), self.TESTABLE_STREAMS,
-                         msg="Testable streams exist for this category.")
-        print("\tThere are no testable streams.")
-
     def start_date_test(self):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
@@ -159,8 +153,6 @@ class TestSquareStartDate(TestSquareBase):
             conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
         )
 
-        catalogs = menagerie.get_catalogs(conn_id)
-
         # clear state
         menagerie.set_state(conn_id, {})
 
@@ -193,12 +185,12 @@ class TestSquareStartDate(TestSquareBase):
 
                 # Verify that the 2nd sync resutls in less records than the 1st sync.
                 self.assertLessEqual(record_count_2, record_count_1,
-                                msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
-                                "Second sync should result in fewer records\n" +
-                                "Sync 1 start_date: {} ".format(self.START_DATE_1) +
-                                "Sync 1 record_count: {}\n".format(record_count_1) +
-                                "Sync 2 start_date: {} ".format(self.START_DATE_2) +
-                                "Sync 2 record_count: {}".format(record_count_2))
+                                     msg="\nStream '{}' is {}\n".format(stream, self.FULL) +
+                                     "Second sync should result in fewer records\n" +
+                                     "Sync 1 start_date: {} ".format(self.START_DATE_1) +
+                                     "Sync 1 record_count: {}\n".format(record_count_1) +
+                                     "Sync 2 start_date: {} ".format(self.START_DATE_2) +
+                                     "Sync 2 record_count: {}".format(record_count_2))
 
                 # Verify 1st sync record count > 2nd sync record count for incremental streams
                 if replication_type == self.INCREMENTAL:
