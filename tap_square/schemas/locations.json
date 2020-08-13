@@ -80,6 +80,18 @@
             "string"
           ]
         },
+        "address_line_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "address_line_3": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "postal_code": {
           "type": [
             "null",
@@ -98,7 +110,61 @@
             "string"
           ]
         },
+        "administrative_district_level_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "administrative_district_level_3": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "country": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "first_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "last_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "locality": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "organization": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "sublocality": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "sublocality_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "sublocality_3": {
           "type": [
             "null",
             "string"
