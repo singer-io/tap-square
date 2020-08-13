@@ -152,37 +152,19 @@ class TestSquarePagination(TestSquareBase):
                     self.assertEqual(set(), auto_fields.difference(actual_keys),
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
-                # Verify by pks that the data replicated matches what we expect
                 primary_keys = self.expected_primary_keys().get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
 
                 if pk:
-                    # Verify that actual records were in our expectations
-                    for actual_record in actual_records:
-                        stream_expected_records = [record.get(pk) for record in expected_records.get(stream)
-                                                   if actual_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_expected_records),
-                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(1, len(stream_expected_records),
-                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
-                        stream_expected_record = stream_expected_records[0]
-                        self.assertEqual(stream_expected_record, actual_record.get(pk))
 
-                    # Verify that our expected records were replicated by the tap
-                    for expected_record in expected_records.get(stream):
-                        stream_actual_records = [record.get(pk) for record in actual_records
-                                                 if expected_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_actual_records),
-                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(1, len(stream_actual_records),
-                                         msg="A duplicate record was found in the sync for {}.".format(stream))
-                        stream_actual_record = stream_actual_records[0]
-                        self.assertEqual(expected_record.get(pk), stream_actual_record)
+                    # Verify by pks that the replicated records match our expectations
+                    self.assertRecordsEqualByPK(expected_records.get(stream), actual_records, pk)
 
-                elif stream == 'inventories': # We can not compare by pks for this stream so we make a less strict assertion
+                # Verify the expected number of records were replicated
+                self.assertEqual(len(expected_records.get(stream)), len(actual_records))
 
-                    # Verify the expected number of records were replicated
-                    self.assertEqual(len(expected_records.get(stream)), len(actual_records))
+
+                if stream == 'inventories': # We can not compare by pks for this stream so we make a less strict assertion
 
                     # Verify the pages contain unique data sets (verify we don't duplicate pages)
                     page_size = self.API_LIMIT.get(stream)
@@ -206,8 +188,34 @@ class TestSquarePagination(TestSquareBase):
 
                         instances = 0
 
-                else:
-                    raise NotImplementedError("{} does no have full test coverage for pagination feature.".format(stream))
+    def assertRecordsEqualByPK(self, expected_records, actual_records, pk):
+        """
+        Verify all replicated records are accounted for in our expectations.
+        Verfy all expected records were replicated.
+
+        Make these assertions by comparing records by their primary key
+        """
+        # Verify that actual records were in our expectations
+        for actual_record in actual_records:
+            stream_expected_records = [record.get(pk) for record in expected_records
+                                       if actual_record.get(pk) == record.get(pk)]
+            self.assertTrue(len(stream_expected_records),
+                            msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
+            self.assertEqual(1, len(stream_expected_records),
+                             msg="A duplicate record was found in our expectations for {}.".format(stream))
+            stream_expected_record = stream_expected_records[0]
+            self.assertEqual(stream_expected_record, actual_record.get(pk))
+
+        # Verify that our expected records were replicated by the tap
+        for expected_record in expected_records:
+            stream_actual_records = [record.get(pk) for record in actual_records
+                                     if expected_record.get(pk) == record.get(pk)]
+            self.assertTrue(len(stream_actual_records),
+                            msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
+            self.assertEqual(1, len(stream_actual_records),
+                             msg="A duplicate record was found in the sync for {}.".format(stream))
+            stream_actual_record = stream_actual_records[0]
+            self.assertEqual(expected_record.get(pk), stream_actual_record)
 
 
 if __name__ == '__main__':
