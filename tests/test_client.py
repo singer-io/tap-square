@@ -231,7 +231,7 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
-            return self.create_shift(num_records, start_date, end_date)
+            return self.create_shift(start_date, end_date, num_records)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
@@ -684,7 +684,7 @@ class TestClient(SquareClient):
 
         return created_orders
 
-    def create_shift(self, num_records, start_date, end_date):
+    def create_shift(self, start_date, end_date, num_records):
         employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
@@ -943,7 +943,7 @@ class TestClient(SquareClient):
 
     def update_shift(self, obj):
         body = {
-            "shift": { # TODO: Can this be obj with the title updated?
+            "shift": {
                 "employee_id": obj['employee_id'],
                 "location_id": obj['location_id'],
                 "start_at": obj['start_at'],
