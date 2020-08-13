@@ -95,7 +95,7 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_catalog('TAX', start_date, None) for obj in page]
         elif stream == 'employees':
             return [obj for page, _ in self.get_employees(None) for obj in page
-                    if obj['updated_at'] >= start_date]
+                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'bank_accounts':
@@ -113,7 +113,7 @@ class TestClient(SquareClient):
             return [obj for page, _ in orders.sync(start_date, None) for obj in page]
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page
-                    if obj['updated_at'] >= start_date]
+                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts() for obj in page
                     if obj['updated_at'] >= start_date]
@@ -232,8 +232,8 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
-            employee_id = self.get_first_found('employees', start_date)['id']
-            location_id = self.get_first_found('locations', start_date)['id']
+            employee_id = self.get_first_found('employees', None)['id']
+            location_id = self.get_first_found('locations', None)['id']
             all_shifts = self.get_all('shifts', start_date)
 
             if all_shifts:
