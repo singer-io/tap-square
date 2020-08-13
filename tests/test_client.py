@@ -230,32 +230,8 @@ class TestClient(SquareClient):
             return refunds
         elif stream == 'payments':
             return self.create_payments(num_records)
-        elif stream == 'shifts':  # TODO
-            employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
-            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
-            all_shifts = self.get_all('shifts', start_date)
-
-            if all_shifts:
-                max_end_at = max([obj['end_at'] for obj in all_shifts])
-            else:
-                max_end_at = start_date
-
-            if start_date < max_end_at:
-                LOGGER.warning('Tried to create a Shift that overlapped another shift')
-                # Readjust start date and end date
-                start_date = max_end_at
-
-            if not end_date:
-                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
-
-            created_shifts = []
-            for i in range(num_records):
-                created_shifts.append(self.create_shift(employee_id, location_id, start_date, end_date).body.get('shift'))
-                start_date = end_date
-                # Bump by shift minutes to avoid any shift overlaps
-                end_date = self.shift_date(start_date, self.SHIFT_MINUTES)
-
-            return created_shifts
+        elif stream == 'shifts':
+            return self.create_shift(num_records, start_date, end_date)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
@@ -708,23 +684,50 @@ class TestClient(SquareClient):
 
         return created_orders
 
-    def create_shift(self, employee_id, location_id, start_date, end_date):
-        body = {
-            'idempotency_key': str(uuid.uuid4()),
-            'shift': {
-                'employee_id': employee_id, # This is the only employee we have on the sandbox
-                'location_id': location_id, # Should we vary this?
-                'start_at': start_date, # This can probably be derived from the test's start date
-                'end_at': end_date # This can be some short time after the start time
+    def create_shift(self, num_records, start_date, end_date):
+        employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
+        all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
+        all_shifts = self.get_all('shifts', start_date)
+
+        max_end_at = max([obj['end_at'] for obj in all_shifts]) if all_shifts else start_date
+        if start_date < max_end_at:
+            LOGGER.warning('Tried to create a Shift that overlapped another shift')
+
+        start_at = max_end_at
+        end_at = self.shift_date(start_at, self.SHIFT_MINUTES) if not end_date else end_date
+
+        created_shifts = []
+        for _ in range(num_records):
+            location_id = random.choice(all_location_ids)
+            body = {
+                'idempotency_key': str(uuid.uuid4()),
+                'shift': {
+                    'employee_id': employee_id,
+                    'location_id': location_id,
+                    'start_at': start_at, # This can probably be derived from the test's start date
+                    'end_at': end_at,
+                    'wage': {
+                        'title': self.make_id('shift'),
+                        'hourly_rate' : {
+                            'amount_money': 1100,
+                            'currency': 'USD'
+                        }
+                    }
+                }
             }
-        }
 
-        resp = self._client.labor.create_shift(body=body)
+            resp = self._client.labor.create_shift(body=body)
+            if resp.is_error():
+                raise RuntimeError(resp.errors)
+            LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
 
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
-        return resp
+            created_shifts.append(resp.body.get('shift'))
+
+            start_at = end_at
+            # Bump by shift minutes to avoid any shift overlaps
+            end_at = self.shift_date(start_at, self.SHIFT_MINUTES)
+
+        return created_shifts
 
     ##########################################################################
     ### UPDATEs

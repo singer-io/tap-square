@@ -38,7 +38,8 @@ if __name__ == "__main__":
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
-        'orders'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
+        # 'orders'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
+        'shifts'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
     ]
     print("********** Testing basic functions of test client **********")
     if test_gets:
