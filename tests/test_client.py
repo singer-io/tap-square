@@ -232,8 +232,8 @@ class TestClient(SquareClient):
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
-            employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
-            location_id = [location['id'] for location in self.get_all('locations', start_date)][0]
+            employee_id = self.get_first_found('employees', start_date)['id']
+            location_id = self.get_first_found('locations', start_date)['id']
             all_shifts = self.get_all('shifts', start_date)
 
             if all_shifts:
@@ -259,6 +259,14 @@ class TestClient(SquareClient):
             return created_shifts
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
+
+    def get_first_found(self, stream, start_date):
+        all_found = self.get_all(stream, start_date)
+
+        if all_found:
+            return all_found[0]
+
+        return self.create(stream, start_date)[0]
 
     @staticmethod
     def shift_date(date_string, shift_minutes):
@@ -380,21 +388,10 @@ class TestClient(SquareClient):
 
         refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
-            print("Refund error, Updating payment status and retrying refund process.")
-
-            if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
-                payment = self._update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
-                body['idempotency_key'] = str(uuid.uuid4())
-                body['id'] = self.make_id('refund')
-
-                refund = self._client.refunds.refund_payment(body)
-                if refund.is_error(): # Debugging
-                    print("body: {}".format(body))
-                    print("response: {}".format(refund))
-                    print("payment attempted to be refunded: {}".format(payment))
-                    raise RuntimeError(refund.errors)
-            else:
-                raise RuntimeError(refund.errors)
+            print("body: {}".format(body))
+            print("response: {}".format(refund))
+            print("payment attempted to be refunded: {}".format(payment))
+            raise RuntimeError(refund.errors)
 
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
