@@ -39,8 +39,9 @@ class TestSquarePagination(TestSquareBase):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        testable_streams = self.static_data_streams().difference(self.untestable_streams())
-        return testable_streams.difference({'locations'})  # Locations does not paginate
+        return self.static_data_streams().difference(self.untestable_streams()).difference({
+            'locations',  # This stream does not paginate in the sync (See Above)
+        })
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -178,13 +179,8 @@ class TestSquarePagination(TestSquareBase):
         expected_pks_set = set(expected_pks)
         self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
 
-        # Verify that all expected records were replicated
-        self.assertEqual(set(), expected_pks_set.difference(actual_pks_set),
-                         msg="Our expectations have more unique records than the tap replicated.")
-
-        # Verify ONLY expected records were replicated
-        self.assertEqual(set(), actual_pks_set.difference(expected_pks_set),
-                         msg="The tap replicated data that was not in our expectations.")
+        # Verify that all expected records and ONLY the expected records were replicated
+        self.assertEqual(expected_pks_set, actual_pks_set)
 
 
 if __name__ == '__main__':
