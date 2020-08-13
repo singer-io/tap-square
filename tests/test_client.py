@@ -24,7 +24,7 @@ typesToKeyMap = {
 class TestClient(SquareClient):
     # This is the duration of a shift, we make this constant so we can
     # ensure the shifts don't overlap
-    SHIFT_MINUTES = 2
+    SHIFT_MINUTES = 10
 
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
@@ -729,6 +729,14 @@ class TestClient(SquareClient):
                     'location_id': location_id,
                     'start_at': start_at, # This can probably be derived from the test's start date
                     'end_at': end_at,
+                    'breaks': [{
+                        "start_at": self.shift_date(start_at, 1),
+                        "end_at": self.shift_date(start_at, 2),
+                        "name": "Tea Break",
+                        "expected_duration": "PT5M",
+                        "break_type_id": self.make_id('shift.break'),
+                        "is_paid": True
+                    }],
                     'wage': {
                         'title': self.make_id('shift'),
                         'hourly_rate' : {
