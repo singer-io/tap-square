@@ -9,7 +9,9 @@ class TestSyncCanary(TestSquareBase, TestCase):
         return "tap_tester_sync_canary"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams()
+        return self.dynamic_data_streams().difference({
+            'bank_accounts',
+        })
 
     def testable_streams_static(self):
         return self.static_data_streams()
