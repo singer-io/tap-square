@@ -11,6 +11,7 @@ class TestSyncCanary(TestSquareBase, TestCase):
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference({
             'bank_accounts',
+            'settlements',
         })
 
     def testable_streams_static(self):
