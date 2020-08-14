@@ -284,7 +284,7 @@ class SquareClient():
 
             yield (result.body.get('items', []), result.body.get('cursor'))
 
-    def get_settlements(self, location_id, start_time, bookmarked_cursor): #pylint: disable=unused-argument
+    def get_settlements(self, location_id, start_time):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
         headers = {
             'content-type': 'application/json',
@@ -292,6 +292,7 @@ class SquareClient():
         }
         params = {
             'limit': 200,
+            'begin_time': start_time,
         }
         resp = requests.get(url, headers=headers, params=params)
         resp.raise_for_status()

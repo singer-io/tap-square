@@ -1,20 +1,27 @@
 import os
 import json
-import unittest
 from datetime import datetime as dt
 from datetime import timedelta
+from abc import ABC, abstractmethod
+from enum import Enum
 
 import singer
 
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
+import tap_tester.runner      as runner
 
 from test_client import TestClient
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareBase(unittest.TestCase):
+class DataType(Enum):
+    DYNAMIC = 1
+    STATIC = 2
+
+
+class TestSquareBase(ABC):
     PRODUCTION = "production"
     SANDBOX = "sandbox"
     SQUARE_ENVIRONMENT = SANDBOX
@@ -223,6 +230,30 @@ class TestSquareBase(unittest.TestCase):
         return set(stream for stream, rep_meth in self.expected_replication_method().items()
                    if rep_meth == self.FULL)
 
+    @abstractmethod
+    def testable_streams_dynamic(self):
+        pass
+
+    @abstractmethod
+    def testable_streams_static(self):
+        pass
+
+    def testable_streams(self, environment='sandbox', data_type=DataType.DYNAMIC):
+        allowed_environments = {self.SANDBOX, self.PRODUCTION}
+        if environment not in allowed_environments:
+            raise NotImplementedError("Environment can only be one of {}, but {} provided".format(allowed_environments, environment))
+
+        if environment == self.SANDBOX:
+            if data_type == DataType.DYNAMIC:
+                return self.testable_streams_dynamic().intersection(self.sandbox_streams())
+            else:
+                return self.testable_streams_static().intersection(self.sandbox_streams())
+        else:
+            if data_type == DataType.DYNAMIC:
+                return self.testable_streams_dynamic().intersection(self.production_streams())
+            else:
+                return self.testable_streams_static().intersection(self.production_streams())
+
     def expected_primary_keys(self):
         """
         return a dictionary with key of table name
@@ -376,7 +407,7 @@ class TestSquareBase(unittest.TestCase):
             record[key] = str(value)
 
     def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
-        if min_required_num_records_per_stream == None:
+        if min_required_num_records_per_stream is None:
             min_required_num_records_per_stream = {
                 stream: 1
                 for stream in testable_streams
@@ -387,9 +418,8 @@ class TestSquareBase(unittest.TestCase):
 
         # Force modifier_lists to go first and payments to go last
         create_test_data_streams = list(testable_streams)
-        if 'modifier_lists' in testable_streams:
-            create_test_data_streams.remove('modifier_lists')
-            create_test_data_streams.insert(0, 'modifier_lists')
+        self._shift_to_start_of_list('employees', create_test_data_streams)
+        self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
         if 'payments' in testable_streams:
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')
@@ -426,3 +456,74 @@ class TestSquareBase(unittest.TestCase):
             self.modify_expected_records(expected_records[stream])
 
         return expected_records
+
+    @staticmethod
+    def _shift_to_start_of_list(key, values):
+        new_list = values.copy()
+
+        if key in values:
+            new_list.remove(key)
+            new_list.insert(0, key)
+
+        return new_list
+
+    def run_initial_sync(self, environment, data_type):
+        # Instantiate connection with default start/end dates
+        conn_id = connections.ensure_connection(self)
+
+        # run in check mode
+        check_job_name = runner.run_check_mode(self, conn_id)
+
+        # verify check exit codes
+        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
+        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
+
+        found_catalogs = menagerie.get_catalogs(conn_id)
+        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
+
+        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
+        diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
+        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
+        print("discovered schemas are OK")
+
+        # Select all available fields from all testable streams
+        exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
+        self.select_all_streams_and_fields(
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        )
+
+        catalogs = menagerie.get_catalogs(conn_id)
+
+        # Ensure our selection worked
+        for cat in catalogs:
+            catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
+            # Verify all testable streams are selected
+            selected = catalog_entry.get('annotated-schema').get('selected')
+            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+            if cat['stream_name'] not in self.testable_streams(environment, data_type):
+                self.assertFalse(selected, msg="Stream selected, but not testable.")
+                continue # Skip remaining assertions if we aren't selecting this stream
+            self.assertTrue(selected, msg="Stream not selected.")
+
+            # Verify all fields within each selected stream are selected
+            for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
+                field_selected = field_props.get('selected')
+                print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                self.assertTrue(field_selected, msg="Field not selected.")
+
+        #clear state
+        menagerie.set_state(conn_id, {})
+
+        # run sync
+        sync_job_name = runner.run_sync_mode(self, conn_id)
+
+        # Verify tap exit codes
+        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
+        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
+
+        # read target output
+        first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
+                                                                         self.expected_streams(),
+                                                                         self.expected_primary_keys())
+
+        return conn_id, first_record_count_by_stream

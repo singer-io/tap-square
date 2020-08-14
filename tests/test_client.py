@@ -94,7 +94,8 @@ class TestClient(SquareClient):
         elif stream == 'taxes':
             return [obj for page, _ in self.get_catalog('TAX', start_date, None) for obj in page]
         elif stream == 'employees':
-            return [obj for page, _ in self.get_employees(None) for obj in page]
+            return [obj for page, _ in self.get_employees(None) for obj in page
+                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'bank_accounts':
@@ -108,19 +109,20 @@ class TestClient(SquareClient):
         elif stream == 'inventories':
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
-            orders = Orders()
-            return [obj for page, _ in orders.sync(self, start_date, None) for obj in page]
+            orders = Orders(self, {})
+            return [obj for page, _ in orders.sync(start_date, None) for obj in page]
         elif stream == 'roles':
-            return [obj for page, _ in self.get_roles(None) for obj in page]
+            return [obj for page, _ in self.get_roles(None) for obj in page
+                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts() for obj in page
                     if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
-            settlements = Settlements()
-            return [obj for page, _ in settlements.sync(self, start_date) for obj in page]
+            settlements = Settlements(self, {})
+            return [obj for page, _ in settlements.sync(start_date) for obj in page]
         elif stream == 'cash_drawer_shifts':
-            cash_drawer_shifts = CashDrawerShifts()
-            return [obj for page, _ in cash_drawer_shifts.sync(self, start_date, None) for obj in page]
+            cash_drawer_shifts = CashDrawerShifts(self, {})
+            return [obj for page, _ in cash_drawer_shifts.sync(start_date) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
@@ -232,6 +234,14 @@ class TestClient(SquareClient):
             return self.create_shift(start_date, end_date, num_records)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
+
+    def get_first_found(self, stream, start_date):
+        all_found = self.get_all(stream, start_date)
+
+        if all_found:
+            return all_found[0]
+
+        return self.create(stream, start_date)[0]
 
     @staticmethod
     def shift_date(date_string, shift_minutes):
@@ -355,21 +365,10 @@ class TestClient(SquareClient):
 
         refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
-            print("Refund error, Updating payment status and retrying refund process.")
-
-            if "PENDING_CAPTURE" in refund.body.get('errors')[0].get('detail'):
-                payment = self._update_payment(obj_id=payment_id, action='complete') # update (complete) a payment if it is pending
-                body['idempotency_key'] = str(uuid.uuid4())
-                body['id'] = self.make_id('refund')
-
-                refund = self._client.refunds.refund_payment(body)
-                if refund.is_error(): # Debugging
-                    print("body: {}".format(body))
-                    print("response: {}".format(refund))
-                    print("payment attempted to be refunded: {}".format(payment))
-                    raise RuntimeError(refund.errors)
-            else:
-                raise RuntimeError(refund.errors)
+            LOGGER.error("body: {}".format(body))
+            LOGGER.error("response: {}".format(refund))
+            LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
+            raise RuntimeError(refund.errors)
 
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
@@ -459,7 +458,7 @@ class TestClient(SquareClient):
                                   'available_for_pickup': True,
                                   'product_type': random.choice(['REGULAR', 'APPOINTMENTS_SERVICE']),
                                   'skip_modifiere_screen': False,
-                                  'modifier_list_info':[{
+                                  'modifier_list_info': [{
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
                                   }]}} for item_id in item_ids]
@@ -684,7 +683,7 @@ class TestClient(SquareClient):
         # location id in body is merchant location id, one in create_order call is bussiness location id
         created_orders = []
         all_locations = self.get_all('locations', start_date)
-        for i in range(num_records):
+        for _ in range(num_records):
             location_id = random.choice(all_locations).get('id')
             body = {'order': {'location_id': location_id,},
                     'idempotency_key': str(uuid.uuid4())}
@@ -700,15 +699,16 @@ class TestClient(SquareClient):
                     'recipient': {
                         'display_name': 'display name 42',
                     }
-                 },
-                 'state': 'PROPOSED'
+                },
+                'state': 'PROPOSED'
             }]
             created_orders.append(self.post_order(body, location_id).body.get('order'))
 
         return created_orders
 
     def create_shift(self, start_date, end_date, num_records):
-        employee_id = [employee['id'] for employee in self.get_all('employees', start_date)][0]
+        employee_id = self.get_first_found('employees', None)['id']
+
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
 

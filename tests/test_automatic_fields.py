@@ -1,5 +1,7 @@
 import os
 
+from unittest import TestCase
+
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -7,15 +9,14 @@ import tap_tester.runner      as runner
 from base import TestSquareBase
 
 
-class TestAutomaticFields(TestSquareBase):
+class TestAutomaticFields(TestSquareBase, TestCase):
     """Test that with no fields selected for a stream automatic fields are still replicated"""
 
     def name(self):
         return "tap_tester_square_automatic_fields"
 
-    def testable_streams(self):
+    def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
-
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
@@ -24,7 +25,7 @@ class TestAutomaticFields(TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.auto_fields_test()
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -36,7 +37,7 @@ class TestAutomaticFields(TestSquareBase):
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test()
 
 

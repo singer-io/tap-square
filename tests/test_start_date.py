@@ -8,12 +8,13 @@ import tap_tester.runner      as runner
 
 import singer
 
+from unittest import TestCase
 from base import TestSquareBase
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareStartDate(TestSquareBase):
+class TestSquareStartDate(TestSquareBase, TestCase):
     START_DATE = ""
     START_DATE_1 = ""
     START_DATE_2 = ""
@@ -21,7 +22,7 @@ class TestSquareStartDate(TestSquareBase):
     def name(self):
         return "tap_tester_square_start_date_test"
 
-    def testable_streams(self):
+    def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
@@ -44,7 +45,7 @@ class TestSquareStartDate(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')  # Initialize start_date state to make assertions
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.start_date_test()
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -59,7 +60,7 @@ class TestSquareStartDate(TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.start_date_test()
 
     def start_date_test(self):
