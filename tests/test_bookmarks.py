@@ -13,16 +13,20 @@ from base import TestSquareBase
 LOGGER = singer.get_logger()
 
 
-class TestSquareIncrementalReplication(TestSquareBase):
+class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
     def name(self):
         return "tap_tester_square_incremental_replication"
 
-    def testable_streams(self):
+    def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
             'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
             'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
         })
+
+    def testable_streams_static(self):
+        """ No static streams marked for incremental. """
+        return set()
 
     def cannot_update_streams(self):
         return {
@@ -56,11 +60,11 @@ class TestSquareIncrementalReplication(TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.bookmarks_test(self.testable_streams().intersection(self.sandbox_streams()))
+        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
         self.set_environment(self.PRODUCTION)
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.bookmarks_test(self.testable_streams().intersection(self.production_streams()))
+        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.production_streams()))
 
     def bookmarks_test(self, testable_streams):
         """

@@ -10,14 +10,17 @@ from base import TestSquareBase
 from test_client import TestClient
 
 
-class TestSquareIncrementalReplication(TestSquareBase):
+class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
 
     def name(self):
         return "tap_tester_square_incremental_replication"
 
-    def testable_streams(self):
+    def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
+
+    def testable_streams_dynamic(self):
+        return set()
 
     @classmethod
     def tearDownClass(cls):
@@ -63,7 +66,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         self.START_DATE = self.STATIC_START_DATE
 
         # Ensure tested streams have data
-        expected_records_first_sync = self.create_test_data(self.testable_streams(), self.START_DATE)
+        expected_records_first_sync = self.create_test_data(self.testable_streams_static(), self.START_DATE)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -77,7 +80,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
 
         # Select all testable streams and no fields within streams
         found_catalogs = menagerie.get_catalogs(conn_id)
-        streams_to_select = self.testable_streams()
+        streams_to_select = self.testable_streams_static()
         our_catalogs = [catalog for catalog in found_catalogs if
                         catalog.get('tap_stream_id') in streams_to_select]
         self.select_all_streams_and_fields(conn_id, our_catalogs)
@@ -101,7 +104,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         # Set expectations for 2nd sync
         expected_records_second_sync = {x: [] for x in self.expected_streams()}
         # adjust expectations for full table streams to include the expected records from sync 1
-        for stream in self.testable_streams():
+        for stream in self.testable_streams_static():
             if stream in self.expected_full_table_streams():
                 for record in expected_records_first_sync.get(stream, []):
                     expected_records_second_sync[stream].append(record)
@@ -115,7 +118,7 @@ class TestSquareIncrementalReplication(TestSquareBase):
         second_sync_state = menagerie.get_state(conn_id)
 
         # Loop first_sync_records and compare against second_sync_records
-        for stream in self.testable_streams():
+        for stream in self.testable_streams_static():
             with self.subTest(stream=stream):
 
                 second_sync_data = [record.get("data") for record
