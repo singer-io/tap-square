@@ -125,10 +125,12 @@ class TestClient(SquareClient):
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
     def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=frozenset(), **kwargs):
-        while True:
-            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop', stream)
+        attempts = 0
+        while attempts < 100:
+            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop [attemps: %s]', stream, attempts)
             all_objects = self.get_all(stream, start_date)
             found_object = [object for object in all_objects if object['id'] == object_id]
+            attempts += 1
             if not found_object:
                 LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
@@ -142,6 +144,8 @@ class TestClient(SquareClient):
                 return found_object
             else:
                 LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
+
+        LOGGER.error("Polling Failed for stream %s object with id %s \n [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -295,15 +299,48 @@ class TestClient(SquareClient):
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
+    def create_specific_inventory_adjustment(self, start_date, obj, to_state):
+        catalog_obj_id= obj.get('catalog_object_id')
+        location_id = obj.get('location_id')
+        from_state = obj.get('state')
+        change = [self._inventory_specific_change(catalog_obj_id, location_id, to_state, from_state)]
+
+        body = {
+            'changes': change,
+            'ignore_unchanged_counts': False,
+            'idempotency_key': str(uuid.uuid4())
+        }
+        LOGGER.info("About to create %s inventory adjustments", len(change))
+        response = self._client.inventory.batch_change_inventory(body)
+        if response.is_error():
+            LOGGER.error("response had error, body was %s", body)
+            raise RuntimeError(response.errors)
+
+        return response.body.get('counts')
+
+    @staticmethod
+    def _inventory_specific_change(catalog_obj_id, location_id, to_state, from_state):
+        occurred_at = datetime.strftime(
+            datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
+
+        return {
+            'type': 'ADJUSTMENT',
+            'adjustment': {
+                'from_state': from_state,
+                'to_state': to_state,
+                'location_id': location_id,
+                'occurred_at': occurred_at,
+                'catalog_object_id': catalog_obj_id,
+                'quantity': '1.0',
+                'source': {
+                    'product': random.choice([
+                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
+                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
+                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
+        }
+
     @staticmethod
     def _inventory_adjustment_change(catalog_obj_id, location_id):
-        # TODO
-        # states = ['SOLD'] # WASTE SOLD_ONLINE
-        #else:
-        #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-        #                'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-        #                'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-        # to_state = random.choice(states)
         occurred_at = datetime.strftime(
             datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
         return {
@@ -322,7 +359,7 @@ class TestClient(SquareClient):
                         'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
         }
 
-    def create_refund(self, start_date):
+    def create_refund(self, start_date, payment_response=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -333,8 +370,10 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        payment_response = self._create_payment(autocomplete=True, source_key="card")
-        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
+        if not payment_response:
+            payment_response = self._create_payment(autocomplete=True, source_key="card")
+        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
+                                                          start_date=start_date, status=payment_response.get('status'))[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -816,13 +855,25 @@ class TestClient(SquareClient):
         'cancel': 'CANCELED',
     }
 
-    def _update_payment(self, obj_id: str, action=None):
+    def _create_dispute(self, obj: None):
+        body = {
+            'idempotency_key': str(uuid.uuid4()),
+            }
+        resp = self._client.labor.create_shift(body=body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+
+    def _update_payment(self, obj_id: str, obj: None, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
             action = random.choice(['complete', 'cancel'])
+        elif action == 'dispute':
+            return self._create_dispute(obj)
+
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
