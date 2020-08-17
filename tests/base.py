@@ -418,8 +418,8 @@ class TestSquareBase(ABC):
 
         # Force modifier_lists to go first and payments to go last
         create_test_data_streams = list(testable_streams)
-        self._shift_to_start_of_list('employees', create_test_data_streams)
-        self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
+        create_test_data_streams = self._shift_to_start_of_list('employees', create_test_data_streams)
+        create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
         if 'payments' in testable_streams:
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')

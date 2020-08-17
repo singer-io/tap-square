@@ -255,9 +255,6 @@ class SquareClient():
 
         end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
         while cursor:
-            if cursor == '__initial__':
-                cursor = bookmarked_cursor
-
             with singer.http_request_timer('GET cash drawer shifts'):
                 result = self._retryable_v2_method(
                     lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(

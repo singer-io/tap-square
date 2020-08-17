@@ -704,7 +704,7 @@ class TestClient(SquareClient):
         return created_orders
 
     def create_shift(self, start_date, end_date, num_records):
-        employee_id = self.get_first_found('employees', None)['id']
+        employee_id = self.get_or_create_first_found('employees', None)['id']
 
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
