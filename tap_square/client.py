@@ -26,7 +26,7 @@ def log_backoff(details):
     '''
     Logs a backoff retry message
     '''
-    LOGGER.warn('Network error receiving data from Typo. Sleeping {:.1f} seconds before trying again: {}'.format(details['wait']))
+    LOGGER.warning('Network error receiving data from square. Sleeping {:.1f} seconds before trying again: {}'.format(details['wait']))
 
 
 class RetryableError(RuntimeError):
@@ -71,21 +71,26 @@ class SquareClient():
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
-    def _get_v2_objects(request_timer_suffix, request_method, body, body_key):
+    def _retryable_method(request_method, body, **kwargs):
+        result = request_method(body, **kwargs)
+
+        if result.is_error():
+            error_message = result.errors if result.errors else result.body
+            if 'Service Unavailable' in error_message:
+                raise RetryableError(error_message)
+            else:
+                raise RuntimeError(error_message)
+
+        return result
+
+    def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
         cursor = body.get('cursor', '__initial__')
         while cursor:
             if cursor != '__initial__':
                 body['cursor'] = cursor
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
-                result = request_method(body)
-
-            if result.is_error():
-                error_message = result.errors if result.errors else result.body
-                if 'Service Unavailable' in error_message:
-                    raise RetryableError(error_message)
-                else:
-                    raise RuntimeError(error_message)
+                result = self._retryable_method(request_method, body)
 
             yield (result.body.get(body_key, []), result.body.get('cursor'))
 
@@ -242,6 +247,33 @@ class SquareClient():
             body,
             'payments')
 
+    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
+
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                cursor = bookmarked_cursor
+
+            with singer.http_request_timer('GET cash drawer shifts'):
+                result = self._retryable_method(
+                    lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=1000,
+                    ),
+                    None,
+                )
+
+            yield (result.body.get('items', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
+
     def get_roles(self, bookmarked_cursor):
         headers = {
             'Authorization': 'Bearer ' + self._access_token,
@@ -274,37 +306,6 @@ class SquareClient():
             batch_token = get_batch_token_from_headers(result.headers)
 
             yield (result.json(), batch_token)
-
-    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
-        with singer.http_request_timer('GET cash drawer shifts'):
-            result = self._client.cash_drawers.list_cash_drawer_shifts(
-                location_id=location_id,
-                begin_time=start_time,
-                end_time=end_time,
-                cursor=bookmarked_cursor,
-                limit=1000,
-            )
-
-        if result.is_error():
-            raise RuntimeError(result.errors)
-
-        yield (result.body.get('items', []), result.body.get('cursor'))
-
-        while result.body.get('cursor'):
-            with singer.http_request_timer('GET cash drawer shifts'):
-                result = self._client.cash_drawers.list_cash_drawer_shifts(
-                    location_id=location_id,
-                    begin_time=start_time,
-                    end_time=end_time,
-                    cursor=result.body.get('cursor'),
-                    limit=1000,
-                )
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('items', []), result.body.get('cursor'))
 
     def get_settlements(self, location_id, start_time):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
