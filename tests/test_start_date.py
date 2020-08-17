@@ -173,14 +173,9 @@ class TestSquareStartDate(TestSquareBase, TestCase):
 
         synced_records_2 = runner.get_records_from_target_output()
 
-        state_2 = menagerie.get_state(conn_id)
-
-        replication_keys = self.expected_replication_keys()
-
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 replication_type = self.expected_replication_method().get(stream)
-                comparison_key = next(iter(replication_keys.get(stream, {'created_at'})))
                 record_count_1 = record_count_by_stream_1.get(stream, 0)
                 record_count_2 = record_count_by_stream_2.get(stream, 0)
 
@@ -206,19 +201,19 @@ class TestSquareStartDate(TestSquareBase, TestCase):
                     continue
 
                 # Verify all data from first sync has bookmark values >= start_date .
-                records_from_sync_1 = set(row.get('data').get(comparison_key)
-                                          for row in synced_records_1.get(stream, []).get('messages', []))
-                for record in records_from_sync_1:
-                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_1),
-                                            msg="Record was created prior to start date for 1st sync.\n" +
-                                            "Sync 1 start_date: {}\n".format(self.START_DATE_1) +
-                                            "Record bookmark: {} ".format(record))
+                self.assertRecordsDateGreaterEqual(synced_records_1, stream, self.START_DATE_1)
+                self.assertRecordsDateGreaterEqual(synced_records_2, stream, self.START_DATE_2)
 
-                # Verify all data from second sync has bookmark values >= start_date 2.
-                records_from_sync_2 = set(row.get('data').get(comparison_key)
-                                          for row in synced_records_2.get(stream, {}).get('messages', []))
-                for record in records_from_sync_2:
-                    self.assertGreaterEqual(self.parse_date(record), self.parse_date(self.START_DATE_2),
-                                            msg="Record was created prior to start date for 2nd sync.\n" +
-                                            "Sync 2 start_date: {}\n".format(self.START_DATE_2) +
-                                            "Record bookmark: {} ".format(record))
+    def assertRecordsDateGreaterEqual(self, sync_records, stream, start_date):
+        replication_key = next(iter(self.expected_replication_keys().get(stream, {'created_at'})))
+        records_replication_key_data = set(
+            row.get('data').get(replication_key)
+            for row in sync_records.get(stream, []).get('messages', [])
+        )
+        for record_date in records_replication_key_data:
+            self.assertGreaterEqual(
+                self.parse_date(record_date), self.parse_date(start_date),
+                msg="Record was created prior to start date for this sync.\n" +
+                "Sync start_date: {}\n".format(start_date) +
+                "Record date: {} ".format(record_date)
+            )
