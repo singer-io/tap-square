@@ -203,9 +203,9 @@ class TestSquareStartDate(TestSquareBase, TestCase):
     def assertRecordsDateGreaterEqual(self, sync_records, stream, start_date):
         replication_type = self.expected_replication_method().get(stream)
         if replication_type == self.INCREMENTAL and self.expected_replication_keys().get(stream):
-            start_date_key = next(iter(self.expected_start_date_stream_to_key.get(stream)))
+            start_date_key = next(iter(self.expected_replication_keys().get(stream)))
         elif replication_type == self.FULL and self.expected_stream_to_start_date_key().get(stream):
-            start_date_key = self.expected_stream_to_start_date_key.get(stream)
+            start_date_key = self.expected_stream_to_start_date_key().get(stream)
         else:
             start_date_key = 'created_at'
 
