@@ -26,7 +26,9 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
-        return self.static_data_streams().difference(self.untestable_streams())
+        return self.static_data_streams().difference(self.untestable_streams()).differences({
+            'locations', # As discussed with PM, because this is a parent stream of a few other streams intentionally does not respect start_date
+        }
 
     def timedelta_formatted(self, dtime, days=0):
         try:
