@@ -235,7 +235,7 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
-    def get_first_found(self, stream, start_date):
+    def get_or_create_first_found(self, stream, start_date):
         all_found = self.get_all(stream, start_date)
 
         if all_found:

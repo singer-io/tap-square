@@ -5,6 +5,7 @@ from square.client import Client
 from singer import utils
 import singer
 import requests
+import backoff
 
 
 LOGGER = singer.get_logger()
@@ -19,6 +20,17 @@ def get_batch_token_from_headers(headers):
         return parsed_query['batch_token'][0]
     else:
         return None
+
+
+def log_backoff(details):
+    '''
+    Logs a backoff retry message
+    '''
+    LOGGER.warn('Network error receiving data from Typo. Sleeping {:.1f} seconds before trying again: {}'.format(details['wait']))
+
+
+class RetryableError(RuntimeError):
+    pass
 
 
 class SquareClient():
@@ -52,6 +64,13 @@ class SquareClient():
         return result.body['access_token']
 
     @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        (RetryableError),
+        max_time=120, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
     def _get_v2_objects(request_timer_suffix, request_method, body, body_key):
         cursor = body.get('cursor', '__initial__')
         while cursor:
@@ -63,7 +82,10 @@ class SquareClient():
 
             if result.is_error():
                 error_message = result.errors if result.errors else result.body
-                raise RuntimeError(error_message)
+                if 'Service Unavailable' in error_message:
+                    raise RetryableError(error_message)
+                else:
+                    raise RuntimeError(error_message)
 
             yield (result.body.get(body_key, []), result.body.get('cursor'))
 
