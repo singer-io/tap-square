@@ -289,8 +289,7 @@ class TestClient(SquareClient):
 
             # Get a random location to apply the adjustment
             location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
-            # changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
-            changes.append(self._inventory_specific_change(catalog_obj_id, location_id))
+            changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
         for change_chunk in chunks(changes, 100):
@@ -326,14 +325,14 @@ class TestClient(SquareClient):
         return response.body.get('counts')
 
     @staticmethod
-    def _inventory_specific_change(catalog_obj_id, location_id, to_state=None, from_state=None):
+    def _inventory_adjustment_change(catalog_obj_id, location_id, to_state=None, from_state=None):
         occurred_at = datetime.strftime(
             datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
 
         if not to_state and not from_state:
-            from_state, to_state = random.choice({
+            from_state, to_state = random.choice([
                 ('IN_STOCK', 'SOLD'), ('IN_STOCK', 'SOLD'), ('NONE', 'IN_STOCK'), ('UNLINKED_RETURN', 'IN_STOCK'), 
-            })
+            ])
 
         adjust_to = {'SOLD', 'IN_STOCK', 'WASTE'}
         adjust_from = {'IN_STOCK', 'NONE', 'UNLINKED_RETURN'}
@@ -354,26 +353,6 @@ class TestClient(SquareClient):
         }
 
         return adjustments[to_state]
-
-    @staticmethod
-    def _inventory_adjustment_change(catalog_obj_id, location_id):
-        occurred_at = datetime.strftime(
-            datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
-        return {
-            'type': 'ADJUSTMENT',
-            'adjustment': {
-                'from_state': 'IN_STOCK',
-                'to_state': 'SOLD',
-                'location_id': location_id,
-                'occurred_at': occurred_at,
-                'catalog_object_id': catalog_obj_id,
-                'quantity': '1.0',
-                'source': {
-                    'product': random.choice([
-                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
-        }
 
     def create_refund(self, start_date, payment_response=None):
         """
@@ -873,7 +852,7 @@ class TestClient(SquareClient):
             raise RuntimeError(resp.errors)
         LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
 
-    def _update_payment(self, obj_id: str, obj: None, action=None):
+    def _update_payment(self, obj_id: str, obj=None, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))

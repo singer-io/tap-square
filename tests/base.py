@@ -27,7 +27,6 @@ class TestSquareBase(ABC):
     SQUARE_ENVIRONMENT = SANDBOX
     REPLICATION_KEYS = "valid-replication-keys"
     PRIMARY_KEYS = "table-key-properties"
-    FOREIGN_KEYS = "table-foreign-key-properties"
     REPLICATION_METHOD = "forced-replication-method"
     START_DATE_KEY = 'start-date-key'
     API_LIMIT = "max-row-limit"
@@ -467,7 +466,14 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    def run_initial_sync(self, environment, data_type):
+    def run_initial_sync(self, environment, data_type): # REFACTOR see TODOs below
+        """
+        Run the tap in check mode.
+        Perform table selection based on testable streams.
+        Select all fields for selected streams.
+        Run a sync.
+        """
+
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
 
@@ -485,6 +491,8 @@ class TestSquareBase(ABC):
         diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
+
+        # TODO Break the above code into run_and_verify_check()
 
         # Select all available fields from all testable streams
         exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
@@ -514,6 +522,8 @@ class TestSquareBase(ABC):
         #clear state
         menagerie.set_state(conn_id, {})
 
+        # TODO  Put the above code back into each test for transparency
+
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
 
@@ -525,5 +535,5 @@ class TestSquareBase(ABC):
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-
+        # TODO  Put the above and below code into run_and_verify_sync()
         return conn_id, first_record_count_by_stream
