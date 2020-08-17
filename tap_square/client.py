@@ -66,12 +66,12 @@ class SquareClient():
     @staticmethod
     @backoff.on_exception(
         backoff.expo,
-        (RetryableError),
-        max_time=120, # seconds
+        RetryableError,
+        max_time=180, # seconds
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
-    def _retryable_method(request_method, body, **kwargs):
+    def _retryable_v2_method(request_method, body, **kwargs):
         result = request_method(body, **kwargs)
 
         if result.is_error():
@@ -90,7 +90,7 @@ class SquareClient():
                 body['cursor'] = cursor
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
-                result = self._retryable_method(request_method, body)
+                result = self._retryable_v2_method(request_method, body)
 
             yield (result.body.get(body_key, []), result.body.get('cursor'))
 
@@ -259,7 +259,7 @@ class SquareClient():
                 cursor = bookmarked_cursor
 
             with singer.http_request_timer('GET cash drawer shifts'):
-                result = self._retryable_method(
+                result = self._retryable_v2_method(
                     lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(
                         location_id=location_id,
                         begin_time=start_time,
@@ -285,18 +285,33 @@ class SquareClient():
         else:
             batch_token = '__initial__'
 
+        session = requests.Session()
+        session.headers.update(headers)
+
         while batch_token:
             if batch_token != '__initial__':
                 params['batch_token'] = batch_token
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
-                result = requests.get(url, headers=headers, params=params)
-
-            result.raise_for_status()
+                result = self._retryable_v1_method(session, url, params)
 
             batch_token = get_batch_token_from_headers(result.headers)
 
             yield (result.json(), batch_token)
+
+    @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=180, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_v1_method(session, url, params):
+        result = session.get(url, params=params)
+        result.raise_for_status()
+
+        return result
 
     def get_roles(self, bookmarked_cursor):
         yield from self._get_v1_objects(
