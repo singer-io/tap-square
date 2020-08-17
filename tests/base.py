@@ -125,11 +125,12 @@ class TestSquareBase(ABC):
             "employees": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
+                self.START_DATE_KEY: 'updated_at'
             },
-           "inventories": {
+            "inventories": {
                 self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
-               self.START_DATE_KEY: 'calculated_at',
+                self.START_DATE_KEY: 'calculated_at',
             },
             "items": {
                 self.PRIMARY_KEYS: {'id'},
@@ -160,7 +161,8 @@ class TestSquareBase(ABC):
             },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL
+                self.REPLICATION_METHOD: self.FULL,
+                self.START_DATE_KEY: 'updated_at'
             },
             "settlements": {
                 self.PRIMARY_KEYS: {'id'},
@@ -278,7 +280,7 @@ class TestSquareBase(ABC):
                 for table, properties
                 in self.expected_metadata().items() if table in incremental_streams}
 
-    def expected_start_date_stream_to_key(self):
+    def expected_stream_to_start_date_key(self):
         return {table: properties.get(self.START_DATE_KEY)
                 for table, properties in self.expected_metadata().items()
                 if properties.get(self.START_DATE_KEY)}
@@ -431,8 +433,8 @@ class TestSquareBase(ABC):
 
             if self.expected_replication_keys().get(stream):
                 rep_key = next(iter(self.expected_replication_keys().get(stream)))
-            elif self.expected_start_date_stream_to_key().get(stream):
-                rep_key = self.expected_start_date_stream_to_key().get(stream)
+            elif self.expected_stream_to_start_date_key().get(stream):
+                rep_key = self.expected_stream_to_start_date_key().get(stream)
             else:
                 rep_key = 'created_at'
 

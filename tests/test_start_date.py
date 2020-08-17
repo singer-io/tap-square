@@ -196,21 +196,24 @@ class TestSquareStartDate(TestSquareBase, TestCase):
                     raise Exception("Expectations are set incorrectly. {} cannot have a "
                                     "replication method of {}".format(stream, replication_type))
 
-                # Skip the remaining assertions for inventories since it is append only
-                if stream == 'inventories':
-                    continue
-
                 # Verify all data from first sync has bookmark values >= start_date .
                 self.assertRecordsDateGreaterEqual(synced_records_1, stream, self.START_DATE_1)
                 self.assertRecordsDateGreaterEqual(synced_records_2, stream, self.START_DATE_2)
 
     def assertRecordsDateGreaterEqual(self, sync_records, stream, start_date):
-        replication_key = next(iter(self.expected_replication_keys().get(stream, {'created_at'})))
-        records_replication_key_data = set(
-            row.get('data').get(replication_key)
+        replication_type = self.expected_replication_method().get(stream)
+        if replication_type == self.INCREMENTAL and self.expected_replication_keys().get(stream):
+            start_date_key = next(iter(self.expected_start_date_stream_to_key.get(stream)))
+        elif replication_type == self.FULL and self.expected_stream_to_start_date_key().get(stream):
+            start_date_key = self.expected_stream_to_start_date_key.get(stream)
+        else:
+            start_date_key = 'created_at'
+
+        records_date_data = set(
+            row.get('data').get(start_date_key)
             for row in sync_records.get(stream, []).get('messages', [])
         )
-        for record_date in records_replication_key_data:
+        for record_date in records_date_data:
             self.assertGreaterEqual(
                 self.parse_date(record_date), self.parse_date(start_date),
                 msg="Record was created prior to start date for this sync.\n" +
