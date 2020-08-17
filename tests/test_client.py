@@ -7,7 +7,7 @@ import backoff
 
 import singer
 
-from tap_square.client import SquareClient
+from tap_square.client import SquareClient, log_backoff
 from tap_square.streams import Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
@@ -1001,6 +1001,7 @@ class TestClient(SquareClient):
         requests.exceptions.RequestException,
         max_time=120, # seconds
         jitter=backoff.full_jitter,
+        on_backoff=log_backoff,
     )
     def _retryable_request_method(request_method):
         response = request_method()
