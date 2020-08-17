@@ -52,11 +52,13 @@ def sync(config, state, catalog):
                 for page, cursor in stream_obj.sync(start_time, bookmarked_cursor):
                     for record in page:
                         if record[replication_key] >= start_time:
+                            transformed_record = transformer.transform(
+                                record, stream_schema, stream_metadata,
+                            )
                             singer.write_record(
                                 tap_stream_id,
-                                transformer.transform(
-                                    record, stream_schema, stream_metadata,
-                                ))
+                                transformed_record,
+                            )
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
                     singer.write_state(state)
 
