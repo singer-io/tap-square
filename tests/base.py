@@ -431,14 +431,8 @@ class TestSquareBase(ABC):
         for stream in create_test_data_streams:
             expected_records[stream] = self.client.get_all(stream, start_date)
 
-            if self.expected_replication_keys().get(stream):
-                rep_key = next(iter(self.expected_replication_keys().get(stream)))
-            elif self.expected_stream_to_start_date_key().get(stream):
-                rep_key = self.expected_stream_to_start_date_key().get(stream)
-            else:
-                rep_key = 'created_at'
-
-            if (not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
+            start_date_key = self.get_start_date_key(stream)
+            if (not any([stream_obj.get(start_date_key) and self.parse_date(stream_obj.get(start_date_key)) > self.parse_date(start_date_2)
                         for stream_obj in expected_records[stream]])
                     or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]):
 
@@ -458,6 +452,17 @@ class TestSquareBase(ABC):
             self.modify_expected_records(expected_records[stream])
 
         return expected_records
+
+    def get_start_date_key(self, stream):
+        replication_type = self.expected_replication_method().get(stream)
+        if replication_type == self.INCREMENTAL and self.expected_replication_keys().get(stream):
+            start_date_key = next(iter(self.expected_replication_keys().get(stream)))
+        elif replication_type == self.FULL and self.expected_stream_to_start_date_key().get(stream):
+            start_date_key = self.expected_stream_to_start_date_key().get(stream)
+        else:
+            start_date_key = 'created_at'
+
+        return start_date_key
 
     @staticmethod
     def _shift_to_start_of_list(key, values):
