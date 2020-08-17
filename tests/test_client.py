@@ -137,11 +137,11 @@ class TestClient(SquareClient):
                 LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
 
-            if not set(found_object[0].keys()).issuperset(keys_exist):
+            elif not set(found_object[0].keys()).issuperset(keys_exist):
                 LOGGER.warning("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
                 continue
 
-            if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
+            elif all([found_object[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
                 return found_object
             else:
@@ -289,7 +289,8 @@ class TestClient(SquareClient):
 
             # Get a random location to apply the adjustment
             location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
-            changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
+            # changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
+            changes.append(self._inventory_specific_change(catalog_obj_id, location_id))
 
         all_counts = []
         for change_chunk in chunks(changes, 100):
@@ -309,12 +310,8 @@ class TestClient(SquareClient):
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
-    def create_specific_inventory_adjustment(self, start_date, obj, to_state):
-        catalog_obj_id= obj.get('catalog_object_id')
-        location_id = obj.get('location_id')
-        from_state = obj.get('state')
+    def create_specific_inventory_adjustment(self, start_date, catalog_obj_id, location_id, from_state, to_state):
         change = [self._inventory_specific_change(catalog_obj_id, location_id, to_state, from_state)]
-
         body = {
             'changes': change,
             'ignore_unchanged_counts': False,
@@ -329,10 +326,21 @@ class TestClient(SquareClient):
         return response.body.get('counts')
 
     @staticmethod
-    def _inventory_specific_change(catalog_obj_id, location_id, to_state, from_state):
+    def _inventory_specific_change(catalog_obj_id, location_id, to_state=None, from_state=None):
         occurred_at = datetime.strftime(
             datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
 
+        if not to_state and not from_state:
+            from_state, to_state = random.choice({
+                ('IN_STOCK', 'SOLD'), ('IN_STOCK', 'SOLD'), ('NONE', 'IN_STOCK'), ('UNLINKED_RETURN', 'IN_STOCK'), 
+            })
+
+        adjust_to = {'SOLD', 'IN_STOCK', 'WASTE'}
+        adjust_from = {'IN_STOCK', 'NONE', 'UNLINKED_RETURN'}
+        if from_state not in adjust_from or to_state not in adjust_to:
+            raise RuntimeError("this method does not account for the adjustment {} -> {}".format(from_state, to_state))
+
+        quantity = random.choice(['1.0', '2.0', '3.0', '4.0'])
         return {
             'type': 'ADJUSTMENT',
             'adjustment': {
@@ -341,13 +349,11 @@ class TestClient(SquareClient):
                 'location_id': location_id,
                 'occurred_at': occurred_at,
                 'catalog_object_id': catalog_obj_id,
-                'quantity': '1.0',
-                'source': {
-                    'product': random.choice([
-                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
+                'quantity': quantity,
+            }
         }
+
+        return adjustments[to_state]
 
     @staticmethod
     def _inventory_adjustment_change(catalog_obj_id, location_id):
@@ -483,7 +489,10 @@ class TestClient(SquareClient):
 
     def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
-        mod_list_id = random.choice(mod_lists).get('id')
+        if mod_lists:
+            mod_list_id = random.choice(mod_lists).get('id')
+        else:
+            mod_list_id = self.create_modifier_list(num_records).body.get('objects').get('id')
 
         item_ids = [self.make_id('item') for n in range(num_records)]
         objects = [{'id': item_id,

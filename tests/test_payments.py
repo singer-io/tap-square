@@ -1,5 +1,6 @@
 import os
-import unittest
+
+from unittest import TestCase
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
@@ -8,11 +9,17 @@ import tap_tester.runner      as runner
 from base import TestSquareBase
 
 
-class TestSquarePayments(TestSquareBase):
+class TestSquarePayments(TestSquareBase, TestCase):
     """Test specific data input results in the expected output in the target"""
 
     def name(self):
         return "tap_tester_square_payments"
+
+    def testable_streams_dynamic(self):
+        return self.dynamic_data_streams().difference(self.untestable_streams())
+
+    def testable_streams_static(self):
+        return self.static_data_streams().difference(self.untestable_streams())
 
     def tested_stream(self):
         return 'payments'
@@ -107,6 +114,16 @@ class TestSquarePayments(TestSquareBase):
         )
         updated_records[stream][updated_desc] = canceled_payment
 
+        # Submit a dispute for a completed payment
+        # desc = "complete"
+        # updated_desc = "dispute"
+        # obj = updated_records[stream][desc]
+        # import pdb; pdb.set_trace()
+        # dispute_payment = self.ensure_dict_object(
+        #     self.client._update_payment(obj.get('id'), obj=obj, action=updated_desc)
+        # )
+        # updated_records[stream][updated_desc] = canceled_payment
+
         # Track all fields from the updated records
         for desc, record in updated_records[stream].items():
             if set(record.keys()).difference(fields):
@@ -116,7 +133,6 @@ class TestSquarePayments(TestSquareBase):
 
         # Verify all the fields found in the created and updated records are accounted for by the schema
         schema_keys = set(self.expected_schema_keys(stream))
-        fields.add("blueberry_pie")
         self.assertTrue(fields.issubset(schema_keys),
                         msg="Fields missing from schema: {}".format(fields.difference(schema_keys)))
 
