@@ -179,7 +179,8 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
-            updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version, obj=first_rec)
+            updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version,
+                                                obj=first_rec, start_date=self.START_DATE)
             assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
 
             assert len(updated_record) == 1, "Updated too many {} records".format(stream)
@@ -202,7 +203,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
 
-            updated_record = self.client.update('payments', first_rec_id, first_rec_version, self.START_DATE)
+            updated_record = self.client.update('payments', first_rec_id, first_rec_version)
             assert len(updated_record) > 0, "Failed to update a {} record".format('payments')
             assert len(updated_record) == 1, "Updated too many {} records".format('payments')
 

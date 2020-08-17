@@ -222,7 +222,6 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             if num_records != 1:
                 raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
-
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
             return self._create_orders(start_date=start_date, num_records=num_records)
@@ -848,25 +847,14 @@ class TestClient(SquareClient):
         'cancel': 'CANCELED',
     }
 
-    def _create_dispute(self, obj: None):
-        body = {
-            'idempotency_key': str(uuid.uuid4()),
-            }
-        resp = self._client.labor.create_shift(body=body)
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
-
     def _update_payment(self, obj_id: str, obj=None, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
-            action = random.choice(['complete', 'cancel'])
-        elif action == 'dispute': # TODO remove?
-            return self._create_dispute(obj)
-
+            action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
+            
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
@@ -931,7 +919,7 @@ class TestClient(SquareClient):
         }
         return self._update_object_v1("roles", role_id, data)
 
-    def update_modifier_list(self, obj, version): # TODO try v1 endpoint in produciton env
+    def update_modifier_list(self, obj, version):
         obj_id = obj.get('id')
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'MODIFIER_LIST',
@@ -1037,9 +1025,10 @@ class TestClient(SquareClient):
     ### DELETEs
     ##########################################################################
 
-    def delete_catalog(self, ids_to_delete):
-        body = {'object_ids': ids_to_delete}
-        resp = self._client.catalog.batch_delete_catalog_objects(body)
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        return resp
+    # TODO determine if this method works/is needed. Currently unused in tests...
+    # def delete_catalog(self, ids_to_delete):
+    #     body = {'object_ids': ids_to_delete}
+    #     resp = self._client.catalog.batch_delete_catalog_objects(body)
+    #     if resp.is_error():
+    #         raise RuntimeError(resp.errors)
+    #     return resp
