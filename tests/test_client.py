@@ -3,6 +3,7 @@ import random
 import os
 from datetime import datetime, timedelta, timezone
 import requests
+import backoff
 
 import singer
 
@@ -355,7 +356,7 @@ class TestClient(SquareClient):
         status = payment_obj.get('status')
 
         if status != "COMPLETED": # Just a sanity check that logic above is working
-            raise Exception("You cannot refund a payment with status: {}".format(status))
+            raise RuntimeError("You cannot refund a payment with status: {}".format(status))
         # REQUEST
         body = {'id': self.make_id('refund'),
                 'payment_id': payment_id,
@@ -642,9 +643,7 @@ class TestClient(SquareClient):
                 'role_ids': [],  # This is needed for v1 upsert, but does not exist in v2
             }
 
-            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-            if resp.status_code != 200:
-                raise Exception(resp.text)
+            resp = self._retryable_request_method(lambda: requests.post(url=full_url, headers=self.get_headers(), json=data))
 
             response = resp.json() # account for v1 to v2 changes
             employees.append(self.convert_employees_v1_to_v2(response))
@@ -673,9 +672,7 @@ class TestClient(SquareClient):
                 'permissions': random.choice(permissions),
                 'is_owner': False,
             }
-            resp = requests.post(url=full_url, headers=self.get_headers(), json=data)
-            if resp.status_code != 200:
-                raise Exception(resp.text)
+            resp = self._retryable_request_method(lambda: requests.post(url=full_url, headers=self.get_headers(), json=data))
             roles.append(resp.json())
         return roles
 
@@ -858,9 +855,7 @@ class TestClient(SquareClient):
         base_v1 = "https://connect.squareup.com/v1/me/"
         endpoint = base_v1 + stream + "/" + obj_id
 
-        resp = requests.put(url=endpoint, headers=self.get_headers(), json=data)
-        if resp.status_code != 200:
-            raise Exception(resp.text)
+        resp = self._retryable_request_method(lambda: requests.put(url=endpoint, headers=self.get_headers(), json=data))
         return resp.json()
 
     def update_employees_v1(self, obj):
@@ -999,3 +994,16 @@ class TestClient(SquareClient):
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp
+
+    @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=120, # seconds
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_request_method(request_method):
+        response = request_method()
+        response.raise_for_status()
+
+        return response
