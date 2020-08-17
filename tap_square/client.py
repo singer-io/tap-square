@@ -26,7 +26,7 @@ def log_backoff(details):
     '''
     Logs a backoff retry message
     '''
-    LOGGER.warning('Network error receiving data from square. Sleeping {:.1f} seconds before trying again: {}'.format(details['wait']))
+    LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
 class RetryableError(RuntimeError):
