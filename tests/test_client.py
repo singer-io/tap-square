@@ -217,7 +217,7 @@ class TestClient(SquareClient):
             return self.create_employees_v1(num_records)
         elif stream == 'roles':
             return self.create_roles_v1(num_records)
-        elif stream == 'inventories':  # TODO ensure as many fields as possible are covered by the creates
+        elif stream == 'inventories':
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             if num_records != 1:
@@ -790,8 +790,7 @@ class TestClient(SquareClient):
     ##########################################################################
     ### UPDATEs
     ##########################################################################
-
-    def update(self, stream, obj_id, version, obj=None): # pylint: disable=too-many-return-statements
+    def update(self, stream, obj_id, version, obj=None, start_date=None): # pylint: disable=too-many-return-statements
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work
@@ -800,7 +799,7 @@ class TestClient(SquareClient):
             raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and {}".format(obj_id, obj))
 
         if stream == 'items':
-            return self.update_item(obj_id, version).body.get('objects')
+            return self.update_item(obj_id, version, start_date).body.get('objects')
         elif stream == 'categories':
             return self.update_categories(obj_id, version).body.get('objects')
         elif stream == 'discounts':
@@ -826,14 +825,20 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("{} is not implmented".format(stream))
 
-    def update_item(self, obj_id, version):
-        # TODO add a category
-        # TODO add a tax
+    def update_item(self, obj_id, version, start_date):
+        """Add a category, tax, and chagne the name of the item"""
+        all_categories = self.get_all('categories', start_date)
+        category = random.choice(all_categories)
+        all_taxes = self.get_all('taxes', start_date)
+        tax_ids = [random.choice(all_taxes).get('id')]
+
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item')},
+                                          'item_data': {'name': self.make_id('item'),
+                                                        'category_id': category.get('id'),
+                                                        'tax_ids': tax_ids},
                                           'version': version}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_category(body)
@@ -859,7 +864,7 @@ class TestClient(SquareClient):
 
         if not action:
             action = random.choice(['complete', 'cancel'])
-        elif action == 'dispute':
+        elif action == 'dispute': # TODO remove?
             return self._create_dispute(obj)
 
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))

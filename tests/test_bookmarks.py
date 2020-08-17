@@ -202,7 +202,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             first_rec_id = first_rec.get('id')
             first_rec_version = first_rec.get('version')
 
-            updated_record = self.client.update('payments', first_rec_id, first_rec_version)
+            updated_record = self.client.update('payments', first_rec_id, first_rec_version, self.START_DATE)
             assert len(updated_record) > 0, "Failed to update a {} record".format('payments')
             assert len(updated_record) == 1, "Updated too many {} records".format('payments')
 
