@@ -255,6 +255,11 @@ class SquareClient():
 
         end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
         while cursor:
+            if cursor == '__initial__':
+                # initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
+
             with singer.http_request_timer('GET cash drawer shifts'):
                 result = self._retryable_v2_method(
                     lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(
