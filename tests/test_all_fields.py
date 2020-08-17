@@ -15,10 +15,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_all_fields"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
-            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
-            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
-        })
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
