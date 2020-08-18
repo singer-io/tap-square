@@ -550,9 +550,6 @@ class TestSquareBase(ABC):
         # Verify there are no duplicate pks in the target
         actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
         actual_pks_set = set(actual_pks)
-        if len(actual_pks) != len(actual_pks_set):
-            import ipdb; ipdb.set_trace()
-            1+1
         self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
         actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
 

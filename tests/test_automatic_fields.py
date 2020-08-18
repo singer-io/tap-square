@@ -14,7 +14,9 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         return "tap_tester_square_automatic_fields"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams())
+        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
+            'inventories', # No PK so not able to verify any automatic fields
+        })
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
@@ -37,7 +39,6 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test(self.PRODUCTION, DataType.DYNAMIC)
-
 
     def auto_fields_test(self, environment, data_type):
         """
@@ -69,9 +70,6 @@ class TestAutomaticFields(TestSquareBase, TestCase):
             self.assertGreater(count, 0, msg="failed to replicate any data for: {}".format(stream))
         print("total replicated row count: {}".format(replicated_row_count))
 
-        import ipdb; ipdb.set_trace()
-        1+1
-        # Test by Stream
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
