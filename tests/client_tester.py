@@ -19,27 +19,27 @@ if __name__ == "__main__":
 
     # CHANGE FLAGS HERE TO TEST SPECIFIC FUNCTION TYPES
     test_creates = True
-    test_updates = True  # To test updates, must also test creates
-    test_gets = True
-    test_deletes = False  # To test updates, must also test creates
+    test_updates = False  # To test updates, must also test creates
+    test_gets = False
+    test_deletes = True  # To test deletes, must also test creates
 
     # CHANGE FLAG TO PRINT ALL OBJECTS THAT FUNCTIONS INTERACT WITH
     print_objects = True
 
-    objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS 
-        # 'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE - NA
-        # 'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
-        # 'employees',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - NA
+    objects_to_test = [ # CHANGE TO TEST DESIRED STREAMS
+        # 'modifier_lists', # GET - DONE | CREATE -  | UPDATE -  | DELETE -
+        # 'inventories', # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'items',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - DONE
+        # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
+        # 'employees',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
-        # 'orders'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
-        'shifts'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE - NA
+        # 'orders'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE -
+        # 'shifts'  # GET - DONE | CREATE - DONE | UPDATE - DONE  | DELETE -
     ]
     print("********** Testing basic functions of test client **********")
     if test_gets:

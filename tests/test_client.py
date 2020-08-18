@@ -169,7 +169,7 @@ class TestClient(SquareClient):
     # Even though this is documented to be 1000, it fails for a batch of 985 for modifier_lists
     MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 500
 
-    def post_category(self, body):
+    def post_catalog(self, body):
         """
         body:
         {
@@ -191,13 +191,25 @@ class TestClient(SquareClient):
         resp = self._client.catalog.batch_upsert_catalog_objects(body)
         if resp.is_error():
             stream_name = body['batches'][0]['objects'][0]['type']
+            record_limit_message = "Constraint failed: A merchant's catalog may not contain more than 10000 objects"
+            if any(record_limit_message in error.get('detail') for error in resp.errors):
+                LOGGER.info('Too many %s objects have been created', stream_name)
+                self.cleanup(stream_name)
             raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
         for obj in resp.body['objects']:
-            category_id = obj.get('id')
-            category_type = obj.get('type')
-            category_name = obj.get(typesToKeyMap.get(category_type), {}).get('name', 'NONE')
-            LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
+            catalog_id = obj.get('id')
+            catalog_type = obj.get('type')
+            catalog_name = obj.get(typesToKeyMap.get(catalog_type), {}).get('name', 'NONE')
+            LOGGER.debug('Created %s with id %s and name %s', catalog_type, catalog_id, catalog_name)
         return resp
+
+    def cleanup(self, stream):
+        three_days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=3), '%Y-%m-%dT%H:%M:%SZ')
+        catalog = self.get_all(strem, start_date=three_days_ago)
+        catalog_ids = [cat.get('id') for cat in catalog]
+
+        LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream)
+        self.delete_catalog(catalog_ids)
 
     def post_order(self, body, business_location_id):
         """
@@ -473,7 +485,7 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
@@ -501,7 +513,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_item_variation(self, item_ids):
         objects = [{
@@ -522,7 +534,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_categories(self, num_records):
         category_ids = [self.make_id('category') for n in range(num_records)]
@@ -532,7 +544,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_discounts(self, num_records):
         discount_ids = [self.make_id('discount') for n in range(num_records)]
@@ -548,7 +560,7 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_taxes(self, num_records):
         tax_ids = [self.make_id('tax') for n in range(num_records)]
@@ -562,7 +574,7 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def post_location(self, body):
         """
@@ -846,7 +858,7 @@ class TestClient(SquareClient):
                                                         'tax_ids': tax_ids},
                                           'version': version}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     PAYMENT_ACTION_TO_STATUS = {
         'complete': 'COMPLETED',
@@ -887,7 +899,7 @@ class TestClient(SquareClient):
                                           'version': version,
                                           'category_data': {'name': self.make_id('category')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def _update_object_v1(self, stream, obj_id, data):
         if self.env_is_sandbox():
@@ -930,7 +942,7 @@ class TestClient(SquareClient):
                                           'version': version,
                                           'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -941,7 +953,7 @@ class TestClient(SquareClient):
                                                             'amount_money': {'amount': 34500,
                                                                              'currency': 'USD'}}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_taxes(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -949,7 +961,7 @@ class TestClient(SquareClient):
                                           'version': version,
                                           'tax_data': {'name': self.make_id('tax')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_locations(self, obj_id):
         body = {'location': {'name': self.make_id('location')}}
@@ -1024,6 +1036,17 @@ class TestClient(SquareClient):
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp
+
+    ##########################################################################
+    ### DELETEs
+    ##########################################################################
+
+    def delete_catalog(self, ids_to_delete):
+        body = {'object_ids': ids_to_delete}
+        resp = self._client.catalog.batch_delete_catalog_objects(body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp.body
 
     @staticmethod
     @backoff.on_exception(
