@@ -3,8 +3,8 @@ import re
 import os.path
 
 # Read in the filenames of the tests/ directroy
-# cwd = os.getcwd()
-# print("cwd: {}".format(cwd))
+cwd = os.getcwd()
+print("contents of cwd: {}".format(os.listdir(cwd))
 files = [
     name for name in os.listdir('/tap-square/tests/')
     if 'test' == name[:4] and '.py' == name[-3:] and \
