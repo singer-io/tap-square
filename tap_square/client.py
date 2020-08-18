@@ -5,6 +5,7 @@ from square.client import Client
 from singer import utils
 import singer
 import requests
+import backoff
 
 
 LOGGER = singer.get_logger()
@@ -19,6 +20,17 @@ def get_batch_token_from_headers(headers):
         return parsed_query['batch_token'][0]
     else:
         return None
+
+
+def log_backoff(details):
+    '''
+    Logs a backoff retry message
+    '''
+    LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
+
+
+class RetryableError(RuntimeError):
+    pass
 
 
 class SquareClient():
@@ -52,18 +64,33 @@ class SquareClient():
         return result.body['access_token']
 
     @staticmethod
-    def _get_v2_objects(request_timer_suffix, request_method, body, body_key):
+    @backoff.on_exception(
+        backoff.expo,
+        RetryableError,
+        max_time=180, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_v2_method(request_method, body, **kwargs):
+        result = request_method(body, **kwargs)
+
+        if result.is_error():
+            error_message = result.errors if result.errors else result.body
+            if 'Service Unavailable' in error_message:
+                raise RetryableError(error_message)
+            else:
+                raise RuntimeError(error_message)
+
+        return result
+
+    def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
         cursor = body.get('cursor', '__initial__')
         while cursor:
             if cursor != '__initial__':
                 body['cursor'] = cursor
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
-                result = request_method(body)
-
-            if result.is_error():
-                error_message = result.errors if result.errors else result.body
-                raise RuntimeError(error_message)
+                result = self._retryable_v2_method(request_method, body)
 
             yield (result.body.get(body_key, []), result.body.get('cursor'))
 
@@ -220,93 +247,91 @@ class SquareClient():
             body,
             'payments')
 
-    def get_roles(self, bookmarked_cursor):
+    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
+
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                # initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
+
+            with singer.http_request_timer('GET cash drawer shifts'):
+                result = self._retryable_v2_method(
+                    lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=1000,
+                    ),
+                    None,
+                )
+
+            yield (result.body.get('items', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
+
+    def _get_v1_objects(self, url, params, request_timer_suffix, bookmarked_cursor):
         headers = {
-            'Authorization': 'Bearer ' + self._access_token,
-            'Content-Type': 'application/json'
+            'content-type': 'application/json',
+            'authorization': 'Bearer {}'.format(self._access_token)
         }
-        params = {}
-        url = 'https://connect.squareup.com/v1/me/roles'
 
         if bookmarked_cursor:
-            params['batch_token'] = bookmarked_cursor
+            batch_token = bookmarked_cursor
+        else:
+            batch_token = '__initial__'
 
-        with singer.http_request_timer('GET roles'):
-            result = requests.get(url, headers=headers, params=params)
-
-        if result.status_code != 200:
-            raise RuntimeError(result.reason)
-
-        batch_token = get_batch_token_from_headers(result.headers)
-
-        yield (result.json(), batch_token)
+        session = requests.Session()
+        session.headers.update(headers)
 
         while batch_token:
-            params['batch_token'] = batch_token
-            with singer.http_request_timer('GET roles'):
-                result = requests.get(url, headers=headers, params=params)
+            if batch_token != '__initial__':
+                params['batch_token'] = batch_token
 
-            if result.status_code != 200:
-                raise RuntimeError(result.reason)
+            with singer.http_request_timer('GET ' + request_timer_suffix):
+                result = self._retryable_v1_method(session, url, params)
 
             batch_token = get_batch_token_from_headers(result.headers)
 
             yield (result.json(), batch_token)
 
-    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
-        with singer.http_request_timer('GET cash drawer shifts'):
-            result = self._client.cash_drawers.list_cash_drawer_shifts(
-                location_id=location_id,
-                begin_time=start_time,
-                end_time=end_time,
-                cursor=bookmarked_cursor,
-                limit=1000,
-            )
+    @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=180, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_v1_method(session, url, params):
+        result = session.get(url, params=params)
+        result.raise_for_status()
 
-        if result.is_error():
-            raise RuntimeError(result.errors)
+        return result
 
-        yield (result.body.get('items', []), result.body.get('cursor'))
+    def get_roles(self, bookmarked_cursor):
+        yield from self._get_v1_objects(
+            'https://connect.squareup.com/v1/me/roles',
+            dict(),
+            'roles',
+            bookmarked_cursor,
+        )
 
-        while result.body.get('cursor'):
-            with singer.http_request_timer('GET cash drawer shifts'):
-                result = self._client.cash_drawers.list_cash_drawer_shifts(
-                    location_id=location_id,
-                    begin_time=start_time,
-                    end_time=end_time,
-                    cursor=result.body.get('cursor'),
-                    limit=1000,
-                )
-
-            if result.is_error():
-                raise RuntimeError(result.errors)
-
-            yield (result.body.get('items', []), result.body.get('cursor'))
-
-    def get_settlements(self, location_id, start_time):
+    def get_settlements(self, location_id, start_time, bookmarked_cursor):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
-        headers = {
-            'content-type': 'application/json',
-            'authorization': 'Bearer {}'.format(self._access_token)
-        }
         params = {
             'limit': 200,
             'begin_time': start_time,
         }
-        resp = requests.get(url, headers=headers, params=params)
-        resp.raise_for_status()
-
-        batch_token = get_batch_token_from_headers(resp.headers)
-
-        yield (resp.json(), batch_token)
-
-        while batch_token:
-            with singer.http_request_timer('GET settlements'):
-                resp = requests.get(url, headers=headers, params=params)
-
-            resp.raise_for_status()
-
-            batch_token = get_batch_token_from_headers(resp.headers)
-
-            yield (resp.json(), batch_token)
+        yield from self._get_v1_objects(
+            url,
+            params,
+            'roles',
+            bookmarked_cursor,
+        )
