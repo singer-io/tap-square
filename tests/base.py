@@ -535,3 +535,25 @@ class TestSquareBase(ABC):
                                                                          self.expected_primary_keys())
 
         return conn_id, first_record_count_by_stream
+
+    def assertRecordsEqualByPK(self, stream, expected_records, actual_records):
+        """Compare expected and actual records by their primary key."""
+
+        primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
+
+        # Verify there are no duplicate pks in the target
+        actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
+        actual_pks_set = set(actual_pks)
+        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
+        actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
+
+        # Verify there are no duplicate pks in our expectations
+        expected_pks = [tuple(expected_record.get(pk) for pk in primary_keys) for expected_record in expected_records]
+        expected_pks_set = set(expected_pks)
+        self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
+        expected_pks_to_record_dict = {tuple(expected_record.get(pk) for pk in primary_keys): expected_record for expected_record in expected_records}
+
+        # Verify that all expected records and ONLY the expected records were replicated
+        self.assertEqual(expected_pks_set, actual_pks_set)
+
+        return expected_pks_to_record_dict, actual_pks_to_record_dict

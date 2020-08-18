@@ -96,64 +96,8 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
                 actual_records = [row['data'] for row in data['messages']]
 
-                if pk:
+                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
 
-                    stream_expected_record_ids = {record[pk] for record in expected_records.get(stream)}
-                    stream_actual_record_ids = {record[pk] for record in actual_records}
-                    self.assertEqual(stream_expected_record_ids,
-                                     stream_actual_record_ids)
-
-                    # Test by keys and values, that we replicated the expected records and nothing else
-
-                    # Verify that actual records were in our expectations
-                    for actual_record in actual_records:
-                        stream_expected_records = [record for record in expected_records.get(stream)
-                                                   if actual_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_expected_records),
-                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(1, len(stream_expected_records),
-                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
-                        stream_expected_record = stream_expected_records[0]
-                        self.assertDictEqual(stream_expected_record, actual_record)
-
-                    # Verify that our expected records were replicated by the tap
-                    for expected_record in expected_records.get(stream):
-                        stream_actual_records = [record for record in actual_records
-                                                 if expected_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_actual_records),
-                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(1, len(stream_actual_records),
-                                         msg="A duplicate record was found in the sync for {}.".format(stream))
-                        stream_actual_record = stream_actual_records[0]
-                        self.assertDictEqual(expected_record, stream_actual_record)
-
-                else:  # 'inventories' does not have a pk so our assertions aren't as clean
-
-                    # Verify that actual records were in our expectations
-                    for actual_record in actual_records:
-                        if actual_record not in expected_records.get(stream):
-                            print("DATA DISCREPANCY:\n\nACTUAL RECORD:\n{}\n".format(actual_record))
-                            for record in expected_records.get(stream):
-                                if record.get('catalog_object_id') == actual_record.get('catalog_object_id') and \
-                                   record.get('location_id') == actual_record.get('location_id'):
-                                    print("EXPECTED_RECORDS:")
-                                    print(str(record))
-                        self.assertIn(actual_record, expected_records.get(stream))
-
-                    # Verify that our expected records were replicated by the tap
-                    for expected_record in expected_records.get(stream):
-                        if expected_record not in actual_records:
-                            print("DATA DISCREPANCY:\n\nEXPECTED RECORD:\n{}\n".format(expected_record))
-                            for record in actual_records:
-                                if record.get('catalog_object_id') == expected_record.get('catalog_object_id') and \
-                                   record.get('location_id') == expected_record.get('location_id'):
-                                    print("ACTUAL_RECORDS:")
-                                    print(str(record))
-                        self.assertIn(expected_record, actual_records)
-
-                    self.assertEqual(len(expected_records.get(stream)), len(actual_records),
-                                     msg="Unexpected number of records synced.")
-
-
-if __name__ == '__main__':
-    unittest.main()
+                for pks_tuple, expected_record in expected_pks_to_record_dict.items():
+                    actual_record = actual_pks_to_record_dict.get(pks_tuple)
+                    self.assertDictEqual(expected_record, actual_record)
