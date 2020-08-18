@@ -24,19 +24,19 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
-        self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
+        self.auto_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        self.all_fields_test(self.SANDBOX, DataType.STATIC)
+        self.auto_fields_test(self.SANDBOX, DataType.STATIC)
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
+        self.auto_fields_test(self.PRODUCTION, DataType.DYNAMIC)
 
 
     def auto_fields_test(self, environment, data_type):
@@ -48,7 +48,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        expected_records_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
+        expected_records_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
             existing_objects = expected_records_all_fields.get(stream)
