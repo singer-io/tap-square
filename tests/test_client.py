@@ -127,13 +127,20 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
+    @backoff.on_exception(
+        backoff.expo,
+        RuntimeError,
+        max_time=60, # seconds
+        jitter=backoff.full_jitter,
+        on_backoff=log_backoff,
+    )
     def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=frozenset(), **kwargs):
         """
         Poll Square for a specific set of key(s) that we know are not immediately returned.
           ex. A completed payment will have a processing_fee field added after the api call is already returned.
         """
         attempts = 0
-        while attempts < 200:
+        while attempts < 25:
             LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop [attemps: %s]', stream, attempts)
             all_objects = self.get_all(stream, start_date)
             found_object = [object for object in all_objects if object['id'] == object_id]
@@ -153,6 +160,7 @@ class TestClient(SquareClient):
                 LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
 
         LOGGER.error("Polling Failed for stream %s object with id %s \n [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
+        raise RuntimeError()
 
     ##########################################################################
     ### CREATEs
@@ -395,8 +403,7 @@ class TestClient(SquareClient):
             LOGGER.error("response: {}".format(refund))
             LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
             raise RuntimeError(refund.errors)
-
-        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
+        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
         return (completed_refund, completed_payment)
 
@@ -1014,16 +1021,6 @@ class TestClient(SquareClient):
             body['order']['note'] = "Updated Order " + self.make_id('orders')
 
         resp = self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
-        if resp.is_error():
-            raise RuntimeError(resp.errors)
-        return resp
-
-    ##########################################################################
-    ### DELETEs
-    ##########################################################################
-    def delete_catalog(self, ids_to_delete):
-        body = {'object_ids': ids_to_delete}
-        resp = self._client.catalog.batch_delete_catalog_objects(body)
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp

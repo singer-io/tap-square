@@ -181,23 +181,26 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
                 first_rec_location_id = first_rec.get('location_id')
+                inventory_to_look_at = first_rec
                 # IN_STOCK -> SOLD
                 updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='IN_STOCK', to_state='SOLD', quantity='1.0')
+                assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
                 # UNLINKED_RETURN -> IN_STOCK
-                updated_record += self.client.create_specific_inventory_adjustment(
+                updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='UNLINKED_RETURN', to_state='IN_STOCK', quantity='2.0')
+                assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
                 # NONE -> IN_STOCK
-                updated_record += self.client.create_specific_inventory_adjustment(
+                updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='NONE', to_state='IN_STOCK', quantity='1.0')
-                # IN_STOCK -> WASTE
+                # IN_STOCK -> WASTE # TODO
                 # updated_record += self.client.create_specific_inventory_adjustment(
                 #     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                 #     from_state='IN_STOCK', to_state='WASTE', quantity='1.0')  # creates 2 records
-                assert len(updated_record) == 3, "Failed to update the {} records as intended".format(stream)
+                assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
             else:
                 first_rec_id = first_rec.get('id')
                 first_rec_version = first_rec.get('version')
@@ -234,11 +237,10 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
-            if stream == 'inventories':
+            if stream == 'inventories': # append only so we keep everything
                 primary_keys = self.makeshift_primary_keys().get(stream)
             else:
                 primary_keys = list(self.expected_primary_keys().get(stream))
-
             updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
             for record in expected_records_first_sync.get(stream, []):
                 record_pk_values = tuple([record.get(pk) for pk in primary_keys])
@@ -347,7 +349,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_second_sync.get(stream)
                 if stream == 'inventories':
-                    primary_keys = {'catalog_object_id', 'location_id', 'state'}
+                    primary_keys = self.makeshift_primary_keys().get(stream)
                 else:
                     primary_keys = stream_primary_keys.get(stream)
 
