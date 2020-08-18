@@ -158,7 +158,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
-            elif stream == 'orders':
+            elif stream == 'orders':  # Use the first available order that is still 'OPEN'
                 for message in first_sync_records.get(stream).get('messages'):
                     if message.get('data')['state'] not in ['COMPLETED', 'CANCELED']:
                         first_rec = message.get('data')
@@ -166,7 +166,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            elif stream == 'roles':
+            elif stream == 'roles':  # Use the first available role that has limited permissions (where is_owner = False)
                 for message in first_sync_records.get(stream).get('messages'):
                     data = message.get('data')
                     if not data['is_owner'] and 'role' in data['name']:
@@ -177,13 +177,35 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
             else:
                 first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
-            first_rec_id = first_rec.get('id')
-            first_rec_version = first_rec.get('version')
-            updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version,
-                                                obj=first_rec, start_date=self.START_DATE)
-            assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
 
-            assert len(updated_record) == 1, "Updated too many {} records".format(stream)
+            if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
+                first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
+                first_rec_location_id = first_rec.get('location_id')
+                # IN_STOCK -> SOLD
+                updated_record = self.client.create_specific_inventory_adjustment(
+                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    from_state='IN_STOCK', to_state='SOLD', quantity='1.0')
+                # UNLINKED_RETURN -> IN_STOCK
+                updated_record += self.client.create_specific_inventory_adjustment(
+                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    from_state='UNLINKED_RETURN', to_state='IN_STOCK', quantity='2.0')
+                # NONE -> IN_STOCK
+                updated_record += self.client.create_specific_inventory_adjustment(
+                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    from_state='NONE', to_state='IN_STOCK', quantity='1.0')
+                # IN_STOCK -> WASTE
+                # updated_record += self.client.create_specific_inventory_adjustment(
+                #     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                #     from_state='IN_STOCK', to_state='WASTE', quantity='1.0')  # creates 2 records
+                assert len(updated_record) == 3, "Failed to update the {} records as intended".format(stream)
+            else:
+                first_rec_id = first_rec.get('id')
+                first_rec_version = first_rec.get('version')
+                updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version,
+                                                    obj=first_rec, start_date=self.START_DATE)
+                assert len(updated_record) > 0, "Failed to update a {} record".format(stream)
+
+                assert len(updated_record) == 1, "Updated too many {} records".format(stream)
 
             expected_records_second_sync[stream] += updated_record
 

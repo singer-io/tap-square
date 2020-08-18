@@ -127,8 +127,12 @@ class TestClient(SquareClient):
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
     def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=frozenset(), **kwargs):
+        """
+        Poll Square for a specific set of key(s) that we know are not immediately returned.
+          ex. A completed payment will have a processing_fee field added after the api call is already returned.
+        """
         attempts = 0
-        while attempts < 100:
+        while attempts < 200:
             LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop [attemps: %s]', stream, attempts)
             all_objects = self.get_all(stream, start_date)
             found_object = [object for object in all_objects if object['id'] == object_id]
@@ -148,6 +152,7 @@ class TestClient(SquareClient):
                 LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
 
         LOGGER.error("Polling Failed for stream %s object with id %s \n [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
+
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -226,11 +231,7 @@ class TestClient(SquareClient):
         elif stream == 'orders':
             return self._create_orders(start_date=start_date, num_records=num_records)
         elif stream == 'refunds':
-            refunds = []
-            for _ in range(num_records):
-                (created_refund, _) = self.create_refund(start_date)
-                refunds += created_refund
-            return refunds
+            return self.create_refunds(start_date=start_date, num_records=num_records)
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
@@ -262,13 +263,6 @@ class TestClient(SquareClient):
             raise RuntimeError(response.errors)
 
         return response.body.get('object')
-
-    def get_an_inventory_adjustment(self, obj_id):
-        response = self._client.inventory.retrieve_inventory_changes(catalog_object_id=obj_id)
-
-        if response.is_error():
-            raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
-        return response
 
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create item object(s)
@@ -308,8 +302,8 @@ class TestClient(SquareClient):
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
-    def create_specific_inventory_adjustment(self, start_date, catalog_obj_id, location_id, from_state, to_state):
-        change = [self._inventory_specific_change(catalog_obj_id, location_id, to_state, from_state)]
+    def create_specific_inventory_adjustment(self, start_date, catalog_obj_id, location_id, from_state, to_state, quantity):
+        change = [self._inventory_adjustment_change(catalog_obj_id, location_id, from_state, to_state, quantity)]
         body = {
             'changes': change,
             'ignore_unchanged_counts': False,
@@ -324,21 +318,22 @@ class TestClient(SquareClient):
         return response.body.get('counts')
 
     @staticmethod
-    def _inventory_adjustment_change(catalog_obj_id, location_id, to_state=None, from_state=None):
-        occurred_at = datetime.strftime(
-            datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
-
+    def _inventory_adjustment_change(catalog_obj_id, location_id, from_state=None, to_state=None, quantity='1.0'):
+        """
+        Generate the value for the `adjustment` field for the `inventories` stream.
+        The adjustment is based on the to_state and from_state, and if none are provide the
+        default adjustment is IN_STOCK -> SOLD
+        """
+        valid_transitions = [('IN_STOCK', 'SOLD'), ('IN_STOCK', 'SOLD'), ('NONE', 'IN_STOCK'), ('UNLINKED_RETURN', 'IN_STOCK')]
         if not to_state and not from_state:
-            from_state, to_state = random.choice([
-                ('IN_STOCK', 'SOLD'), ('IN_STOCK', 'SOLD'), ('NONE', 'IN_STOCK'), ('UNLINKED_RETURN', 'IN_STOCK'), 
-            ])
+            from_state, to_state = valid_transitions[0]
 
         adjust_to = {'SOLD', 'IN_STOCK', 'WASTE'}
         adjust_from = {'IN_STOCK', 'NONE', 'UNLINKED_RETURN'}
         if from_state not in adjust_from or to_state not in adjust_to:
             raise RuntimeError("this method does not account for the adjustment {} -> {}".format(from_state, to_state))
-
-        quantity = random.choice(['1.0', '2.0', '3.0', '4.0'])
+        occurred_at = datetime.strftime(
+            datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
         return {
             'type': 'ADJUSTMENT',
             'adjustment': {
@@ -352,6 +347,13 @@ class TestClient(SquareClient):
         }
 
         return adjustments[to_state]
+
+    def create_refunds(self, start_date, num_records, payment_response=None):
+        refunds = []
+        for _ in range(num_records):
+            (created_refund, _) = self.create_refund(start_date, payment_response)
+            refunds += created_refund
+        return refunds
 
     def create_refund(self, start_date, payment_response=None):
         """
