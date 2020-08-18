@@ -1,6 +1,11 @@
 version: 2
 
 jobs:
+  queue:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:0.latest
+    steps:
+      - run: deployment_utils queue
   build:
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
@@ -151,6 +156,8 @@ workflows:
   version: 2
   commit:
     jobs:
+      - queue:
+          context: circleci-user
       - build:
           context: circleci-user
   build_daily:
