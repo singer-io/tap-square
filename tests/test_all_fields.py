@@ -52,12 +52,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # ensure data exists for sync streams and set expectations
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
-        # modify data set to conform to expectations (json standards)
-        for stream, records in expected_records.items():
-            print("Ensuring expected data for {} has values formatted correctly.".format(stream))
-            self.modify_expected_records(records)
 
         (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
