@@ -114,16 +114,6 @@ class TestSquarePayments(TestSquareBase, TestCase):
         )
         updated_records[stream][updated_desc] = canceled_payment
 
-        # Submit a dispute for a completed payment
-        # desc = "complete"
-        # updated_desc = "dispute"
-        # obj = updated_records[stream][desc]
-        # import pdb; pdb.set_trace()
-        # dispute_payment = self.ensure_dict_object(
-        #     self.client._update_payment(obj.get('id'), obj=obj, action=updated_desc)
-        # )
-        # updated_records[stream][updated_desc] = canceled_payment
-
         # Track all fields from the updated records
         for desc, record in updated_records[stream].items():
             if set(record.keys()).difference(fields):
