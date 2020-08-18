@@ -73,8 +73,6 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
                 expected_keys = set()
                 for record in expected_records.get(stream):
                     expected_keys.update(record.keys())
-                primary_keys = self.expected_primary_keys().get(stream)
-                pk = list(primary_keys)[0] if primary_keys else None
 
                 # Verify schema covers all fields
                 schema_keys = set(self.expected_schema_keys(stream))

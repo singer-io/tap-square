@@ -475,7 +475,7 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    def run_initial_sync(self, environment, data_type):
+    def run_initial_sync(self, environment, data_type, select_all_fields=True):
         # Instantiate connection with default start/end dates
         conn_id = connections.ensure_connection(self)
 
@@ -497,7 +497,7 @@ class TestSquareBase(ABC):
         # Select all available fields from all testable streams
         exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
         self.select_all_streams_and_fields(
-            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=select_all_fields, exclude_streams=exclude_streams
         )
 
         catalogs = menagerie.get_catalogs(conn_id)
@@ -513,11 +513,17 @@ class TestSquareBase(ABC):
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
 
-            # Verify all fields within each selected stream are selected
-            for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
-                field_selected = field_props.get('selected')
-                print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
-                self.assertTrue(field_selected, msg="Field not selected.")
+            if select_all_fields:
+                # Verify all fields within each selected stream are selected
+                for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
+                    field_selected = field_props.get('selected')
+                    print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                    self.assertTrue(field_selected, msg="Field not selected.")
+            else:
+                # Verify only automatic fields are selected
+                expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
+                selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+                self.assertEqual(expected_automatic_fields, selected_fields)
 
         #clear state
         menagerie.set_state(conn_id, {})
@@ -544,6 +550,9 @@ class TestSquareBase(ABC):
         # Verify there are no duplicate pks in the target
         actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
         actual_pks_set = set(actual_pks)
+        if len(actual_pks) != len(actual_pks_set):
+            import ipdb; ipdb.set_trace()
+            1+1
         self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
         actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
 
