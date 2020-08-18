@@ -52,7 +52,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
 
         (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 

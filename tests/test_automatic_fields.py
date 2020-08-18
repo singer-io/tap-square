@@ -2,11 +2,9 @@ import os
 
 from unittest import TestCase
 
-import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase
+from base import TestSquareBase, DataType
 
 
 class TestAutomaticFields(TestSquareBase, TestCase):
@@ -26,22 +24,22 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
-        self.auto_fields_test()
+        self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        self.auto_fields_test()
+        self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        self.auto_fields_test()
+        self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
 
 
-    def auto_fields_test(self):
+    def auto_fields_test(self, environment, data_type):
         """
         Verify that for each stream you can get data when no fields are selected
         and only the automatic fields are replicated.
@@ -50,97 +48,18 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # ensure data exists for sync streams and set expectations
+        expected_records_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
-            existing_objects = self.client.get_all(stream, self.START_DATE)
-            if not existing_objects:
-                print("Test data is not properly set for {}.".format(stream))
-
-                new_record = self.client.create(stream, start_date=self.START_DATE)
-                assert len(new_record) > 0, "Failed to create a {} record".format(stream)
-                assert len(new_record) == 1, "Created too many {} records: {}".format(stream, len(new_record))
-
-                expected_records[stream] += new_record
-
-            print("Data exists for stream: {}".format(stream))
+            existing_objects = expected_records_all_fields.get(stream)
             for obj in existing_objects:
                 expected_records[stream].append(
                     {field: obj.get(field)
-                    for field in self.expected_automatic_fields().get(stream)}
+                     for field in self.expected_automatic_fields().get(stream)}
                 )
 
-        # Adjust expectations for datetime format
-        for stream, records in expected_records.items():
-            print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(records)
+        (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
-        # Instantiate connection with default start/end dates
-        conn_id = connections.ensure_connection(self)
-
-        # run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
-
-        # verify check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are OK")
-
-        for cat in found_catalogs:
-            catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
-
-            # Verify that pks, rep keys, foreign keys have inclusion of automatic (metadata and annotated schema).
-            for k in self.expected_automatic_fields().get(cat['stream_name']):
-                mdata = next((m for m in catalog_entry['metadata']
-                              if len(m['breadcrumb']) == 2 and m['breadcrumb'][1] == k), None)
-
-                print("Validating inclusion on {}: {}".format(cat['stream_name'], mdata))
-                self.assertTrue(mdata and mdata['metadata']['inclusion'] == 'automatic')
-
-        # Select testable streams. Deselect all available fields from all testable streams, keep automatic fields
-        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
-        self.select_all_streams_and_fields(
-            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=False, exclude_streams=exclude_streams
-        )
-
-        catalogs = menagerie.get_catalogs(conn_id)
-
-        # Ensure our selection worked
-        for cat in catalogs:
-            expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
-            catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
-            # Verify all testable streams are selected
-            selected = catalog_entry.get('annotated-schema').get('selected')
-            print("Validating selection on {}: {}".format(cat['stream_name'], selected))
-            if cat['stream_name'] not in self.TESTABLE_STREAMS:
-                self.assertFalse(selected, msg="Stream `{}` selected, but not testable.".format(cat["stream_name"]))
-                continue # Skip remaining assertions if we aren't selecting this stream
-            self.assertTrue(selected, msg="Stream not selected.")
-            # Verify only automatic fields are selected
-            selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
-            self.assertEqual(expected_automatic_fields, selected_fields)
-
-        #clear state
-        menagerie.set_state(conn_id, {})
-
-        # run sync
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        # Verify tap exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # read target output
-        first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                         self.expected_streams(),
-                                                                         self.expected_primary_keys())
         replicated_row_count =  sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 

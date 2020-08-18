@@ -79,7 +79,8 @@ def sync(config, state, catalog):
                         transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                         singer.write_record(
                             tap_stream_id,
-                            transformed_record)
+                            transformed_record,
+                        )
                         if record[replication_key] > max_record_value:
                             max_record_value = transformed_record[replication_key]
 

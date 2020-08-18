@@ -408,7 +408,7 @@ class TestSquareBase(ABC):
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
 
-    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
+    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None, force_create_records=False):
         if min_required_num_records_per_stream is None:
             min_required_num_records_per_stream = {
                 stream: 1
@@ -434,7 +434,8 @@ class TestSquareBase(ABC):
             start_date_key = self.get_start_date_key(stream)
             if (not any([stream_obj.get(start_date_key) and self.parse_date(stream_obj.get(start_date_key)) > self.parse_date(start_date_2)
                         for stream_obj in expected_records[stream]])
-                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]):
+                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]
+                    or force_create_records):
 
                 num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(expected_records[stream]))
 
