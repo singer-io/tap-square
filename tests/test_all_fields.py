@@ -70,20 +70,22 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
-                expected_keys = list(expected_records.get(stream)[0].keys())
+                expected_keys = set()
+                for record in expected_records.get(stream):
+                    expected_keys.update(record.keys())
                 primary_keys = self.expected_primary_keys().get(stream)
                 pk = list(primary_keys)[0] if primary_keys else None
 
                 # Verify schema covers all fields
                 schema_keys = set(self.expected_schema_keys(stream))
                 self.assertEqual(
-                    set(), set(expected_keys).difference(schema_keys),
-                    msg="\nFields missing from schema: {}\n".format(set(expected_keys).difference(schema_keys))
+                    set(), expected_keys.difference(schema_keys),
+                    msg="\nFields missing from schema: {}\n".format(expected_keys.difference(schema_keys))
                 )
 
                 # not a test, just logging the fields that are included in the schema but not in the expectations
-                if schema_keys.difference(set(expected_keys)):
-                    print("WARNING Fields missing from expectations: {}".format(schema_keys.difference(set(expected_keys))))
+                if schema_keys.difference(expected_keys):
+                    print("WARNING Fields missing from expectations: {}".format(schema_keys.difference(expected_keys)))
 
                 # Verify that all fields sent to the target fall into the expected schema
                 for actual_keys in record_messages_keys:
