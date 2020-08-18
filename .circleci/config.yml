@@ -34,7 +34,8 @@ jobs:
           name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-    - run:
+      - run:
+          when: always
           name: 'All Tests Running'
           command: |
             source dev_env.sh
