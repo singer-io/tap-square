@@ -371,7 +371,7 @@ class TestClient(SquareClient):
             LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
             raise RuntimeError(refund.errors)
 
-        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
+        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
         return (completed_refund, completed_payment)
 
