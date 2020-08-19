@@ -220,7 +220,7 @@ class TestClient(SquareClient):
             if num_records != 1:
                 raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
 
-            return [self.create_locations().body.get('location')]
+            return [self._create_location()]
         elif stream == 'orders':
             return self._create_orders(start_date=start_date, num_records=num_records)
         elif stream == 'refunds':
@@ -550,7 +550,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created location with id %s and name %s', location_id, location_name)
         return resp
 
-    def create_locations(self):
+    def _create_location(self):
         made_id = self.make_id('location')
         website = 'https://get.stitchdata.com/stitch?utm_source=google' + \
             '&utm_medium=cpc&utm_campaign=stitch_ga_nam_en_dg_search_brand&utm_content' + \
@@ -621,7 +621,14 @@ class TestClient(SquareClient):
             print("body: {}".format(body))
             print("response: {}".format(response))
             raise RuntimeError(response.errors)
-        return response
+
+        location_id = response.body.get('location')['id']
+
+        # Trying to get_all locations because data is slightly different
+        all_locations = self.get_all('locations', None)
+        location_matching_ids = [location for location in all_locations if location['id'] == location_id]
+        assert len(location_matching_ids) == 1
+        return location_matching_ids[0]
 
     def create_employees_v1(self, num_records):
         if self.env_is_sandbox():

@@ -423,14 +423,12 @@ class TestSquareBase(ABC):
         create_test_data_streams = list(testable_streams)
         create_test_data_streams = self._shift_to_start_of_list('employees', create_test_data_streams)
         create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
-        if 'payments' in testable_streams:
-            # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
-            create_test_data_streams.remove('payments')
-            create_test_data_streams.append('payments')
-        if 'orders' in testable_streams:
-            # creating a payment results in a new order, putting it after ensures the number of orders is consistent
-            create_test_data_streams.remove('orders')
-            create_test_data_streams.append('orders')
+        # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
+        create_test_data_streams = self._shift_to_end_of_list('payments', create_test_data_streams)
+        # creating a payment results in a new order, putting it after ensures the number of orders is consistent
+        create_test_data_streams = self._shift_to_end_of_list('orders', create_test_data_streams)
+        # creating an inventory results in a new item, putting it after ensures the number of items is consistent
+        create_test_data_streams = self._shift_to_end_of_list('items', create_test_data_streams)
 
         stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
@@ -478,6 +476,15 @@ class TestSquareBase(ABC):
         if key in values:
             new_list.remove(key)
             new_list.insert(0, key)
+
+        return new_list
+
+    @staticmethod
+    def _shift_to_end_of_list(key, values):
+        new_list = values.copy()
+        if key in values:
+            new_list.remove(key)
+            new_list.append(key)
 
         return new_list
 
@@ -573,19 +580,31 @@ class TestSquareBase(ABC):
     def assertRecordsEqual(self, stream, expected_record, sync_record):
         if stream == 'payments':
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-        elif stream == 'locations':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-        elif stream == 'inventories':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at'})
         elif stream in {'employees', 'roles'}:
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        elif stream == 'orders':
+            self.assertParentKeysEqual(expected_record, sync_record)
+            expected_record_copy = deepcopy(expected_record)
+            sync_record_copy = deepcopy(sync_record)
+
+            if 'fulfillments' in sync_record_copy:
+                expected_record_fulfillment = expected_record_copy['fulfillments'][0]
+                synced_record_fulfillment = sync_record_copy['fulfillments'][0]
+                self.assertParentKeysEqual(expected_record_fulfillment, synced_record_fulfillment)
+
+                if 'pickup_details' in synced_record_fulfillment:
+                    expected_record_pickup_details = expected_record_fulfillment['pickup_details']
+                    if 'expired_at' in expected_record_pickup_details:
+                        # No explanation for why this key exists in the expected_record_pickup_details but not in synced record's
+                        expected_record_pickup_details.pop('expired_at')
+                    synced_record_pickup_details = synced_record_fulfillment['pickup_details']
+                    self.assertParentKeysEqual(expected_record_pickup_details, synced_record_pickup_details)
+            self.assertDictEqual(expected_record_copy, sync_record_copy)
         else:
             self.assertDictEqual(expected_record, sync_record)
 
     def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
-                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
-                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
+        self.assertParentKeysEqual(expected_record, sync_record)
         expected_record_copy = deepcopy(expected_record)
         sync_record_copy = deepcopy(sync_record)
 
@@ -595,3 +614,8 @@ class TestSquareBase(ABC):
             self.assertGreaterEqual(sync_record_copy.pop(off_key),
                                     expected_record_copy.pop(off_key))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
+
+    def assertParentKeysEqual(self, expected_record, sync_record):
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
