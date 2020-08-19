@@ -1,32 +1,48 @@
 import os
 
+potential_paths = [
+    'tests/',
+    '../tests/'
+    'tap-square/tests/',
+    '../tap-square/tests/',
+]
 
-cwd = os.getcwd()
-if cwd not in {'root/project', '/opt/code/tap-square'}:
-    print("WARN: This script is meant to run from the top level directory of the tap.")
+def go_to_tests_directory():
+    for path in potential_paths:
+        if os.path.exists(path):
+            os.chdir(path)
+            return os.getcwd()
+    raise NotImplementedError("This check cannot run from {}".format(os.getcwd()))
+
+##########################################################################
+### TEST
+##########################################################################
+
+print("Acquiring path to tests direcotry.")
+cwd = go_to_tests_directory()
 
 print("Reading in filenames from tests directory.")
+files_in_dir = [name for name in os.listdir(cwd)]
+
 print("Parsing directory for tests.")
-files = [
-    name for name in os.listdir(cwd + '/tests')
-    if 'test' == name[:4] and '.py' == name[-3:] and \
-    name not in ['test_client.py', 'test_config.py']
-]
-print("\tFiles found: {}".format(files))
+test_files_in_dir = [fn for fn in files_in_dir if 'test' == fn[:4] and '.py' == fn[-3:]]
+test_files_in_dir.remove('test_client.py')
+test_files_in_dir.remove('test_config.py')
+print("\tFiles found: {}".format(test_files_in_dir))
 
 print("Reading contents of circle config")
-with open(cwd + "/.circleci/config.yml", "r") as config:
+with open(cwd + "/../.circleci/config.yml", "r") as config:
     contents = config.read()
 
-# Check that each file in the directory can be found in a run black in the circle config
 print("Parsing circle config for run blocks.")
-runs = contents.replace(' ', '').replace('\n', '').split('-run:') # separate into run blocks
-matches = {f: False for f in files}
-for m in matches.keys():
-    print("Verifying {} is running in circle.".format(m))
-    if any([m in run for run in runs]):
-        matches[m] = True
+runs = contents.replace(' ', '').replace('\n', '').split('-run:')
 
-# Verify all files were found
-assert all(matches.values()), "The following tests are not running in circle:\t{}".format([k for k, v in matches.items() if not v])
+print("Verify all test files are executed in circle")
+file_found = {f: False for f in test_files_in_dir}
+for filename in file_found.keys():
+    print("\tVerifying {} is running in circle.".format(filename))
+    if any([filename in run for run in runs]):
+        file_found[filename] = True
+
+assert all(file_found.values()), "The following tests are not running in circle:\t{}".format([k for k, v in file_found.items() if not v])
 print("\t SUCCESS: All tests are running in circle.")
