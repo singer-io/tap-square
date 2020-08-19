@@ -203,12 +203,13 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', catalog_type, catalog_id, catalog_name)
         return resp
 
-    def cleanup(self, stream):
+    def cleanup(self, stream_name):
+        streams = {'CATEGORY': 'categories'}
         three_days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=3), '%Y-%m-%dT%H:%M:%SZ')
-        catalog = self.get_all(stream, start_date=three_days_ago)
+        catalog = self.get_all(streams.get(stream_name), start_date=three_days_ago)
         catalog_ids = [cat.get('id') for cat in catalog]
 
-        LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream)
+        LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream_name)
         self.delete_catalog(catalog_ids)
 
     def post_order(self, body, business_location_id):
