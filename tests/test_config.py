@@ -24,20 +24,22 @@ cwd = go_to_tests_directory()
 print("Reading in filenames from tests directory.")
 files_in_dir = [name for name in os.listdir(cwd)]
 
-print("Parsing directory for tests.")
+print("Dropping files that are not of the form 'test_<feature>.py'.")
 test_files_in_dir = [fn for fn in files_in_dir if 'test' == fn[:4] and '.py' == fn[-3:]]
-test_files_in_dir.remove('test_client.py')
-test_files_in_dir.remove('test_config.py')
-print("\tFiles found: {}".format(test_files_in_dir))
 
-print("Reading contents of circle config")
+print("Dropping test_client.py from test files.")
+test_files_in_dir.remove('test_client.py')
+
+print("Files found: {}".format(test_files_in_dir))
+
+print("Reading contents of circle config.")
 with open(cwd + "/../.circleci/config.yml", "r") as config:
     contents = config.read()
 
 print("Parsing circle config for run blocks.")
 runs = contents.replace(' ', '').replace('\n', '').split('-run:')
 
-print("Verify all test files are executed in circle")
+print("Verify all test files are executed in circle...")
 file_found = {f: False for f in test_files_in_dir}
 for filename in file_found.keys():
     print("\tVerifying {} is running in circle.".format(filename))
