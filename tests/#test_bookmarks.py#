@@ -1,6 +1,5 @@
 import os
 import unittest
-from copy import deepcopy
 
 import singer
 
@@ -368,12 +367,3 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                         self.assertRecordsEqual(stream, updated_record, sync_record)
 
-    def assertRecordsEqual(self, stream, expected_record, sync_record):
-        if stream == 'payments':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-        elif stream == 'inventories':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
-        elif stream in {'employees', 'roles'}:
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
-        else:
-            self.assertDictEqual(expected_record, sync_record)

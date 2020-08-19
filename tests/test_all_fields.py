@@ -28,7 +28,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -40,7 +40,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
 
     def all_fields_test(self, environment, data_type):
@@ -53,6 +53,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
+
 
         (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
@@ -98,4 +99,4 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
-                    self.assertDictEqual(expected_record, actual_record)
+                    self.assertRecordsEqual(stream, expected_record, actual_record)

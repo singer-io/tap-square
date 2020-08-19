@@ -182,7 +182,7 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
         return resp
 
-    def post_order(self, body, business_location_id):
+    def _post_order(self, body, business_location_id):
         """
         body: {
           "order": {
@@ -699,7 +699,7 @@ class TestClient(SquareClient):
                 },
                 'state': 'PROPOSED'
             }]
-            created_orders.append(self.post_order(body, location_id).body.get('order'))
+            created_orders.append(self._post_order(body, location_id).body.get('order'))
 
         return created_orders
 

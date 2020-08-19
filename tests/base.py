@@ -4,6 +4,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from abc import ABC, abstractmethod
 from enum import Enum
+from copy import deepcopy
 
 import singer
 
@@ -423,36 +424,41 @@ class TestSquareBase(ABC):
         create_test_data_streams = self._shift_to_start_of_list('employees', create_test_data_streams)
         create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
         if 'payments' in testable_streams:
+            # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
             create_test_data_streams.remove('payments')
             create_test_data_streams.append('payments')
+        if 'orders' in testable_streams:
+            # creating a payment results in a new order, putting it after ensures the number of orders is consistent
+            create_test_data_streams.remove('orders')
+            create_test_data_streams.append('orders')
 
-        expected_records = {stream: [] for stream in self.expected_streams()}
+        stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
         for stream in create_test_data_streams:
-            expected_records[stream] = self.client.get_all(stream, start_date)
+            stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 
             start_date_key = self.get_start_date_key(stream)
             if (not any([stream_obj.get(start_date_key) and self.parse_date(stream_obj.get(start_date_key)) > self.parse_date(start_date_2)
-                        for stream_obj in expected_records[stream]])
-                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]
+                        for stream_obj in stream_to_expected_records[stream]])
+                    or len(stream_to_expected_records[stream]) <= min_required_num_records_per_stream[stream]
                     or force_create_records):
 
-                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(expected_records[stream]))
+                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(stream_to_expected_records[stream]))
 
                 LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
                 created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
                 if isinstance(created_records, dict):
-                    expected_records[stream].append(created_records)
+                    stream_to_expected_records[stream].append(created_records)
                 elif isinstance(created_records, list):
-                    expected_records[stream].extend(created_records)
+                    stream_to_expected_records[stream].extend(created_records)
                 else:
                     raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(expected_records[stream])
+            self.modify_expected_records(stream_to_expected_records[stream])
 
-        return expected_records
+        return stream_to_expected_records
 
     def get_start_date_key(self, stream):
         replication_type = self.expected_replication_method().get(stream)
@@ -563,3 +569,29 @@ class TestSquareBase(ABC):
         self.assertEqual(expected_pks_set, actual_pks_set)
 
         return expected_pks_to_record_dict, actual_pks_to_record_dict
+
+    def assertRecordsEqual(self, stream, expected_record, sync_record):
+        if stream == 'payments':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
+        elif stream == 'locations':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
+        elif stream == 'inventories':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at'})
+        elif stream in {'employees', 'roles'}:
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        else:
+            self.assertDictEqual(expected_record, sync_record)
+
+    def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
+        expected_record_copy = deepcopy(expected_record)
+        sync_record_copy = deepcopy(sync_record)
+
+        # Square api workflow updates these values so they're a few seconds different between
+        # the time the record is created and the tap syncs, but other fields are the same
+        for off_key in off_keys:
+            self.assertGreaterEqual(sync_record_copy.pop(off_key),
+                                    expected_record_copy.pop(off_key))
+        self.assertDictEqual(expected_record_copy, sync_record_copy)
