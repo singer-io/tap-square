@@ -18,7 +18,7 @@ def go_to_tests_directory():
 ### TEST
 ##########################################################################
 
-print("Acquiring path to tests direcotry.")
+print("Acquiring path to tests directory.")
 cwd = go_to_tests_directory()
 
 print("Reading in filenames from tests directory.")
