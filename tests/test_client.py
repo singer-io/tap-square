@@ -127,24 +127,41 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
+    @backoff.on_exception(
+        backoff.expo,
+        RuntimeError,
+        max_time=60, # seconds
+        jitter=backoff.full_jitter,
+        on_backoff=log_backoff,
+    )
     def get_object_matching_conditions(self, stream, object_id, start_date, keys_exist=frozenset(), **kwargs):
-        while True:
-            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop', stream)
+        """
+        Poll Square for a specific set of key(s) that we know are not immediately returned.
+          ex. A completed payment will have a processing_fee field added after the api call is already returned.
+        """
+        attempts = 0
+        while attempts < 25:
+            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop [attemps: %s]', stream, attempts)
             all_objects = self.get_all(stream, start_date)
             found_object = [object for object in all_objects if object['id'] == object_id]
+            attempts += 1
             if not found_object:
                 LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
 
-            if not set(found_object[0].keys()).issuperset(keys_exist):
+            elif not set(found_object[0].keys()).issuperset(keys_exist):
                 LOGGER.warning("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
                 continue
 
-            if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
+            elif all([found_object[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
                 return found_object
             else:
                 LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
+
+        LOGGER.error("Polling Failed for stream %s object with id %s \n [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
+        raise RuntimeError()
+
     ##########################################################################
     ### CREATEs
     ##########################################################################
@@ -152,7 +169,7 @@ class TestClient(SquareClient):
     # Even though this is documented to be 1000, it fails for a batch of 985 for modifier_lists
     MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS = 500
 
-    def post_category(self, body):
+    def post_catalog(self, body):
         """
         body:
         {
@@ -174,13 +191,32 @@ class TestClient(SquareClient):
         resp = self._client.catalog.batch_upsert_catalog_objects(body)
         if resp.is_error():
             stream_name = body['batches'][0]['objects'][0]['type']
+            catalog_limit_error = "Constraint failed: A merchant's catalog may not contain more than 10000 objects"
+            if any(catalog_limit_error in error.get('detail') for error in resp.errors):
+                LOGGER.info('Too many %s objects have been created', stream_name)
+                self.emergency_cleanup(stream_name)
             raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
         for obj in resp.body['objects']:
-            category_id = obj.get('id')
-            category_type = obj.get('type')
-            category_name = obj.get(typesToKeyMap.get(category_type), {}).get('name', 'NONE')
-            LOGGER.debug('Created %s with id %s and name %s', category_type, category_id, category_name)
+            catalog_id = obj.get('id')
+            catalog_type = obj.get('type')
+            catalog_name = obj.get(typesToKeyMap.get(catalog_type), {}).get('name', 'NONE')
+            LOGGER.debug('Created %s with id %s and name %s', catalog_type, catalog_id, catalog_name)
         return resp
+
+    def emergency_cleanup(self, stream_name, days=4):
+        """Delete the last 4 days worth of data or however many days are necessary."""
+        stream_name_to_streams = {'ITEM': 'items',
+                                  'CATEGORY': 'categories',
+                                  'DISCOUNT': 'discounts',
+                                  'TAX': 'taxes',
+                                  'MODIFIER_LIST': 'modifier_lists'}
+        days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=days), '%Y-%m-%dT%H:%M:%SZ')
+        catalog = self.get_all(stream_name_to_streams.get(stream_name), start_date=days_ago)
+        catalog_ids = [cat.get('id') for cat in catalog]
+
+        LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream_name)
+        self.delete_catalog(catalog_ids)
+        raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
     def post_order(self, body, business_location_id):
         """
@@ -214,21 +250,16 @@ class TestClient(SquareClient):
             return self.create_employees_v1(num_records)
         elif stream == 'roles':
             return self.create_roles_v1(num_records)
-        elif stream == 'inventories':  # TODO ensure as many fields as possible are covered by the creates
+        elif stream == 'inventories':
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
             if num_records != 1:
                 raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
-
             return [self.create_locations().body.get('location')]
         elif stream == 'orders':
             return self._create_orders(start_date=start_date, num_records=num_records)
         elif stream == 'refunds':
-            refunds = []
-            for _ in range(num_records):
-                (created_refund, _) = self.create_refund(start_date)
-                refunds += created_refund
-            return refunds
+            return self.create_refunds(start_date=start_date, num_records=num_records)
         elif stream == 'payments':
             return self.create_payments(num_records)
         elif stream == 'shifts':
@@ -260,13 +291,6 @@ class TestClient(SquareClient):
             raise RuntimeError(response.errors)
 
         return response.body.get('object')
-
-    def get_an_inventory_adjustment(self, obj_id):
-        response = self._client.inventory.retrieve_inventory_changes(catalog_object_id=obj_id)
-
-        if response.is_error():
-            raise RuntimeError('GET INVENTORY_ADJUSTMENT: {}'.format(response.errors))
-        return response
 
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create item object(s)
@@ -306,34 +330,60 @@ class TestClient(SquareClient):
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
+    def create_specific_inventory_adjustment(self, start_date, catalog_obj_id, location_id, from_state, to_state, quantity):
+        change = [self._inventory_adjustment_change(catalog_obj_id, location_id, from_state, to_state, quantity)]
+        body = {
+            'changes': change,
+            'ignore_unchanged_counts': False,
+            'idempotency_key': str(uuid.uuid4())
+        }
+        LOGGER.info("About to create %s inventory adjustments", len(change))
+        response = self._client.inventory.batch_change_inventory(body)
+        if response.is_error():
+            LOGGER.error("response had error, body was %s", body)
+            raise RuntimeError(response.errors)
+
+        return response.body.get('counts')
+
     @staticmethod
-    def _inventory_adjustment_change(catalog_obj_id, location_id):
-        # TODO
-        # states = ['SOLD'] # WASTE SOLD_ONLINE
-        #else:
-        #    states = ['CUSTOM', 'IN_STOCK', 'RETURNED_BY_CUSTOMER', 'RESERVED_FROM_SALE',
-        #                'ORDERED_FROM_VENDOR', 'RECEIVED_FROM_VENDOR',
-        #                'IN_TRANSIT_TO','UNLINKED_RETURN', 'NONE']
-        # to_state = random.choice(states)
+    def _inventory_adjustment_change(catalog_obj_id, location_id, from_state=None, to_state=None, quantity='1.0'):
+        """
+        Generate the value for the `adjustment` field for the `inventories` stream.
+        The adjustment is based on the to_state and from_state, and if none are provide the
+        default adjustment is IN_STOCK -> SOLD
+        """
+        valid_transitions = [('IN_STOCK', 'SOLD'), ('IN_STOCK', 'SOLD'), ('NONE', 'IN_STOCK'), ('UNLINKED_RETURN', 'IN_STOCK')]
+        if not to_state and not from_state:
+            from_state, to_state = valid_transitions[0]
+
+        adjust_to = {'SOLD', 'IN_STOCK', 'WASTE'}
+        adjust_from = {'IN_STOCK', 'NONE', 'UNLINKED_RETURN'}
+        if from_state not in adjust_from or to_state not in adjust_to:
+            raise RuntimeError("this method does not account for the adjustment {} -> {}".format(from_state, to_state))
         occurred_at = datetime.strftime(
             datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
         return {
             'type': 'ADJUSTMENT',
             'adjustment': {
-                'from_state': 'IN_STOCK',
-                'to_state': 'SOLD',
+                'from_state': from_state,
+                'to_state': to_state,
                 'location_id': location_id,
                 'occurred_at': occurred_at,
                 'catalog_object_id': catalog_obj_id,
-                'quantity': '1.0',
-                'source': {
-                    'product': random.choice([
-                        'SQUARE_POS', 'EXTERNAL_API', 'BILLING', 'APPOINTMENTS',
-                        'INVOICES', 'ONLINE_STORE', 'PAYROLL', 'DASHBOARD',
-                        'ITEM_LIBRARY_IMPORT', 'OTHER'])}},
+                'quantity': quantity,
+            }
         }
 
-    def create_refund(self, start_date):
+        return adjustments[to_state]
+
+    def create_refunds(self, start_date, num_records, payment_response=None):
+        refunds = []
+        for _ in range(num_records):
+            (created_refund, _) = self.create_refund(start_date, payment_response)
+            refunds += created_refund
+        return refunds
+
+    def create_refund(self, start_date, payment_response=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -344,8 +394,10 @@ class TestClient(SquareClient):
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        payment_response = self._create_payment(autocomplete=True, source_key="card")
-        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, status='COMPLETED')[0]
+        if not payment_response:
+            payment_response = self._create_payment(autocomplete=True, source_key="card")
+        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
+                                                          start_date=start_date, status=payment_response.get('status'))[0]
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -370,8 +422,7 @@ class TestClient(SquareClient):
             LOGGER.error("response: {}".format(refund))
             LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
             raise RuntimeError(refund.errors)
-
-        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
+        completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
         return (completed_refund, completed_payment)
 
@@ -441,11 +492,14 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
-        mod_list_id = random.choice(mod_lists).get('id')
+        if mod_lists:
+            mod_list_id = random.choice(mod_lists).get('id')
+        else:
+            mod_list_id = self.create_modifier_list(num_records).body.get('objects').get('id')
 
         item_ids = [self.make_id('item') for n in range(num_records)]
         objects = [{'id': item_id,
@@ -466,7 +520,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_item_variation(self, item_ids):
         objects = [{
@@ -487,7 +541,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_categories(self, num_records):
         category_ids = [self.make_id('category') for n in range(num_records)]
@@ -497,7 +551,7 @@ class TestClient(SquareClient):
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_discounts(self, num_records):
         discount_ids = [self.make_id('discount') for n in range(num_records)]
@@ -513,7 +567,7 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def create_taxes(self, num_records):
         tax_ids = [self.make_id('tax') for n in range(num_records)]
@@ -527,7 +581,7 @@ class TestClient(SquareClient):
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
 
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def post_location(self, body):
         """
@@ -760,8 +814,7 @@ class TestClient(SquareClient):
     ##########################################################################
     ### UPDATEs
     ##########################################################################
-
-    def update(self, stream, obj_id, version, obj=None): # pylint: disable=too-many-return-statements
+    def update(self, stream, obj_id, version, obj=None, start_date=None): # pylint: disable=too-many-return-statements
         """For `stream` update `obj_id` with a new name
 
         We found that you have to send the same `obj_id` and `version` for the update to work
@@ -770,7 +823,7 @@ class TestClient(SquareClient):
             raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and {}".format(obj_id, obj))
 
         if stream == 'items':
-            return self.update_item(obj_id, version).body.get('objects')
+            return self.update_item(obj_id, version, start_date).body.get('objects')
         elif stream == 'categories':
             return self.update_categories(obj_id, version).body.get('objects')
         elif stream == 'discounts':
@@ -796,30 +849,37 @@ class TestClient(SquareClient):
         else:
             raise NotImplementedError("{} is not implmented".format(stream))
 
-    def update_item(self, obj_id, version):
-        # TODO add a category
-        # TODO add a tax
+    def update_item(self, obj_id, version, start_date):
+        """Add a category, tax, and chagne the name of the item"""
+        all_categories = self.get_all('categories', start_date)
+        category = random.choice(all_categories)
+        all_taxes = self.get_all('taxes', start_date)
+        tax_ids = [random.choice(all_taxes).get('id')]
+
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item')},
+                                          'item_data': {'name': self.make_id('item'),
+                                                        'category_id': category.get('id'),
+                                                        'tax_ids': tax_ids},
                                           'version': version}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     PAYMENT_ACTION_TO_STATUS = {
         'complete': 'COMPLETED',
         'cancel': 'CANCELED',
     }
 
-    def _update_payment(self, obj_id: str, action=None):
+    def _update_payment(self, obj_id: str, obj=None, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
 
         if not action:
-            action = random.choice(['complete', 'cancel'])
+            action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
+
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
@@ -846,7 +906,7 @@ class TestClient(SquareClient):
                                           'version': version,
                                           'category_data': {'name': self.make_id('category')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def _update_object_v1(self, stream, obj_id, data):
         if self.env_is_sandbox():
@@ -882,14 +942,14 @@ class TestClient(SquareClient):
         }
         return self._update_object_v1("roles", role_id, data)
 
-    def update_modifier_list(self, obj, version): # TODO try v1 endpoint in produciton env
+    def update_modifier_list(self, obj, version):
         obj_id = obj.get('id')
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'MODIFIER_LIST',
                                           'version': version,
                                           'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_discounts(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -900,7 +960,7 @@ class TestClient(SquareClient):
                                                             'amount_money': {'amount': 34500,
                                                                              'currency': 'USD'}}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_taxes(self, obj_id, version):
         body = {'batches': [{'objects': [{'id': obj_id,
@@ -908,7 +968,7 @@ class TestClient(SquareClient):
                                           'version': version,
                                           'tax_data': {'name': self.make_id('tax')}}]}],
                 'idempotency_key': str(uuid.uuid4())}
-        return self.post_category(body)
+        return self.post_catalog(body)
 
     def update_locations(self, obj_id):
         body = {'location': {'name': self.make_id('location')}}
@@ -989,11 +1049,21 @@ class TestClient(SquareClient):
     ##########################################################################
 
     def delete_catalog(self, ids_to_delete):
+        LOGGER.info('Attempting batched delete of %s objects', len(ids_to_delete))
+
+        if len(ids_to_delete) > 200:
+            for chunk in chunks(ids_to_delete, 150):
+                body = {'object_ids': chunk}
+                resp = self._client.catalog.batch_delete_catalog_objects(body)
+                if resp.is_error():
+                    raise RuntimeError(resp.errors)
+                return resp.body
+
         body = {'object_ids': ids_to_delete}
         resp = self._client.catalog.batch_delete_catalog_objects(body)
         if resp.is_error():
             raise RuntimeError(resp.errors)
-        return resp
+        return resp.body
 
     @staticmethod
     @backoff.on_exception(

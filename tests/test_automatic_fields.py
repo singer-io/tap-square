@@ -96,11 +96,10 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         for cat in found_catalogs:
             catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
 
-            # Verify that pks, rep keys, foreign keys have inclusion of automatic (metadata and annotated schema).
+            # Verify that pks and rep keys have inclusion of automatic (metadata and annotated schema).
             for k in self.expected_automatic_fields().get(cat['stream_name']):
                 mdata = next((m for m in catalog_entry['metadata']
                               if len(m['breadcrumb']) == 2 and m['breadcrumb'][1] == k), None)
-
                 print("Validating inclusion on {}: {}".format(cat['stream_name'], mdata))
                 self.assertTrue(mdata and mdata['metadata']['inclusion'] == 'automatic')
 
