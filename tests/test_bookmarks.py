@@ -176,7 +176,14 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
             else:
-                first_rec = first_sync_records.get(stream).get('messages')[0].get('data')
+                for message in first_sync_records.get(stream).get('messages'):
+                    data = message.get('data')
+                    if not data['is_deleted']:
+                        first_rec = message.get('data')
+                        break
+
+                if not first_rec:
+                    raise RuntimeError("Unable to find any {} that were not deleted.".format(stream))
 
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')

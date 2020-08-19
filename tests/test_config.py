@@ -9,9 +9,8 @@ print("Reading in filenames from tests directory.")
 print("Parsing directory for tests.")
 files = [
     name for name in os.listdir(cwd + '/tests')
-    if 'test' == name[:4] and \  # starts with 'test'
-    '.py' == name[-3:] and \  # is a python file
-    name not in ['test_client.py', 'test_config.py']  # is not this test or the test_client
+    if 'test' == name[:4] and '.py' == name[-3:] and \
+    name not in ['test_client.py', 'test_config.py']
 ]
 
 print("Reading contents of circle config")
