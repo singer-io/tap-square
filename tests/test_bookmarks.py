@@ -1,6 +1,5 @@
 import os
 import unittest
-from copy import deepcopy
 
 import singer
 
@@ -146,10 +145,9 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 new_records = self.client.create(stream, start_date=self.START_DATE)
 
             assert new_records, "Failed to create a {} record".format(stream)
+            assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
             expected_records_second_sync[stream] += new_records
             created_records[stream] += new_records
-
-            assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
 
         for stream in testable_streams.difference(self.cannot_update_streams()):
             # Update all streams (but save payments for last)
@@ -326,15 +324,16 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                     primary_keys = stream_primary_keys.get(stream)
 
                 updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
-                if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly
+                if stream in {'orders', 'modifier_lists', 'items', 'categories', 'discounts', 'taxes'}:  # Some streams have too many dependencies to track explicitly
                     self.assertLessEqual(len(expected_records), len(second_sync_data),
                                          msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
-                                            "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                                         "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                     )
                 else:
-                    self.assertEqual(len(expected_records), len(second_sync_data),
-                                     msg="Expected number of records do not match actual for 2nd sync.\n" +
-                                     "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                    self.assertEqual(
+                        len(expected_records), len(second_sync_data),
+                        msg="Expected number of records do not match actual for 2nd sync.\n" +
+                        "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                     )
 
                 if not primary_keys:
@@ -368,12 +367,3 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                         self.assertRecordsEqual(stream, updated_record, sync_record)
 
-    def assertRecordsEqual(self, stream, expected_record, sync_record):
-        if stream == 'payments':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-        elif stream == 'inventories':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
-        elif stream in {'employees', 'roles'}:
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
-        else:
-            self.assertDictEqual(expected_record, sync_record)

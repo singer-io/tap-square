@@ -582,6 +582,8 @@ class TestSquareBase(ABC):
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
         elif stream in {'employees', 'roles'}:
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        elif stream == 'inventories':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
         else:
             self.assertDictEqual(expected_record, sync_record)
 
