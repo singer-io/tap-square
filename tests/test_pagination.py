@@ -48,7 +48,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
         cleanup = {'categories': 10000}
         for stream, limit in cleanup.items():
             print("Checking if cleanup is required.")
-            all_records = self.get_all(stream, start_date=self.STATIC_START_DATE)
+            all_records = self.client.get_all(stream, start_date=self.STATIC_START_DATE)
             if len(all_records) > limit / 2:
                 chunk = limit / 4
                 print("Cleaning up {} excess records".format(chunk))

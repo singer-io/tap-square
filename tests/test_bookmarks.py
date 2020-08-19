@@ -178,7 +178,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             else:
                 for message in first_sync_records.get(stream).get('messages'):
                     data = message.get('data')
-                    if not data['is_deleted']:
+                    if not data.get('is_deleted'):
                         first_rec = message.get('data')
                         break
 
