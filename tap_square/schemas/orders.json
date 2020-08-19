@@ -235,6 +235,13 @@
               "object"
             ],
             "properties": {
+              "canceled_at": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
               "expired_at": {
                 "type": [
                   "null",
