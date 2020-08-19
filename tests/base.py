@@ -582,24 +582,6 @@ class TestSquareBase(ABC):
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
         elif stream in {'employees', 'roles'}:
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
-        elif stream == 'orders':
-            self.assertParentKeysEqual(expected_record, sync_record)
-            expected_record_copy = deepcopy(expected_record)
-            sync_record_copy = deepcopy(sync_record)
-
-            if 'fulfillments' in sync_record_copy:
-                expected_record_fulfillment = expected_record_copy['fulfillments'][0]
-                synced_record_fulfillment = sync_record_copy['fulfillments'][0]
-                self.assertParentKeysEqual(expected_record_fulfillment, synced_record_fulfillment)
-
-                if 'pickup_details' in synced_record_fulfillment:
-                    expected_record_pickup_details = expected_record_fulfillment['pickup_details']
-                    if 'expired_at' in expected_record_pickup_details:
-                        # No explanation for why this key exists in the expected_record_pickup_details but not in synced record's
-                        expected_record_pickup_details.pop('expired_at')
-                    synced_record_pickup_details = synced_record_fulfillment['pickup_details']
-                    self.assertParentKeysEqual(expected_record_pickup_details, synced_record_pickup_details)
-            self.assertDictEqual(expected_record_copy, sync_record_copy)
         else:
             self.assertDictEqual(expected_record, sync_record)
 

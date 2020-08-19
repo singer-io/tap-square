@@ -235,6 +235,13 @@
               "object"
             ],
             "properties": {
+              "expired_at": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
               "expires_at": {
                 "type": [
                   "null",
