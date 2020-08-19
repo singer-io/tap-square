@@ -1046,7 +1046,7 @@ class TestClient(SquareClient):
         LOGGER.info('Attempting batched delete of %s objects', len(ids_to_delete))
 
         if len(ids_to_delete) > 200:
-            for chunk in chunks(ids_to_delete, 150)
+            for chunk in chunks(ids_to_delete, 150):
                 body = {'object_ids': chunk}
                 resp = self._client.catalog.batch_delete_catalog_objects(body)
                 if resp.is_error():
