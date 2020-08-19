@@ -205,7 +205,7 @@ class TestClient(SquareClient):
 
     def cleanup(self, stream):
         three_days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=3), '%Y-%m-%dT%H:%M:%SZ')
-        catalog = self.get_all(strem, start_date=three_days_ago)
+        catalog = self.get_all(stream, start_date=three_days_ago)
         catalog_ids = [cat.get('id') for cat in catalog]
 
         LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream)

@@ -44,6 +44,16 @@ class TestSquarePagination(TestSquareBase, TestCase):
             'locations',  # This stream does not paginate in the sync (See Above)
         })
 
+    def cleanup_excess(self):
+        cleanup = {'categories': 10000}
+        for stream, limit in cleanup.items():
+            print("Checking if cleanup is required.")
+            all_records = self.get_all(stream, start_date=self.STATIC_START_DATE)
+            if len(all_records) > limit / 2:
+                chunk = limit / 4
+                print("Cleaning up {} excess records".format(chunk))
+                self.delete_catalog(all_records[:chunk-1])
+
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -69,6 +79,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
+        self.cleanup_excess()
 
     def pagination_test(self):
         """
