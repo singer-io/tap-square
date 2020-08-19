@@ -175,7 +175,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            else:
+            else: # By default we want the first available record that has not been deleted
                 for message in first_sync_records.get(stream).get('messages'):
                     data = message.get('data')
                     if not data.get('is_deleted'):
@@ -189,25 +189,26 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
                 first_rec_location_id = first_rec.get('location_id')
                 inventory_to_look_at = first_rec
-                # IN_STOCK -> SOLD
+                # IN_STOCK -> SOLD [quantity -1]
                 updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='IN_STOCK', to_state='SOLD', quantity='1.0')
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
-                # UNLINKED_RETURN -> IN_STOCK
+                # UNLINKED_RETURN -> IN_STOCK [quantity +1]
                 updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='UNLINKED_RETURN', to_state='IN_STOCK', quantity='2.0')
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
-                # NONE -> IN_STOCK
+                # NONE -> IN_STOCK [quantity +2]
                 updated_record = self.client.create_specific_inventory_adjustment(
                     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='NONE', to_state='IN_STOCK', quantity='1.0')
-                # IN_STOCK -> WASTE # TODO
-                # updated_record += self.client.create_specific_inventory_adjustment(
-                #     self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
-                #     from_state='IN_STOCK', to_state='WASTE', quantity='1.0')  # creates 2 records
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
+                # IN_STOCK -> WASTE [quantity +1]
+                updated_record = self.client.create_specific_inventory_adjustment(
+                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    from_state='IN_STOCK', to_state='WASTE', quantity='1.0')  # creates 2 records
+                assert len(updated_record) == 2, "Failed to update the {} records as intended".format(stream)
             else:
                 first_rec_id = first_rec.get('id')
                 first_rec_version = first_rec.get('version')
@@ -244,7 +245,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
         # adjust expectations for full table streams to include the expected records from sync 1
         for stream in self.expected_full_table_streams():
-            if stream == 'inventories': # append only so we keep everything
+            if stream == 'inventories':
                 primary_keys = self.makeshift_primary_keys().get(stream)
             else:
                 primary_keys = list(self.expected_primary_keys().get(stream))
@@ -276,6 +277,21 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                     self.assertEqual(2, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
             if stream in self.expected_full_table_streams():
+                if stream == 'inventories':
+                    # Typically changes to inventories object will replace an IN_STOCK record with two records
+                    #    1 IN_STOCK  ->  1 IN_STOCK, 1 WASTE
+                    # if a given combination of {'catalog_object_id', 'location_id', 'state'} already has a
+                    # WASTE record then both records will be replaced
+                    #    1 IN_STOCK, 1 WASTE  ->  1 IN_STOCK, 1 WASTE
+                    self.assertLessEqual(
+                        len(expected_records_second_sync.get(stream)),
+                        len(expected_records_first_sync.get(stream)) + len(created_records[stream]) + 1,
+                        msg="Expectations are invalid for full table stream {}".format(stream))
+                    self.assertGreaterEqual(
+                        len(expected_records_second_sync.get(stream)),
+                        len(expected_records_first_sync.get(stream)) + len(created_records[stream]),
+                        msg="Expectations are invalid for full table stream {}".format(stream))
+                    continue
                 self.assertEqual(len(expected_records_second_sync.get(stream)), len(expected_records_first_sync.get(stream)) + len(created_records[stream]),
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 

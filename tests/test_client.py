@@ -203,8 +203,8 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', catalog_type, catalog_id, catalog_name)
         return resp
 
-    def cleanup(self, stream_name, days=3):
-        """Delete the last 3 days worth of data or however many days are necessary."""
+    def cleanup(self, stream_name, days=4):
+        """Delete the last 4 days worth of data or however many days are necessary."""
         streams = {'CATEGORY': 'categories'}
         days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=days), '%Y-%m-%dT%H:%M:%SZ')
         catalog = self.get_all(streams.get(stream_name), start_date=days_ago)
