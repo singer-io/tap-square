@@ -873,7 +873,7 @@ class TestClient(SquareClient):
 
         if not action:
             action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
-            
+
         print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
@@ -1043,6 +1043,16 @@ class TestClient(SquareClient):
     ##########################################################################
 
     def delete_catalog(self, ids_to_delete):
+        LOGGER.info('Attempting batched delete of %s objects', len(ids_to_delete))
+
+        if len(ids_to_delete) > 200:
+            for chunk in chunks(ids_to_delete, 150)
+                body = {'object_ids': chunk}
+                resp = self._client.catalog.batch_delete_catalog_objects(body)
+                if resp.is_error():
+                    raise RuntimeError(resp.errors)
+                return resp.body
+
         body = {'object_ids': ids_to_delete}
         resp = self._client.catalog.batch_delete_catalog_objects(body)
         if resp.is_error():
