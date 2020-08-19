@@ -235,6 +235,13 @@
               "object"
             ],
             "properties": {
+              "rejected_at": {
+                "type": [
+                  "null",
+                  "string"
+                ],
+                "format": "date-time"
+              },
               "canceled_at": {
                 "type": [
                   "null",
