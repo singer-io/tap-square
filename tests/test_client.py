@@ -191,10 +191,10 @@ class TestClient(SquareClient):
         resp = self._client.catalog.batch_upsert_catalog_objects(body)
         if resp.is_error():
             stream_name = body['batches'][0]['objects'][0]['type']
-            record_limit_message = "Constraint failed: A merchant's catalog may not contain more than 10000 objects"
-            if any(record_limit_message in error.get('detail') for error in resp.errors):
+            catalog_limit_error = "Constraint failed: A merchant's catalog may not contain more than 10000 objects"
+            if any(catalog_limit_error in error.get('detail') for error in resp.errors):
                 LOGGER.info('Too many %s objects have been created', stream_name)
-                self.cleanup(stream_name)
+                self.emergency_cleanup(stream_name)
             raise RuntimeError('Stream {}: {}'.format(stream_name, resp.errors))
         for obj in resp.body['objects']:
             catalog_id = obj.get('id')
@@ -203,15 +203,20 @@ class TestClient(SquareClient):
             LOGGER.debug('Created %s with id %s and name %s', catalog_type, catalog_id, catalog_name)
         return resp
 
-    def cleanup(self, stream_name, days=4):
+    def emergency_cleanup(self, stream_name, days=4):
         """Delete the last 4 days worth of data or however many days are necessary."""
-        streams = {'CATEGORY': 'categories'}
+        stream_name_to_streams = {'ITEM': 'items',
+                                  'CATEGORY': 'categories',
+                                  'DISCOUNT': 'discounts',
+                                  'TAX': 'taxes',
+                                  'MODIFIER_LIST': 'modifier_lists'}
         days_ago = datetime.strftime(datetime.now(tz=timezone.utc) - timedelta(days=days), '%Y-%m-%dT%H:%M:%SZ')
-        catalog = self.get_all(streams.get(stream_name), start_date=days_ago)
+        catalog = self.get_all(stream_name_to_streams.get(stream_name), start_date=days_ago)
         catalog_ids = [cat.get('id') for cat in catalog]
 
         LOGGER.info('Cleaning up %s %s records', len(catalog_ids), stream_name)
         self.delete_catalog(catalog_ids)
+        raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
     def post_order(self, body, business_location_id):
         """
