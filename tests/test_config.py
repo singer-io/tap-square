@@ -12,6 +12,7 @@ files = [
     if 'test' == name[:4] and '.py' == name[-3:] and \
     name not in ['test_client.py', 'test_config.py']
 ]
+print("\tFiles found: {}".format(files))
 
 print("Reading contents of circle config")
 with open(cwd + "/.circleci/config.yml", "r") as config:
