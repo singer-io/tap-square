@@ -1,3 +1,5 @@
+import tap_tester.connections as connections
+
 from unittest import TestCase
 from base import TestSquareBase, DataType
 

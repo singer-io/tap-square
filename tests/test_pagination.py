@@ -114,9 +114,8 @@ class TestSquarePagination(TestSquareBase, TestCase):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # table and field selection
-        exclude_streams = list(self.expected_streams().difference(self.TESTABLE_STREAMS))
         self.perform_and_verify_table_and_field_selection(
-            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+            conn_id, found_catalogs, streams_to_select=self.TESTABLE_STREAMS, select_all_fields=True
         )
 
         # run initial sync
