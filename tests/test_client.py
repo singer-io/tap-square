@@ -861,7 +861,7 @@ class TestClient(SquareClient):
     def update_item(self, obj_id, version, start_date):
         """Add a category, tax, and chagne the name of the item"""
         all_categories = self.get_all('categories', start_date)
-        category = random.choice(all_categories)
+        category = random.choice([category for category in all_categories if not category.get('is_deleted')])
         all_taxes = self.get_all('taxes', start_date)
         tax_ids = [random.choice(all_taxes).get('id')]
 
