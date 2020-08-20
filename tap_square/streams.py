@@ -1,4 +1,5 @@
 import singer
+from methodtools import lru_cache
 
 LOGGER = singer.get_logger()
 
@@ -116,10 +117,13 @@ class Locations(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_all_location_ids(self, start_time):
+    @classmethod
+    def get_all_location_ids(cls, client):
+        LOGGER.info("Called get_all_location_ids")
         all_location_ids = list()
-        for location in self.sync(start_time):
-            all_location_ids.append(location['id'])
+        for page, _ in client.get_locations():
+            for location in page:
+                all_location_ids.append(location['id'])
 
         return all_location_ids
 
@@ -176,8 +180,7 @@ class Orders(Stream):
     object_type = 'ORDER'
 
     def sync(self, start_time, bookmarked_cursor):
-        locations = Locations(self.client, self.state)
-        all_location_ids = locations.get_all_location_ids(start_time)
+        all_location_ids = Locations.get_all_location_ids(self.client)
         for location_ids_chunk in chunks(all_location_ids, 10):
             # orders requests can only take up to 10 location_ids at a time
             for page, cursor in self.client.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
@@ -237,9 +240,7 @@ class CashDrawerShifts(FullTableStream):
     replication_key = None
 
     def get_pages(self, bookmarked_cursor, start_time):
-        locations = Locations(self.client, self.state)
-
-        for location_id in locations.get_all_location_ids(start_time):
+        for location_id in Locations.get_all_location_ids(self.client):
             # Cash Drawer Shifts requests can only take up to 1 location_id at a time
             for page, cursor in self.client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
                 yield page, cursor
@@ -253,9 +254,7 @@ class Settlements(FullTableStream):
     replication_key = None
 
     def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
-        locations = Locations(self.client, self.state)
-
-        for location_id in locations.get_all_location_ids(start_time):
+        for location_id in Locations.get_all_location_ids(self.client):
             # Settlements requests can only take up to 1 location_id at a time
             for page, batch_token in self.client.get_settlements(location_id, start_time, bookmarked_cursor):
                 yield page, batch_token
