@@ -1,14 +1,19 @@
 import singer
 
+LOGGER = singer.get_logger()
+
+
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
+
 class Stream:
     def __init__(self, client, state):
         self.client = client
         self.state = state
+
 
 class CatalogStream(Stream):
     object_type = None
@@ -134,6 +139,7 @@ class BankAccounts(FullTableStream):
     def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
         for page, cursor in self.client.get_bank_accounts():
             yield page, cursor
+
 
 class Refunds(FullTableStream):
     tap_stream_id = 'refunds'

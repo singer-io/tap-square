@@ -49,6 +49,64 @@
       ],
       "format": "date-time"
     },
+    "breaks": {
+      "items": {
+        "properties": {
+          "expected_duration": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "is_paid": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "end_at": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "start_at": {
+            "format": "date-time",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "break_type_id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": [
+          "null",
+          "object"
+        ]
+      },
+      "type": [
+        "null",
+        "array"
+      ]
+    },
     "updated_at": {
       "type": [
         "null",
