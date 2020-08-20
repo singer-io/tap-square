@@ -488,6 +488,7 @@ class TestSquareBase(ABC):
         return new_list
 
     def run_initial_sync(self, environment, data_type, select_all_fields=True): # REFACTOR see TODOs below
+        """
         Run the tap in check mode.
         Perform table selection based on testable streams.
         Select all fields for selected streams.
