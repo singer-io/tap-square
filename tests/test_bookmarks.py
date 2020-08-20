@@ -368,7 +368,8 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 # TESTING APPLICABLE TO ALL STREAMS
 
                 # Verify that the expected records are replicated in the 2nd sync
-                # For incremental streams we should see only 2 records (a new record and an updated record)
+                # For incremental streams we should see at least 2 records (a new record and an updated record)
+                # but we may see more as the bookmmark is inclusive.
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_second_sync.get(stream)
                 if stream == 'inventories':
@@ -377,16 +378,13 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                     primary_keys = stream_primary_keys.get(stream)
 
                 updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
-                if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly
-                    self.assertLessEqual(len(expected_records), len(second_sync_data),
-                                         msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
-                                            "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                    )
-                else:
-                    self.assertEqual(len(expected_records), len(second_sync_data),
-                                     msg="Expected number of records do not match actual for 2nd sync.\n" +
+                self.assertLessEqual(len(expected_records), len(second_sync_data),
+                                     msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                    )
+                )
+                if (len(second_sync_data) - len(expected_records)) > 0:
+                    LOGGER.info('Second sync replicated %s records more than our create and update for %s',
+                                len(second_sync_data), stream)
 
                 if not primary_keys:
                     raise NotImplementedError("PKs are needed for comparing records")
