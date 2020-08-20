@@ -23,6 +23,70 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
 
+    def ensure_dict_object(self, resp_object):
+        """
+        Ensure the response object is a dictionary and return it.
+        If the object is a list, ensure the list contains only one dict item and return that.
+        Otherwise fail the test.
+        """
+        if isinstance(resp_object, dict):
+            return resp_object
+        elif isinstance(resp_object, list):
+            self.assertEqual(1, len(resp_object),
+                             msg="Multiple objects were returned, but only 1 was expected")
+            self.assertTrue(isinstance(resp_object[0], dict),
+                            msg="Response object is a list of {} types".format(type(resp_object[0])))
+            return resp_object[0]
+        else:
+            raise RuntimeError("Type {} was unexpected.\nRecord: {} ".format(type(resp_object), resp_object))
+
+    def create_specific_payments(self):
+        """Create a record using each source type, and a record that will autocomplete."""
+        print("Creating a record using each source type, and the autocomplete flag.")
+        payment_records = []
+        descriptions = {  # (source type, autocomplete)
+            ("card", False),
+            ("card_on_file", False),
+            ("gift_card", False),
+            ("card", True),
+        }
+        for source_key, autocomplete in descriptions:
+            payment_response = self.client._create_payment(autocomplete=autocomplete, source_key=source_key)
+            payment_object = self.ensure_dict_object(payment_response)
+            payment_records.append({'description': (source_key, autocomplete), 'record': payment_object})
+
+        return payment_records
+
+    def update_specific_payments(self, payments_to_update):
+        """Perform specifc updates on specific payment records."""
+        updated_records = []
+        print("Updating payment records by completing, canceling and refunding them.")
+        # Update a completed payment by making a refund (payments must have a status of 'COMPLETED' to process a refund)
+        created_desc =  ("card", True)
+        description = "refund"
+        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        _, payment_response = self.client.create_refund(self.START_DATE, payment_to_update)
+        payment_object = self.ensure_dict_object(payment_response)
+        updated_records.append({'description': description, 'record': payment_object})
+
+        # Update a payment by completing it
+        created_desc =  ("card_on_file", False)
+        description = "complete"
+        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_object = self.ensure_dict_object(payment_response)
+        updated_records.append({'description': description, 'record': payment_object})
+
+        # Update a payment by canceling it
+        created_desc =  ("gift_card", False)
+        description = "cancel"
+        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_object = self.ensure_dict_object(payment_response)
+        updated_records.append({'description': description, 'record': payment_object})
+
+        return updated_records
+
     @classmethod
     def tearDownClass(cls):
         print("\n\nTEST TEARDOWN\n\n")
@@ -55,6 +119,22 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
+        ################################################################################
+        if 'payments' in self.TESTABLE_STREAMS:
+            created_payments = self.create_specific_payments()
+
+            updated_payments = self.update_specific_payments(created_payments)
+
+            print("Tracking fields found in created and updated payments.")
+            fields = set()
+            for payments in [created_payments, updated_payments]:
+                for payment in payments:
+                    payment_fields = set(payment['record'].keys())
+                    untracked_fields = payment_fields.difference(fields)
+                    if untracked_fields:
+                        print("Adding untracked fields to tracked set: {}".format(untracked_fields))
+                        fields.update(payment_fields)
+        ################################################################################
         # ensure data exists for sync streams and set expectations
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
         # modify data set to conform to expectations (json standards)
