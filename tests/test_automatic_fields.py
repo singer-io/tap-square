@@ -70,7 +70,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         # table and field selection
         streams_to_select = self.testable_streams(environment, data_type)
         self.perform_and_verify_table_and_field_selection(
-            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+            conn_id, found_catalogs, streams_to_select, select_all_fields=False
         )
 
         # run initial sync

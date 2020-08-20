@@ -487,25 +487,6 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    # def run_initial_sync(self, environment, data_type, select_all_fields=True):
-    #     """
-    #     Run the tap in check mode.
-    #     Perform table selection based on testable streams.
-    #     Select all fields or no fields based on the select_all_fields param.
-    #     Run a sync.
-    #     """
-    #     # Instantiate connection
-    #     conn_id = connections.ensure_connection(self)
-
-    #     found_catalogs = self.run_and_verify_check_mode()
-
-    #     streams_to_select = self.testable_streams(environment, data_type)
-    #     self.perform_and_verify_table_and_field_selection(
-    #         conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
-    #     )
-
-    #     return self.run_and_verify_sync(conn_id)
-
     def run_and_verify_check_mode(self, conn_id):
         """
         Run the tap in check mode and verify it succeeds.
