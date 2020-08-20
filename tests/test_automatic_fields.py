@@ -83,8 +83,10 @@ class TestAutomaticFields(TestSquareBase, TestCase):
                                      msg="Expected automatic fields and nothing else.")
 
                 actual_records = [row['data'] for row in data['messages']]
+                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
 
-                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
+                expected_pks_to_record_dict = self.getPKsToRecordsDict(stream, expected_records.get(stream))
+                actual_pks_to_record_dict = self.getPKsToRecordsDict(stream, actual_records)
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)

@@ -169,5 +169,5 @@ class TestSquarePagination(TestSquareBase, TestCase):
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
                 # Verify by pks that the replicated records match our expectations
-                self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
+                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
 

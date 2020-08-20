@@ -487,11 +487,16 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    def run_initial_sync(self, environment, data_type, select_all_fields=True): # REFACTOR see TODOs below
+    # REFACTOR I want to break up this method according to  TODOs below
+    # and I want to keep run_initial_sync as a tap-specific method and have it call the broken up methods.
+    # Under normal circumstances I think this method as is does 3 things and those should be explicit.
+    # Also splitting data by 'environment' and 'data_type' is square specific and is something I hope we
+    # shouldn't need in most cases.
+    def run_initial_sync(self, environment, data_type, select_all_fields=True):
         """
         Run the tap in check mode.
         Perform table selection based on testable streams.
-        Select all fields for selected streams.
+        Select all fields or no fields based on the select_all_fields param.
         Run a sync.
         """
 
@@ -562,32 +567,55 @@ class TestSquareBase(ABC):
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-        # TODO  Put the above and below code into run_and_verify_sync()
-        return conn_id, first_record_count_by_stream
 
-    def assertRecordsEqualByPK(self, stream, expected_records, actual_records):
-        """Compare expected and actual records by their primary key."""
+        return conn_id, first_record_count_by_stream        # TODO  Put the above and below code run_and_verify_sync()
 
+    def getPKsToRecordsDict(self, stream, records):
+        """Return dict object of tupled pk values to record"""
+        primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
+        pks_to_record_dict = {tuple(record.get(pk) for pk in primary_keys): record for record in records}
+        return pks_to_record_dict
+
+    ##########################################################################
+    ### Standard Assertion Patterns
+    ##########################################################################
+
+    def assertPKsEqual(self, stream, expected_records, sync_records):
+        """
+        Compare the values of the primary keys for expected and synced records.
+        For this comparison to be valid we also check for duplicate primary keys.
+        """
         primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
 
         # Verify there are no duplicate pks in the target
-        actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
-        actual_pks_set = set(actual_pks)
-        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
-        actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
+        sync_pks = [tuple(sync_record.get(pk) for pk in primary_keys) for sync_record in sync_records]
+        sync_pks_set = set(sync_pks)
+        self.assertEqual(len(sync_pks), len(sync_pks_set), msg="A duplicate record may have been replicated.")
 
         # Verify there are no duplicate pks in our expectations
         expected_pks = [tuple(expected_record.get(pk) for pk in primary_keys) for expected_record in expected_records]
         expected_pks_set = set(expected_pks)
         self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
-        expected_pks_to_record_dict = {tuple(expected_record.get(pk) for pk in primary_keys): expected_record for expected_record in expected_records}
 
         # Verify that all expected records and ONLY the expected records were replicated
-        self.assertEqual(expected_pks_set, actual_pks_set)
+        self.assertEqual(expected_pks_set, sync_pks_set)
 
-        return expected_pks_to_record_dict, actual_pks_to_record_dict
+    def assertParentKeysEqual(self, expected_record, sync_record):
+        """Compare the top level keys of an expected record and a sync record."""
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
+
+    ##########################################################################
+    ### Tap Specific Assertions
+    ##########################################################################
 
     def assertRecordsEqual(self, stream, expected_record, sync_record):
+        """
+        Certain Square streams cannot be compared directly with assertDictEqual().
+        Some Square workflows return slightly differnt values for the rep key (keys differ on order of ms).
+        So we handle that logic here.
+        """
         if stream == 'payments':
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
         elif stream in {'employees', 'roles'}:
@@ -608,8 +636,3 @@ class TestSquareBase(ABC):
             self.assertGreaterEqual(sync_record_copy.pop(off_key),
                                     expected_record_copy.pop(off_key))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
-
-    def assertParentKeysEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
-                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
-                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))

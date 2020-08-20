@@ -116,9 +116,6 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # ensure data exists for sync streams and set expectations
-        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
-
         # Execute specific creates and updates for the payments stream in addition to the standard create
         if 'payments' in self.TESTABLE_STREAMS:
 
@@ -126,21 +123,24 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
             updated_payments = self.update_specific_payments(created_payments)
 
-            print("Tracking fields found in created and updated payments.") # TODO move this to bottom?
-            fields = set()
-            for payments in [created_payments, updated_payments]:
-                for payment in payments:
-                    payment_fields = set(payment['record'].keys())
-                    untracked_fields = payment_fields.difference(fields)
-                    if untracked_fields:
-                        print("Adding untracked fields to tracked set: {}".format(untracked_fields))
-                        fields.update(payment_fields)
+            # print("Tracking fields found in created and updated payments.") # TODO move this to bottom? Is this needed?
+            # fields = set()
+            # for payments in [created_payments, updated_payments]:
+            #     for payment in payments:
+            #         payment_fields = set(payment['record'].keys())
+            #         untracked_fields = payment_fields.difference(fields)
+            #         if untracked_fields:
+            #             print("Adding untracked fields to tracked set: {}".format(untracked_fields))
+            #             fields.update(payment_fields)
 
         # TODO delete if not needed (depends on use of created_payments and updated_payments in asertions/comparisons)
         # # modify data set to conform to expectations (json standards)
         # for stream, records in expected_records.items():
         #     print("Ensuring expected data for {} has values formatted correctly.".format(stream))
         #     self.modify_expected_records(records)
+
+        # ensure data exists for sync streams and set expectations
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
 
         (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
@@ -182,7 +182,11 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
                 actual_records = [row['data'] for row in data['messages']]
 
-                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
+                # Verify by pks, that we replicated the expected records and only the expected records
+                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
+
+                expected_pks_to_record_dict = self.getPKsToRecordsDict(stream, expected_records.get(stream))
+                actual_pks_to_record_dict = self.getPKsToRecordsDict(stream, actual_records)
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
