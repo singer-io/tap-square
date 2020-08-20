@@ -2,7 +2,7 @@ import os
 import unittest
 
 import tap_tester.runner      as runner
-
+import tap_tester.connections as connections
 from base import TestSquareBase, DataType
 
 
@@ -116,33 +116,28 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        # Execute specific creates and updates for the payments stream in addition to the standard create
+        # execute specific creates and updates for the payments stream in addition to the standard create
         if 'payments' in self.TESTABLE_STREAMS:
-
             created_payments = self.create_specific_payments()
-
             updated_payments = self.update_specific_payments(created_payments)
-
-            # print("Tracking fields found in created and updated payments.") # TODO move this to bottom? Is this needed?
-            # fields = set()
-            # for payments in [created_payments, updated_payments]:
-            #     for payment in payments:
-            #         payment_fields = set(payment['record'].keys())
-            #         untracked_fields = payment_fields.difference(fields)
-            #         if untracked_fields:
-            #             print("Adding untracked fields to tracked set: {}".format(untracked_fields))
-            #             fields.update(payment_fields)
-
-        # TODO delete if not needed (depends on use of created_payments and updated_payments in asertions/comparisons)
-        # # modify data set to conform to expectations (json standards)
-        # for stream, records in expected_records.items():
-        #     print("Ensuring expected data for {} has values formatted correctly.".format(stream))
-        #     self.modify_expected_records(records)
 
         # ensure data exists for sync streams and set expectations
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
 
-        (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
+        # instantiate connection
+        conn_id = connections.ensure_connection(self)
+
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
+        # table and field selection
+        streams_to_select = self.testable_streams(environment, data_type)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+        )
+
+        # run initial sync
+        first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()

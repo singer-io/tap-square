@@ -487,22 +487,32 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    # REFACTOR I want to break up this method according to  TODOs below
-    # and I want to keep run_initial_sync as a tap-specific method and have it call the broken up methods.
-    # Under normal circumstances I think this method as is does 3 things and those should be explicit.
-    # Also splitting data by 'environment' and 'data_type' is square specific and is something I hope we
-    # shouldn't need in most cases.
-    def run_initial_sync(self, environment, data_type, select_all_fields=True):
-        """
-        Run the tap in check mode.
-        Perform table selection based on testable streams.
-        Select all fields or no fields based on the select_all_fields param.
-        Run a sync.
-        """
+    # def run_initial_sync(self, environment, data_type, select_all_fields=True):
+    #     """
+    #     Run the tap in check mode.
+    #     Perform table selection based on testable streams.
+    #     Select all fields or no fields based on the select_all_fields param.
+    #     Run a sync.
+    #     """
+    #     # Instantiate connection
+    #     conn_id = connections.ensure_connection(self)
 
-        # Instantiate connection with default start/end dates
-        conn_id = connections.ensure_connection(self)
+    #     found_catalogs = self.run_and_verify_check_mode()
 
+    #     streams_to_select = self.testable_streams(environment, data_type)
+    #     self.perform_and_verify_table_and_field_selection(
+    #         conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
+    #     )
+
+    #     return self.run_and_verify_sync(conn_id)
+
+    def run_and_verify_check_mode(self, conn_id):
+        """
+        Run the tap in check mode and verify it succeeds.
+        This should be ran prior to field selection and initial sync.
+
+        Return the connection id and found catalogs from menagerie.
+        """
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)
 
@@ -518,10 +528,15 @@ class TestSquareBase(ABC):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # TODO Break the above code into run_and_verify_check()
+        return found_catalogs
 
-        # Select all available fields from all testable streams
-        exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
+    def perform_and_verify_table_and_field_selection(self, conn_id, found_catalogs, streams_to_select, select_all_fields=True):
+        """
+        Perform table and field selection based off of the streams to select set and field selection parameters.
+        Verfify this results in the expected streams selected and all or no fields selected for those streams.
+        """
+        # Select all available fields or select no fields from all testable streams
+        exclude_streams = self.expected_streams().difference(streams_to_select)
         self.select_all_streams_and_fields(
             conn_id=conn_id, catalogs=found_catalogs, select_all_fields=select_all_fields, exclude_streams=exclude_streams
         )
@@ -534,7 +549,7 @@ class TestSquareBase(ABC):
             # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
-            if cat['stream_name'] not in self.testable_streams(environment, data_type):
+            if cat['stream_name'] not in streams_to_select:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
@@ -551,10 +566,15 @@ class TestSquareBase(ABC):
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
                 self.assertEqual(expected_automatic_fields, selected_fields)
 
+    def run_and_verify_sync(self, conn_id):
+        """
+        Clear the connections state in menagerie and Run a Sync.
+        Verify the exit code following the sync.
+
+        Return the connection id and record count by stream
+        """
         #clear state
         menagerie.set_state(conn_id, {})
-
-        # TODO  Put the above code back into each test for transparency
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -568,7 +588,7 @@ class TestSquareBase(ABC):
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
 
-        return conn_id, first_record_count_by_stream        # TODO  Put the above and below code run_and_verify_sync()
+        return first_record_count_by_stream
 
     def getPKsToRecordsDict(self, stream, records):
         """Return dict object of tupled pk values to record"""
@@ -613,7 +633,6 @@ class TestSquareBase(ABC):
     def assertRecordsEqual(self, stream, expected_record, sync_record):
         """
         Certain Square streams cannot be compared directly with assertDictEqual().
-        Some Square workflows return slightly differnt values for the rep key (keys differ on order of ms).
         So we handle that logic here.
         """
         if stream == 'payments':

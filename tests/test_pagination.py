@@ -110,42 +110,18 @@ class TestSquarePagination(TestSquareBase, TestCase):
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False)
 
-        # run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode()
 
-        # verify check  exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-
-        diff = self.expected_check_streams().symmetric_difference( found_catalog_names )
-        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are OK")
-
-        #select all catalogs
+        # table and field selection
         exclude_streams = list(self.expected_streams().difference(self.TESTABLE_STREAMS))
-        self.select_all_streams_and_fields(conn_id=conn_id, catalogs=found_catalogs,
-                                           exclude_streams=exclude_streams)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+        )
 
-        #clear state
-        version = menagerie.get_state_version(conn_id)
-        menagerie.set_state(conn_id, {}, version)
+        # run initial sync
+        record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        # run sync
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        # Verify tap exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # read target output
-        record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                   self.TESTABLE_STREAMS,
-                                                                   self.expected_primary_keys())
         synced_records = runner.get_records_from_target_output()
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
@@ -170,4 +146,3 @@ class TestSquarePagination(TestSquareBase, TestCase):
 
                 # Verify by pks that the replicated records match our expectations
                 self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
-
