@@ -53,7 +53,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
             all_records = cls.client.get_all(stream, start_date=cls.STATIC_START_DATE)
             all_ids = [rec.get('id') for rec in all_records if not rec.get('is_deleted')]
             if len(all_ids) > limit / 2:
-                chunk = int(limit / 4)
+                chunk = int(len(all_ids) - ( limit / 2 ))
                 print("Cleaning up {} excess records".format(chunk))
                 cls.client.delete_catalog(all_ids[:chunk])
 
