@@ -16,7 +16,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
-            'inventories', # No PK so not able to verify any automatic fields
+            'inventories', # No PK or rep key so no automatic fields to check
         })
 
     def testable_streams_static(self):

@@ -49,13 +49,12 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.start_date_test(self.get_environment(), DataType.DYNAMIC)
 
-        # Locations does not respect start date and it's the only static data type
-        # Test fails if this tries to run
-        #print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        #self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        #self.START_DATE_1 = self.STATIC_START_DATE
-        #self.START_DATE_2 = self.timedelta_formatted(dtime=self.STATIC_START_DATE, days=3) # + 3 days
-        #self.start_date_test(self.get_environment(), DataType.STATIC)
+        # Locations does not respect start date and it's the only static data type (see above)
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
         self.set_environment(self.PRODUCTION)
 
