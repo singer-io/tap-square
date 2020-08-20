@@ -41,6 +41,14 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
           when: always
+          name: 'All Tests Running'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            python tests/test_config.py
+      - run:
+          when: always
           name: 'Testing Discovery'
           command: |
             source dev_env.sh
@@ -151,7 +159,20 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
-
+      - run:
+          when: always
+          name: 'Testing Payments Stream'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_payments.py
 workflows:
   version: 2
   commit:

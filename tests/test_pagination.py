@@ -44,6 +44,19 @@ class TestSquarePagination(TestSquareBase, TestCase):
             'locations',  # This stream does not paginate in the sync (See Above)
         })
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.set_environment(cls, cls.SANDBOX)
+        cleanup = {'categories': 10000}
+        for stream, limit in cleanup.items():
+            print("Checking if cleanup is required.")
+            all_records = cls.client.get_all(stream, start_date=cls.STATIC_START_DATE)
+            all_ids = [rec.get('id') for rec in all_records]
+            if len(all_ids) > limit / 2:
+                chunk = int(limit / 4)
+                print("Cleaning up {} excess records".format(chunk))
+                cls.client.delete_catalog(all_ids[:chunk])
+
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
