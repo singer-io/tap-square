@@ -117,6 +117,7 @@ class Locations(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
+    @lru_cache()
     @classmethod
     def get_all_location_ids(cls, client):
         LOGGER.info("Called get_all_location_ids")
