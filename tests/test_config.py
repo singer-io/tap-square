@@ -25,7 +25,7 @@ print("Reading in filenames from tests directory.")
 files_in_dir = [name for name in os.listdir(cwd)]
 
 print("Dropping files that are not of the form 'test_<feature>.py'.")
-test_files_in_dir = [fn for fn in files_in_dir if 'test' == fn[:4] and '.py' == fn[-3:]]
+test_files_in_dir = [fn for fn in files_in_dir if fn.startswith('test_') and fn.endswith('.py')]
 
 print("Dropping test_client.py from test files.")
 test_files_in_dir.remove('test_client.py')
@@ -40,11 +40,10 @@ print("Parsing circle config for run blocks.")
 runs = contents.replace(' ', '').replace('\n', '').split('-run:')
 
 print("Verify all test files are executed in circle...")
-file_found = {f: False for f in test_files_in_dir}
-for filename in file_found.keys():
+tests_not_found = set(test_files_in_dir)
+for filename in test_files_in_dir:
     print("\tVerifying {} is running in circle.".format(filename))
     if any([filename in run for run in runs]):
-        file_found[filename] = True
-
-assert all(file_found.values()), "The following tests are not running in circle:\t{}".format([k for k, v in file_found.items() if not v])
+        tests_not_found.remove(filename)
+assert tests_not_found == set(), "The following tests are not running in circle:\t{}".format(tests_not_found)
 print("\t SUCCESS: All tests are running in circle.")
