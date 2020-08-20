@@ -383,7 +383,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                 )
                 if (len(second_sync_data) - len(expected_records)) > 0:
-                    LOGGER.INFO('Second sync replicated %s records more than our create and update for $s',
+                    LOGGER.info('Second sync replicated %s records more than our create and update for $s',
                                 len(second_sync_data), stream)
 
                 if not primary_keys:
