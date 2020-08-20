@@ -30,7 +30,7 @@ class TestSyncCanary(TestSquareBase, TestCase):
         """
         conn_id = connections.ensure_connection(self)
 
-        found_catalogs = self.run_and_verify_check_mode()
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         streams_to_select = self.testable_streams(environment, data_type)
         self.perform_and_verify_table_and_field_selection(

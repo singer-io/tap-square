@@ -111,7 +111,7 @@ class TestSquarePagination(TestSquareBase, TestCase):
         conn_id = connections.ensure_connection(self, original_properties=False)
 
         # run check mode
-        found_catalogs = self.run_and_verify_check_mode()
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         # table and field selection
         exclude_streams = list(self.expected_streams().difference(self.TESTABLE_STREAMS))
