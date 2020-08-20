@@ -15,10 +15,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_all_fields"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
-            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
-            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
-        })
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
@@ -95,7 +92,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -107,7 +104,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams().difference(self.sandbox_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
 
     def all_fields_test(self, environment, data_type):
@@ -119,13 +116,17 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
-        ################################################################################
+        # ensure data exists for sync streams and set expectations
+        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
+
+        # Execute specific creates and updates for the payments stream in addition to the standard create
         if 'payments' in self.TESTABLE_STREAMS:
+
             created_payments = self.create_specific_payments()
 
             updated_payments = self.update_specific_payments(created_payments)
 
-            print("Tracking fields found in created and updated payments.")
+            print("Tracking fields found in created and updated payments.") # TODO move this to bottom?
             fields = set()
             for payments in [created_payments, updated_payments]:
                 for payment in payments:
@@ -134,13 +135,12 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
                     if untracked_fields:
                         print("Adding untracked fields to tracked set: {}".format(untracked_fields))
                         fields.update(payment_fields)
-        ################################################################################
-        # ensure data exists for sync streams and set expectations
-        expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
-        # modify data set to conform to expectations (json standards)
-        for stream, records in expected_records.items():
-            print("Ensuring expected data for {} has values formatted correctly.".format(stream))
-            self.modify_expected_records(records)
+
+        # TODO delete if not needed (depends on use of created_payments and updated_payments in asertions/comparisons)
+        # # modify data set to conform to expectations (json standards)
+        # for stream, records in expected_records.items():
+        #     print("Ensuring expected data for {} has values formatted correctly.".format(stream))
+        #     self.modify_expected_records(records)
 
         (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
 
@@ -158,20 +158,20 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
             with self.subTest(stream=stream):
                 data = synced_records.get(stream)
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
-                expected_keys = list(expected_records.get(stream)[0].keys())
-                primary_keys = self.expected_primary_keys().get(stream)
-                pk = list(primary_keys)[0] if primary_keys else None
+                expected_keys = set()
+                for record in expected_records.get(stream):
+                    expected_keys.update(record.keys())
 
                 # Verify schema covers all fields
                 schema_keys = set(self.expected_schema_keys(stream))
                 self.assertEqual(
-                    set(), set(expected_keys).difference(schema_keys),
-                    msg="\nFields missing from schema: {}\n".format(set(expected_keys).difference(schema_keys))
+                    set(), expected_keys.difference(schema_keys),
+                    msg="\nFields missing from schema: {}\n".format(expected_keys.difference(schema_keys))
                 )
 
                 # not a test, just logging the fields that are included in the schema but not in the expectations
-                if schema_keys.difference(set(expected_keys)):
-                    print("WARNING Fields missing from expectations: {}".format(schema_keys.difference(set(expected_keys))))
+                if schema_keys.difference(expected_keys):
+                    print("WARNING Fields missing from expectations: {}".format(schema_keys.difference(expected_keys)))
 
                 # Verify that all fields sent to the target fall into the expected schema
                 for actual_keys in record_messages_keys:
@@ -182,64 +182,8 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
                 actual_records = [row['data'] for row in data['messages']]
 
-                if pk:
+                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
 
-                    stream_expected_record_ids = {record[pk] for record in expected_records.get(stream)}
-                    stream_actual_record_ids = {record[pk] for record in actual_records}
-                    self.assertEqual(stream_expected_record_ids,
-                                     stream_actual_record_ids)
-
-                    # Test by keys and values, that we replicated the expected records and nothing else
-
-                    # Verify that actual records were in our expectations
-                    for actual_record in actual_records:
-                        stream_expected_records = [record for record in expected_records.get(stream)
-                                                   if actual_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_expected_records),
-                                        msg="An actual record is missing from our expectations: \nRECORD: {}".format(actual_record))
-                        self.assertEqual(1, len(stream_expected_records),
-                                         msg="A duplicate record was found in our expectations for {}.".format(stream))
-                        stream_expected_record = stream_expected_records[0]
-                        self.assertDictEqual(stream_expected_record, actual_record)
-
-                    # Verify that our expected records were replicated by the tap
-                    for expected_record in expected_records.get(stream):
-                        stream_actual_records = [record for record in actual_records
-                                                 if expected_record.get(pk) == record.get(pk)]
-                        self.assertTrue(len(stream_actual_records),
-                                        msg="An expected record is missing from the sync: \nRECORD: {}".format(expected_record))
-                        self.assertEqual(1, len(stream_actual_records),
-                                         msg="A duplicate record was found in the sync for {}.".format(stream))
-                        stream_actual_record = stream_actual_records[0]
-                        self.assertDictEqual(expected_record, stream_actual_record)
-
-                else:  # 'inventories' does not have a pk so our assertions aren't as clean
-
-                    # Verify that actual records were in our expectations
-                    for actual_record in actual_records:
-                        if actual_record not in expected_records.get(stream):
-                            print("DATA DISCREPANCY:\n\nACTUAL RECORD:\n{}\n".format(actual_record))
-                            for record in expected_records.get(stream):
-                                if record.get('catalog_object_id') == actual_record.get('catalog_object_id') and \
-                                   record.get('location_id') == actual_record.get('location_id'):
-                                    print("EXPECTED_RECORDS:")
-                                    print(str(record))
-                        self.assertIn(actual_record, expected_records.get(stream))
-
-                    # Verify that our expected records were replicated by the tap
-                    for expected_record in expected_records.get(stream):
-                        if expected_record not in actual_records:
-                            print("DATA DISCREPANCY:\n\nEXPECTED RECORD:\n{}\n".format(expected_record))
-                            for record in actual_records:
-                                if record.get('catalog_object_id') == expected_record.get('catalog_object_id') and \
-                                   record.get('location_id') == expected_record.get('location_id'):
-                                    print("ACTUAL_RECORDS:")
-                                    print(str(record))
-                        self.assertIn(expected_record, actual_records)
-
-                    self.assertEqual(len(expected_records.get(stream)), len(actual_records),
-                                     msg="Unexpected number of records synced.")
-
-
-if __name__ == '__main__':
-    unittest.main()
+                for pks_tuple, expected_record in expected_pks_to_record_dict.items():
+                    actual_record = actual_pks_to_record_dict.get(pks_tuple)
+                    self.assertRecordsEqual(stream, expected_record, actual_record)

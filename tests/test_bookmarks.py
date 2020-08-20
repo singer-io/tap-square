@@ -1,6 +1,5 @@
 import os
 import unittest
-from copy import deepcopy
 
 import singer
 
@@ -19,10 +18,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
-            'orders',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3700
-            'shifts',  # BUG | https://stitchdata.atlassian.net/browse/SRCE-3704
-        })
+        return self.dynamic_data_streams().difference(self.untestable_streams())
 
     def testable_streams_static(self):
         """ No static streams marked for incremental. """
@@ -149,10 +145,9 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 new_records = self.client.create(stream, start_date=self.START_DATE)
 
             assert new_records, "Failed to create a {} record".format(stream)
+            assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
             expected_records_second_sync[stream] += new_records
             created_records[stream] += new_records
-
-            assert len(new_records) == 1, "Created too many {} records: {}".format(stream, len(new_records))
 
         for stream in testable_streams.difference(self.cannot_update_streams()):
             # Update all streams (but save payments for last)
@@ -368,7 +363,8 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                 # TESTING APPLICABLE TO ALL STREAMS
 
                 # Verify that the expected records are replicated in the 2nd sync
-                # For incremental streams we should see only 2 records (a new record and an updated record)
+                # For incremental streams we should see at least 2 records (a new record and an updated record)
+                # but we may see more as the bookmmark is inclusive.
                 # For full table streams we should see 1 more record than the first sync
                 expected_records = expected_records_second_sync.get(stream)
                 if stream == 'inventories':
@@ -377,16 +373,13 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                     primary_keys = stream_primary_keys.get(stream)
 
                 updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
-                if stream in {'orders', 'modifier_lists', 'items'}:  # Some streams have too many dependencies to track explicitly
-                    self.assertLessEqual(len(expected_records), len(second_sync_data),
-                                         msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
-                                            "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                    )
-                else:
-                    self.assertEqual(len(expected_records), len(second_sync_data),
-                                     msg="Expected number of records do not match actual for 2nd sync.\n" +
+                self.assertLessEqual(len(expected_records), len(second_sync_data),
+                                     msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
                                      "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
-                    )
+                )
+                if (len(second_sync_data) - len(expected_records)) > 0:
+                    LOGGER.warning('Second sync replicated %s records more than our create and update for %s',
+                                   len(second_sync_data), stream)
 
                 if not primary_keys:
                     raise NotImplementedError("PKs are needed for comparing records")
@@ -419,30 +412,3 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                         self.assertRecordsEqual(stream, updated_record, sync_record)
 
-    def assertRecordsEqual(self, stream, expected_record, sync_record):
-        if stream == 'payments':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-        elif stream == 'inventories':
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
-        elif stream in {'employees', 'roles'}:
-            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
-        else:
-            self.assertDictEqual(expected_record, sync_record)
-
-    def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
-                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
-                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
-        expected_record_copy = deepcopy(expected_record)
-        sync_record_copy = deepcopy(sync_record)
-
-        # Square api workflow updates these values so they're a few seconds different between
-        # the time the record is created and the tap syncs, but other fields are the same
-        for off_key in off_keys:
-            self.assertGreaterEqual(sync_record_copy.pop(off_key),
-                                    expected_record_copy.pop(off_key))
-        self.assertDictEqual(expected_record_copy, sync_record_copy)
-
-
-if __name__ == '__main__':
-    unittest.main()

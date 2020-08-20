@@ -51,9 +51,9 @@ class TestSquarePagination(TestSquareBase, TestCase):
         for stream, limit in cleanup.items():
             print("Checking if cleanup is required.")
             all_records = cls.client.get_all(stream, start_date=cls.STATIC_START_DATE)
-            all_ids = [rec.get('id') for rec in all_records]
+            all_ids = [rec.get('id') for rec in all_records if not rec.get('is_deleted')]
             if len(all_ids) > limit / 2:
-                chunk = int(limit / 4)
+                chunk = int(len(all_ids) - ( limit / 2 ))
                 print("Cleaning up {} excess records".format(chunk))
                 cls.client.delete_catalog(all_ids[:chunk])
 
@@ -168,34 +168,6 @@ class TestSquarePagination(TestSquareBase, TestCase):
                     self.assertEqual(set(), auto_fields.difference(actual_keys),
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
-                primary_keys = self.expected_primary_keys().get(stream)
-                pks = list(primary_keys) if primary_keys else None
-                if not pks:
-                    pks = self.makeshift_primary_keys().get(stream)
-
                 # Verify by pks that the replicated records match our expectations
-                self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records, pks)
+                self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
 
-                # Verify the expected number of records were replicated
-                self.assertEqual(len(expected_records.get(stream)), len(actual_records))
-
-
-    def assertRecordsEqualByPK(self, stream, expected_records, actual_records, pks):
-        """Compare expected and actual records by their primary key."""
-
-        # Verify there are no duplicate pks in the target
-        actual_pks = [tuple(actual_record.get(pk) for pk in pks) for actual_record in actual_records]
-        actual_pks_set = set(actual_pks)
-        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
-
-        # Verify there are no duplicate pks in our expectations
-        expected_pks = [tuple(expected_record.get(pk) for pk in pks) for expected_record in expected_records]
-        expected_pks_set = set(expected_pks)
-        self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
-
-        # Verify that all expected records and ONLY the expected records were replicated
-        self.assertEqual(expected_pks_set, actual_pks_set)
-
-
-if __name__ == '__main__':
-    unittest.main()

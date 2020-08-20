@@ -218,7 +218,7 @@ class TestClient(SquareClient):
         self.delete_catalog(catalog_ids)
         raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
-    def post_order(self, body, business_location_id):
+    def _post_order(self, body, business_location_id):
         """
         body: {
           "order": {
@@ -255,7 +255,8 @@ class TestClient(SquareClient):
         elif stream == 'locations':
             if num_records != 1:
                 raise NotImplementedError("Only implemented create one {} record at a time, but requested {}".format(stream, num_records))
-            return [self.create_locations().body.get('location')]
+
+            return [self._create_location()]
         elif stream == 'orders':
             return self._create_orders(start_date=start_date, num_records=num_records)
         elif stream == 'refunds':
@@ -422,6 +423,7 @@ class TestClient(SquareClient):
             LOGGER.error("response: {}".format(refund))
             LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
             raise RuntimeError(refund.errors)
+
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, status='COMPLETED')
         completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
         return (completed_refund, completed_payment)
@@ -604,7 +606,7 @@ class TestClient(SquareClient):
         LOGGER.info('Created location with id %s and name %s', location_id, location_name)
         return resp
 
-    def create_locations(self):
+    def _create_location(self):
         made_id = self.make_id('location')
         website = 'https://get.stitchdata.com/stitch?utm_source=google' + \
             '&utm_medium=cpc&utm_campaign=stitch_ga_nam_en_dg_search_brand&utm_content' + \
@@ -675,7 +677,14 @@ class TestClient(SquareClient):
             print("body: {}".format(body))
             print("response: {}".format(response))
             raise RuntimeError(response.errors)
-        return response
+
+        location_id = response.body.get('location')['id']
+
+        # Trying to get_all locations because data is slightly different
+        all_locations = self.get_all('locations', None)
+        location_matching_ids = [location for location in all_locations if location['id'] == location_id]
+        assert len(location_matching_ids) == 1
+        return location_matching_ids[0]
 
     def create_employees_v1(self, num_records):
         if self.env_is_sandbox():
@@ -753,7 +762,7 @@ class TestClient(SquareClient):
                 },
                 'state': 'PROPOSED'
             }]
-            created_orders.append(self.post_order(body, location_id).body.get('order'))
+            created_orders.append(self._post_order(body, location_id).body.get('order'))
 
         return created_orders
 
@@ -852,7 +861,7 @@ class TestClient(SquareClient):
     def update_item(self, obj_id, version, start_date):
         """Add a category, tax, and chagne the name of the item"""
         all_categories = self.get_all('categories', start_date)
-        category = random.choice(all_categories)
+        category = random.choice([category for category in all_categories if not category.get('is_deleted')])
         all_taxes = self.get_all('taxes', start_date)
         tax_ids = [random.choice(all_taxes).get('id')]
 

@@ -4,6 +4,7 @@ from datetime import datetime as dt
 from datetime import timedelta
 from abc import ABC, abstractmethod
 from enum import Enum
+from copy import deepcopy
 
 import singer
 
@@ -124,11 +125,12 @@ class TestSquareBase(ABC):
             "employees": {
                 self.PRIMARY_KEYS: {'id'},
                 self.REPLICATION_METHOD: self.FULL,
+                self.START_DATE_KEY: 'updated_at'
             },
-           "inventories": {
+            "inventories": {
                 self.PRIMARY_KEYS: set(),
                 self.REPLICATION_METHOD: self.FULL,
-               self.START_DATE_KEY: 'calculated_at',
+                self.START_DATE_KEY: 'calculated_at',
             },
             "items": {
                 self.PRIMARY_KEYS: {'id'},
@@ -159,7 +161,8 @@ class TestSquareBase(ABC):
             },
             "roles": {
                 self.PRIMARY_KEYS: {'id'},
-                self.REPLICATION_METHOD: self.FULL
+                self.REPLICATION_METHOD: self.FULL,
+                self.START_DATE_KEY: 'updated_at'
             },
             "settlements": {
                 self.PRIMARY_KEYS: {'id'},
@@ -277,7 +280,7 @@ class TestSquareBase(ABC):
                 for table, properties
                 in self.expected_metadata().items() if table in incremental_streams}
 
-    def expected_start_date_stream_to_key(self):
+    def expected_stream_to_start_date_key(self):
         return {table: properties.get(self.START_DATE_KEY)
                 for table, properties in self.expected_metadata().items()
                 if properties.get(self.START_DATE_KEY)}
@@ -405,7 +408,7 @@ class TestSquareBase(ABC):
         if isinstance(value, float) and key in ['latitude', 'longitude']:
             record[key] = str(value)
 
-    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None):
+    def create_test_data(self, testable_streams, start_date, start_date_2=None, min_required_num_records_per_stream=None, force_create_records=False):
         if min_required_num_records_per_stream is None:
             min_required_num_records_per_stream = {
                 stream: 1
@@ -419,42 +422,51 @@ class TestSquareBase(ABC):
         create_test_data_streams = list(testable_streams)
         create_test_data_streams = self._shift_to_start_of_list('employees', create_test_data_streams)
         create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
-        if 'payments' in testable_streams:
-            create_test_data_streams.remove('payments')
-            create_test_data_streams.append('payments')
+        # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
+        create_test_data_streams = self._shift_to_end_of_list('payments', create_test_data_streams)
+        # creating a payment results in a new order, putting it after ensures the number of orders is consistent
+        create_test_data_streams = self._shift_to_end_of_list('orders', create_test_data_streams)
+        # creating an inventory results in a new item, putting it after ensures the number of items is consistent
+        create_test_data_streams = self._shift_to_end_of_list('items', create_test_data_streams)
 
-        expected_records = {stream: [] for stream in self.expected_streams()}
+        stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
         for stream in create_test_data_streams:
-            expected_records[stream] = self.client.get_all(stream, start_date)
+            stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 
-            if self.expected_replication_keys().get(stream):
-                rep_key = next(iter(self.expected_replication_keys().get(stream)))
-            elif self.expected_start_date_stream_to_key().get(stream):
-                rep_key = self.expected_start_date_stream_to_key().get(stream)
-            else:
-                rep_key = 'created_at'
+            start_date_key = self.get_start_date_key(stream)
+            if (not any([stream_obj.get(start_date_key) and self.parse_date(stream_obj.get(start_date_key)) > self.parse_date(start_date_2)
+                        for stream_obj in stream_to_expected_records[stream]])
+                    or len(stream_to_expected_records[stream]) <= min_required_num_records_per_stream[stream]
+                    or force_create_records):
 
-            if (not any([stream_obj.get(rep_key) and self.parse_date(stream_obj.get(rep_key)) > self.parse_date(start_date_2)
-                        for stream_obj in expected_records[stream]])
-                    or len(expected_records[stream]) <= min_required_num_records_per_stream[stream]):
-
-                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(expected_records[stream]))
+                num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(stream_to_expected_records[stream]))
 
                 LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
                 created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
                 if isinstance(created_records, dict):
-                    expected_records[stream].append(created_records)
+                    stream_to_expected_records[stream].append(created_records)
                 elif isinstance(created_records, list):
-                    expected_records[stream].extend(created_records)
+                    stream_to_expected_records[stream].extend(created_records)
                 else:
                     raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
             print("Adjust expectations for stream: {}".format(stream))
-            self.modify_expected_records(expected_records[stream])
+            self.modify_expected_records(stream_to_expected_records[stream])
 
-        return expected_records
+        return stream_to_expected_records
+
+    def get_start_date_key(self, stream):
+        replication_type = self.expected_replication_method().get(stream)
+        if replication_type == self.INCREMENTAL and self.expected_replication_keys().get(stream):
+            start_date_key = next(iter(self.expected_replication_keys().get(stream)))
+        elif replication_type == self.FULL and self.expected_stream_to_start_date_key().get(stream):
+            start_date_key = self.expected_stream_to_start_date_key().get(stream)
+        else:
+            start_date_key = 'created_at'
+
+        return start_date_key
 
     @staticmethod
     def _shift_to_start_of_list(key, values):
@@ -466,7 +478,16 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    def run_initial_sync(self, environment, data_type): # REFACTOR see TODOs below
+    @staticmethod
+    def _shift_to_end_of_list(key, values):
+        new_list = values.copy()
+        if key in values:
+            new_list.remove(key)
+            new_list.append(key)
+
+        return new_list
+
+    def run_initial_sync(self, environment, data_type, select_all_fields=True): # REFACTOR see TODOs below
         """
         Run the tap in check mode.
         Perform table selection based on testable streams.
@@ -497,7 +518,7 @@ class TestSquareBase(ABC):
         # Select all available fields from all testable streams
         exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
         self.select_all_streams_and_fields(
-            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=select_all_fields, exclude_streams=exclude_streams
         )
 
         catalogs = menagerie.get_catalogs(conn_id)
@@ -513,11 +534,17 @@ class TestSquareBase(ABC):
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
 
-            # Verify all fields within each selected stream are selected
-            for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
-                field_selected = field_props.get('selected')
-                print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
-                self.assertTrue(field_selected, msg="Field not selected.")
+            if select_all_fields:
+                # Verify all fields within each selected stream are selected
+                for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
+                    field_selected = field_props.get('selected')
+                    print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                    self.assertTrue(field_selected, msg="Field not selected.")
+            else:
+                # Verify only automatic fields are selected
+                expected_automatic_fields = self.expected_automatic_fields().get(cat['tap_stream_id'])
+                selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
+                self.assertEqual(expected_automatic_fields, selected_fields)
 
         #clear state
         menagerie.set_state(conn_id, {})
@@ -537,3 +564,52 @@ class TestSquareBase(ABC):
                                                                          self.expected_primary_keys())
         # TODO  Put the above and below code into run_and_verify_sync()
         return conn_id, first_record_count_by_stream
+
+    def assertRecordsEqualByPK(self, stream, expected_records, actual_records):
+        """Compare expected and actual records by their primary key."""
+
+        primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
+
+        # Verify there are no duplicate pks in the target
+        actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
+        actual_pks_set = set(actual_pks)
+        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
+        actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
+
+        # Verify there are no duplicate pks in our expectations
+        expected_pks = [tuple(expected_record.get(pk) for pk in primary_keys) for expected_record in expected_records]
+        expected_pks_set = set(expected_pks)
+        self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
+        expected_pks_to_record_dict = {tuple(expected_record.get(pk) for pk in primary_keys): expected_record for expected_record in expected_records}
+
+        # Verify that all expected records and ONLY the expected records were replicated
+        self.assertEqual(expected_pks_set, actual_pks_set)
+
+        return expected_pks_to_record_dict, actual_pks_to_record_dict
+
+    def assertRecordsEqual(self, stream, expected_record, sync_record):
+        if stream == 'payments':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
+        elif stream in {'employees', 'roles'}:
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
+        elif stream == 'inventories':
+            self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
+        else:
+            self.assertDictEqual(expected_record, sync_record)
+
+    def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=set()):
+        self.assertParentKeysEqual(expected_record, sync_record)
+        expected_record_copy = deepcopy(expected_record)
+        sync_record_copy = deepcopy(sync_record)
+
+        # Square api workflow updates these values so they're a few seconds different between
+        # the time the record is created and the tap syncs, but other fields are the same
+        for off_key in off_keys:
+            self.assertGreaterEqual(sync_record_copy.pop(off_key),
+                                    expected_record_copy.pop(off_key))
+        self.assertDictEqual(expected_record_copy, sync_record_copy)
+
+    def assertParentKeysEqual(self, expected_record, sync_record):
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
