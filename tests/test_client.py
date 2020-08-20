@@ -218,7 +218,7 @@ class TestClient(SquareClient):
         self.delete_catalog(catalog_ids)
         raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
-    def post_order(self, body, business_location_id):
+    def _post_order(self, body, business_location_id):
         """
         body: {
           "order": {
