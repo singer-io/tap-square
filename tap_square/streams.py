@@ -120,7 +120,6 @@ class Locations(FullTableStream):
     @lru_cache()
     @classmethod
     def get_all_location_ids(cls, client):
-        LOGGER.info("Called get_all_location_ids")
         all_location_ids = list()
         for page, _ in client.get_locations():
             for location in page:
