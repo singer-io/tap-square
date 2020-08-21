@@ -2,21 +2,20 @@ version: 2.1
 
 workflows:
   version: 2
-  commit:
-    jobs:
+  test:
+    jobs: &test-jobs
       - test:
           context: circleci-user
   build_daily:
     triggers:
       - schedule:
-          cron: "0 0 * * *"
+          # 10:00 EST/11:00 EDT Monday-Friday
+          cron: "0 15 * * 1-5"
           filters:
             branches:
               only:
-                - master
-    jobs:
-      - test:
-          context: circleci-user
+                - feature/circleci-delivery
+    jobs: *test-jobs
 
 orbs:
   slack: circleci/slack@3.4.2
