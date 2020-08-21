@@ -53,6 +53,7 @@ jobs:
       # FIXME move to 0.latest
       - run: aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/deployment-utils/feature.global-queue/docker.env /tmp/circleci_workspace/deployment-utils.docker.env
       - setup_remote_docker
+      - run: docker pull 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:feature.global-queue
       - run:
           # FIXME move to 0.latest
           command: |
