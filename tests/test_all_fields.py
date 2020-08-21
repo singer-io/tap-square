@@ -1,9 +1,15 @@
 import os
 import unittest
+from collections import namedtuple
+from typing import List
 
 import tap_tester.runner      as runner
 import tap_tester.connections as connections
+
 from base import TestSquareBase, DataType
+
+
+PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
 
 class TestSquareAllFields(TestSquareBase, unittest.TestCase):
@@ -36,12 +42,11 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
             return resp_object[0]
         else:
             raise RuntimeError("Type {} was unexpected.\nRecord: {} ".format(type(resp_object), resp_object))
-
     def create_specific_payments(self):
         """Create a record using each source type, and a record that will autocomplete."""
         print("Creating a record using each source type, and the autocomplete flag.")
         payment_records = []
-        descriptions = {  # (source type, autocomplete)
+        descriptions = {
             ("card", False),
             ("card_on_file", False),
             ("gift_card", False),
@@ -49,35 +54,35 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         }
         for source_key, autocomplete in descriptions:
             payment_response = self.client._create_payment(autocomplete=autocomplete, source_key=source_key)
-            payment_object = self.ensure_dict_object(payment_response)
-            payment_records.append({'description': (source_key, autocomplete), 'record': payment_object})
+            payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+            payment_records.append(payment_record)
 
         return payment_records
 
-    def update_specific_payments(self, payments_to_update):
+    def update_specific_payments(self, payments_to_update: List[PaymentRecordDetails]):
         """Perform specifc updates on specific payment records."""
         updated_records = []
         print("Updating payment records by completing, canceling and refunding them.")
         # Update a completed payment by making a refund (payments must have a status of 'COMPLETED' to process a refund)
-        created_desc =  ("card", True)
+        source_key, autocomplete = ("card", True)
         description = "refund"
-        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         _, payment_response = self.client.create_refund(self.START_DATE, payment_to_update)
         payment_object = self.ensure_dict_object(payment_response)
         updated_records.append({'description': description, 'record': payment_object})
 
         # Update a payment by completing it
-        created_desc =  ("card_on_file", False)
+        source_key, autocomplete = ("card_on_file", False)
         description = "complete"
-        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
         payment_object = self.ensure_dict_object(payment_response)
         updated_records.append({'description': description, 'record': payment_object})
 
         # Update a payment by canceling it
-        created_desc =  ("gift_card", False)
+        source_key, autocomplete = ("gift_card", False)
         description = "cancel"
-        payment_to_update = [payment['record'] for payment in payments_to_update if payment['description'] == created_desc][0]
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
         payment_object = self.ensure_dict_object(payment_response)
         updated_records.append({'description': description, 'record': payment_object})
