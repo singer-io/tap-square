@@ -487,17 +487,13 @@ class TestSquareBase(ABC):
 
         return new_list
 
-    def run_initial_sync(self, environment, data_type, select_all_fields=True): # REFACTOR see TODOs below
+    def run_and_verify_check_mode(self, conn_id):
         """
-        Run the tap in check mode.
-        Perform table selection based on testable streams.
-        Select all fields for selected streams.
-        Run a sync.
+        Run the tap in check mode and verify it succeeds.
+        This should be ran prior to field selection and initial sync.
+
+        Return the connection id and found catalogs from menagerie.
         """
-
-        # Instantiate connection with default start/end dates
-        conn_id = connections.ensure_connection(self)
-
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)
 
@@ -513,10 +509,15 @@ class TestSquareBase(ABC):
         self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
         print("discovered schemas are OK")
 
-        # TODO Break the above code into run_and_verify_check()
+        return found_catalogs
 
-        # Select all available fields from all testable streams
-        exclude_streams = self.expected_streams().difference(self.testable_streams(environment, data_type))
+    def perform_and_verify_table_and_field_selection(self, conn_id, found_catalogs, streams_to_select, select_all_fields=True):
+        """
+        Perform table and field selection based off of the streams to select set and field selection parameters.
+        Verfify this results in the expected streams selected and all or no fields selected for those streams.
+        """
+        # Select all available fields or select no fields from all testable streams
+        exclude_streams = self.expected_streams().difference(streams_to_select)
         self.select_all_streams_and_fields(
             conn_id=conn_id, catalogs=found_catalogs, select_all_fields=select_all_fields, exclude_streams=exclude_streams
         )
@@ -529,7 +530,7 @@ class TestSquareBase(ABC):
             # Verify all testable streams are selected
             selected = catalog_entry.get('annotated-schema').get('selected')
             print("Validating selection on {}: {}".format(cat['stream_name'], selected))
-            if cat['stream_name'] not in self.testable_streams(environment, data_type):
+            if cat['stream_name'] not in streams_to_select:
                 self.assertFalse(selected, msg="Stream selected, but not testable.")
                 continue # Skip remaining assertions if we aren't selecting this stream
             self.assertTrue(selected, msg="Stream not selected.")
@@ -546,10 +547,15 @@ class TestSquareBase(ABC):
                 selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
                 self.assertEqual(expected_automatic_fields, selected_fields)
 
+    def run_and_verify_sync(self, conn_id):
+        """
+        Clear the connections state in menagerie and Run a Sync.
+        Verify the exit code following the sync.
+
+        Return the connection id and record count by stream
+        """
         #clear state
         menagerie.set_state(conn_id, {})
-
-        # TODO  Put the above code back into each test for transparency
 
         # run sync
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -562,32 +568,54 @@ class TestSquareBase(ABC):
         first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
                                                                          self.expected_streams(),
                                                                          self.expected_primary_keys())
-        # TODO  Put the above and below code into run_and_verify_sync()
-        return conn_id, first_record_count_by_stream
 
-    def assertRecordsEqualByPK(self, stream, expected_records, actual_records):
-        """Compare expected and actual records by their primary key."""
+        return first_record_count_by_stream
 
+    def getPKsToRecordsDict(self, stream, records):
+        """Return dict object of tupled pk values to record"""
+        primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
+        pks_to_record_dict = {tuple(record.get(pk) for pk in primary_keys): record for record in records}
+        return pks_to_record_dict
+
+    ##########################################################################
+    ### Standard Assertion Patterns
+    ##########################################################################
+
+    def assertPKsEqual(self, stream, expected_records, sync_records):
+        """
+        Compare the values of the primary keys for expected and synced records.
+        For this comparison to be valid we also check for duplicate primary keys.
+        """
         primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
 
         # Verify there are no duplicate pks in the target
-        actual_pks = [tuple(actual_record.get(pk) for pk in primary_keys) for actual_record in actual_records]
-        actual_pks_set = set(actual_pks)
-        self.assertEqual(len(actual_pks), len(actual_pks_set), msg="A duplicate record may have been replicated.")
-        actual_pks_to_record_dict = {tuple(actual_record.get(pk) for pk in primary_keys): actual_record for actual_record in actual_records}
+        sync_pks = [tuple(sync_record.get(pk) for pk in primary_keys) for sync_record in sync_records]
+        sync_pks_set = set(sync_pks)
+        self.assertEqual(len(sync_pks), len(sync_pks_set), msg="A duplicate record may have been replicated.")
 
         # Verify there are no duplicate pks in our expectations
         expected_pks = [tuple(expected_record.get(pk) for pk in primary_keys) for expected_record in expected_records]
         expected_pks_set = set(expected_pks)
         self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
-        expected_pks_to_record_dict = {tuple(expected_record.get(pk) for pk in primary_keys): expected_record for expected_record in expected_records}
 
         # Verify that all expected records and ONLY the expected records were replicated
-        self.assertEqual(expected_pks_set, actual_pks_set)
+        self.assertEqual(expected_pks_set, sync_pks_set)
 
-        return expected_pks_to_record_dict, actual_pks_to_record_dict
+    def assertParentKeysEqual(self, expected_record, sync_record):
+        """Compare the top level keys of an expected record and a sync record."""
+        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
+                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
+
+    ##########################################################################
+    ### Tap Specific Assertions
+    ##########################################################################
 
     def assertRecordsEqual(self, stream, expected_record, sync_record):
+        """
+        Certain Square streams cannot be compared directly with assertDictEqual().
+        So we handle that logic here.
+        """
         if stream == 'payments':
             self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
         elif stream in {'employees', 'roles'}:
@@ -608,8 +636,3 @@ class TestSquareBase(ABC):
             self.assertGreaterEqual(sync_record_copy.pop(off_key),
                                     expected_record_copy.pop(off_key))
         self.assertDictEqual(expected_record_copy, sync_record_copy)
-
-    def assertParentKeysEqual(self, expected_record, sync_record):
-        self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
-                         msg="Expected keys in expected_record to equal keys in sync_record. " +\
-                         "[expected_record={}][sync_record={}]".format(expected_record, sync_record))

@@ -1,9 +1,14 @@
 import os
 import unittest
+from collections import namedtuple
 
 import tap_tester.runner      as runner
+import tap_tester.connections as connections
 
 from base import TestSquareBase, DataType
+
+
+PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
 
 class TestSquareAllFields(TestSquareBase, unittest.TestCase):
@@ -19,6 +24,70 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
+
+    def ensure_dict_object(self, resp_object):
+        """
+        Ensure the response object is a dictionary and return it.
+        If the object is a list, ensure the list contains only one dict item and return that.
+        Otherwise fail the test.
+        """
+        if isinstance(resp_object, dict):
+            return resp_object
+        elif isinstance(resp_object, list):
+            self.assertEqual(1, len(resp_object),
+                             msg="Multiple objects were returned, but only 1 was expected")
+            self.assertTrue(isinstance(resp_object[0], dict),
+                            msg="Response object is a list of {} types".format(type(resp_object[0])))
+            return resp_object[0]
+        else:
+            raise RuntimeError("Type {} was unexpected.\nRecord: {} ".format(type(resp_object), resp_object))
+
+    def create_specific_payments(self):
+        """Create a record using each source type, and a record that will autocomplete."""
+        print("Creating a record using each source type, and the autocomplete flag.")
+        payment_records = []
+        descriptions = {
+            ("card", False),
+            ("card_on_file", False),
+            ("gift_card", False),
+            ("card", True),
+        }
+        for source_key, autocomplete in descriptions:
+            payment_response = self.client._create_payment(autocomplete=autocomplete, source_key=source_key)
+            payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+            payment_records.append(payment_record)
+
+        return payment_records
+
+    def update_specific_payments(self, payments_to_update):
+        """Perform specifc updates on specific payment records."""
+        updated_records = []
+        print("Updating payment records by completing, canceling and refunding them.")
+        # Update a completed payment by making a refund (payments must have a status of 'COMPLETED' to process a refund)
+        source_key, autocomplete = ("card", True)
+        description = "refund"
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
+        _, payment_response = self.client.create_refund(self.START_DATE, payment_to_update)
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
+
+        # Update a payment by completing it
+        source_key, autocomplete = ("card_on_file", False)
+        description = "complete"
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
+        payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
+
+        # Update a payment by canceling it
+        source_key, autocomplete = ("gift_card", False)
+        description = "cancel"
+        payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
+        payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
+
+        return updated_records
 
     @classmethod
     def tearDownClass(cls):
@@ -52,10 +121,28 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
+        # execute specific creates and updates for the payments stream in addition to the standard create
+        if 'payments' in self.TESTABLE_STREAMS:
+            created_payments = self.create_specific_payments()
+            updated_payments = self.update_specific_payments(created_payments)
+
+        # ensure data exists for sync streams and set expectations
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)
 
+        # instantiate connection
+        conn_id = connections.ensure_connection(self)
 
-        (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
+        # table and field selection
+        streams_to_select = self.testable_streams(environment, data_type)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+        )
+
+        # run initial sync
+        first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
@@ -95,7 +182,11 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
                 actual_records = [row['data'] for row in data['messages']]
 
-                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
+                # Verify by pks, that we replicated the expected records and only the expected records
+                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
+
+                expected_pks_to_record_dict = self.getPKsToRecordsDict(stream, expected_records.get(stream))
+                actual_pks_to_record_dict = self.getPKsToRecordsDict(stream, actual_records)
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)

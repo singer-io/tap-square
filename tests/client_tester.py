@@ -1,7 +1,7 @@
 """
 This is used for testing basic functionality of the test client.
 To run change the desired flags below and use the following command from the tap-tester repo:
-  'python ../tap-adroll/tests/client_tester.py'
+  'python ../tap-square/tests/client_tester.py'
 """
 from datetime import datetime
 import random

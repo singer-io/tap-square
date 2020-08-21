@@ -2,6 +2,7 @@ import os
 
 from unittest import TestCase
 
+import tap_tester.connections as connections
 import tap_tester.runner      as runner
 
 from base import TestSquareBase, DataType
@@ -15,7 +16,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
-            'inventories', # No PK so not able to verify any automatic fields
+            'inventories', # No PK or rep key so no automatic fields to check
         })
 
     def testable_streams_static(self):
@@ -49,6 +50,7 @@ class TestAutomaticFields(TestSquareBase, TestCase):
         print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
+        # ensure data exists and set expectatinos with automatic fields only
         expected_records_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
         expected_records = {x: [] for x in self.expected_streams()}
         for stream in self.TESTABLE_STREAMS:
@@ -59,7 +61,20 @@ class TestAutomaticFields(TestSquareBase, TestCase):
                      for field in self.expected_automatic_fields().get(stream)}
                 )
 
-        (_, first_record_count_by_stream) = self.run_initial_sync(environment, data_type, select_all_fields=False)
+        # instantiate connection
+        conn_id = connections.ensure_connection(self)
+
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
+        # table and field selection
+        streams_to_select = self.testable_streams(environment, data_type)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=False
+        )
+
+        # run initial sync
+        first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         replicated_row_count =  sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
@@ -83,10 +98,11 @@ class TestAutomaticFields(TestSquareBase, TestCase):
                                      msg="Expected automatic fields and nothing else.")
 
                 actual_records = [row['data'] for row in data['messages']]
+                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
 
-                (expected_pks_to_record_dict, actual_pks_to_record_dict) = self.assertRecordsEqualByPK(stream, expected_records.get(stream), actual_records)
+                expected_pks_to_record_dict = self.getPKsToRecordsDict(stream, expected_records.get(stream))
+                actual_pks_to_record_dict = self.getPKsToRecordsDict(stream, actual_records)
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
                     self.assertDictEqual(expected_record, actual_record)
-

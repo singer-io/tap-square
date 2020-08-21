@@ -58,7 +58,6 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
             different values for the replication key
         """
         print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # TODO implement PRODUCTION
 
         print("\n\nRUNNING {}\n\n".format(self.name()))
 

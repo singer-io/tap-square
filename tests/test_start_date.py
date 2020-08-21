@@ -49,13 +49,12 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.start_date_test(self.get_environment(), DataType.DYNAMIC)
 
-        # Locations does not respect start date and it's the only static data type
-        # Test fails if this tries to run
-        #print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        #self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        #self.START_DATE_1 = self.STATIC_START_DATE
-        #self.START_DATE_2 = self.timedelta_formatted(dtime=self.STATIC_START_DATE, days=3) # + 3 days
-        #self.start_date_test(self.get_environment(), DataType.STATIC)
+        # Locations does not respect start date and it's the only static data type (see above)
+        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.assertEqual(set(), self.TESTABLE_STREAMS,
+                         msg="Testable streams exist for this category.")
+        print("\tThere are no testable streams.")
 
         self.set_environment(self.PRODUCTION)
 
@@ -76,7 +75,20 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         ### First Sync
         ##########################################################################
 
-        (conn_id, first_record_count_by_stream) = self.run_initial_sync(environment, data_type)
+        # instantiate connection
+        conn_id = connections.ensure_connection(self)
+
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
+
+        # table and field selection
+        streams_to_select = self.testable_streams(environment, data_type)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=True
+        )
+
+        # run initial sync
+        first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
         replicated_row_count_1 =  sum(first_record_count_by_stream.values())
         self.assertGreater(replicated_row_count_1, 0, msg="failed to replicate any data: {}".format(first_record_count_by_stream))
@@ -97,41 +109,18 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         # create a new connection with the new start_date
         conn_id = connections.ensure_connection(self, original_properties=False)
 
-        #run in check mode
-        check_job_name = runner.run_check_mode(self, conn_id)
+        # run check mode
+        found_catalogs = self.run_and_verify_check_mode(conn_id)
 
-        #verify check exit codes
-        exit_status = menagerie.get_exit_status(conn_id, check_job_name)
-        menagerie.verify_check_exit_status(self, exit_status, check_job_name)
-
-        found_catalogs = menagerie.get_catalogs(conn_id)
-        self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
-
-        found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
-
-        diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
-        self.assertEqual(0, len(diff), msg="discovered schemas do not match: {}".format(diff))
-        print("discovered schemas are kosher")
-
-        # Select all available streams and their fields
-        exclude_streams = self.expected_streams().difference(self.TESTABLE_STREAMS)
-        self.select_all_streams_and_fields(
-            conn_id=conn_id, catalogs=found_catalogs, select_all_fields=True, exclude_streams=exclude_streams
+        # table and field selection
+        streams_to_select = self.testable_streams(environment, data_type)
+        self.perform_and_verify_table_and_field_selection(
+            conn_id, found_catalogs, streams_to_select, select_all_fields=True
         )
 
-        # clear state
-        menagerie.set_state(conn_id, {})
+        # run sync
+        record_count_by_stream_2 = self.run_and_verify_sync(conn_id)
 
-        # Run sync 2
-        sync_job_2 = runner.run_sync_mode(self, conn_id)
-
-        # verify tap and target exit codes
-        exit_status_2 = menagerie.get_exit_status(conn_id, sync_job_2)
-        menagerie.verify_sync_exit_status(self, exit_status_2, sync_job_2)
-
-        # This should be validating the the PKs are written in each record
-        record_count_by_stream_2 = runner.examine_target_output_file(self, conn_id,
-                                                                     self.expected_streams(), self.expected_primary_keys())
         replicated_row_count_2 =  sum(record_count_by_stream_2.values())
         self.assertGreater(replicated_row_count_2, 0, msg="failed to replicate any data")
         print("total replicated row count: {}".format(replicated_row_count_2))
