@@ -69,24 +69,24 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
         description = "refund"
         payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         _, payment_response = self.client.create_refund(self.START_DATE, payment_to_update)
-        payment_object = self.ensure_dict_object(payment_response)
-        updated_records.append({'description': description, 'record': payment_object})
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
 
         # Update a payment by completing it
         source_key, autocomplete = ("card_on_file", False)
         description = "complete"
         payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
-        payment_object = self.ensure_dict_object(payment_response)
-        updated_records.append({'description': description, 'record': payment_object})
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
 
         # Update a payment by canceling it
         source_key, autocomplete = ("gift_card", False)
         description = "cancel"
         payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
         payment_response = self.client._update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
-        payment_object = self.ensure_dict_object(payment_response)
-        updated_records.append({'description': description, 'record': payment_object})
+        payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
+        updated_records.append(payment_record)
 
         return updated_records
 
