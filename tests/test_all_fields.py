@@ -42,6 +42,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
             return resp_object[0]
         else:
             raise RuntimeError("Type {} was unexpected.\nRecord: {} ".format(type(resp_object), resp_object))
+
     def create_specific_payments(self):
         """Create a record using each source type, and a record that will autocomplete."""
         print("Creating a record using each source type, and the autocomplete flag.")
