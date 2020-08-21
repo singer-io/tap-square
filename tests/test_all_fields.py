@@ -1,7 +1,6 @@
 import os
 import unittest
 from collections import namedtuple
-from typing import List
 
 import tap_tester.runner      as runner
 import tap_tester.connections as connections
@@ -60,7 +59,7 @@ class TestSquareAllFields(TestSquareBase, unittest.TestCase):
 
         return payment_records
 
-    def update_specific_payments(self, payments_to_update: List[PaymentRecordDetails]):
+    def update_specific_payments(self, payments_to_update):
         """Perform specifc updates on specific payment records."""
         updated_records = []
         print("Updating payment records by completing, canceling and refunding them.")
