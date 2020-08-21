@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+docker() {
+  /usr/bin/env docker run --rm -it \
+               -v "$PWD":/project \
+               -w /project \
+               218546966473.dkr.ecr.us-east-1.amazonaws.com/tap-tester:feature.circleci-delivery@sha256:db23b6f2e9c2b8119986c383f993e258eae9af66a3582be1d0a307ef511d0e6e "$@"
+}
+
+if [[ ! -d venv ]]
+then
+   docker python -m venv venv &&
+     docker venv/bin/pip install -U 'pip<21' &&
+     docker venv/bin/pip install -e '.[dev]'
+fi
+
+docker venv/bin/python tests/test_config.py

@@ -1,4 +1,5 @@
 import os
+import yaml
 
 potential_paths = [
     'tests/',
@@ -37,13 +38,19 @@ with open(cwd + "/../.circleci/config.yml", "r") as config:
     contents = config.read()
 
 print("Parsing circle config for run blocks.")
-runs = contents.replace(' ', '').replace('\n', '').split('-run:')
+run_tests = {
+    step['run_test']['file']
+    for step
+    in yaml.load(contents, Loader=yaml.FullLoader)['jobs']['test']['steps']
+    if isinstance(step, dict) and step.get('run_test')}
 
 print("Verify all test files are executed in circle...")
-tests_not_found = set(test_files_in_dir)
-for filename in test_files_in_dir:
-    print("\tVerifying {} is running in circle.".format(filename))
-    if any([filename in run for run in runs]):
-        tests_not_found.remove(filename)
+discovered_tests = {test_file_in_dir.replace("test_", "").replace(".py", "")
+                    for test_file_in_dir
+                    in test_files_in_dir
+                    # Can't watch the watchmen
+                    if test_file_in_dir != "test_config.py"}
+
+tests_not_found = discovered_tests - run_tests
 assert tests_not_found == set(), "The following tests are not running in circle:\t{}".format(tests_not_found)
 print("\t SUCCESS: All tests are running in circle.")
