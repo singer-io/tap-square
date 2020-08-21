@@ -20,6 +20,7 @@ workflows:
 
 orbs:
   slack: circleci/slack@3.4.2
+  aws-ecr: circleci/aws-ecr@6.12.2
 
 commands:
   run_test:
@@ -29,6 +30,9 @@ commands:
         type: string
     steps:
       - run:
+          # TODO Instead of using always steps to make reading the output
+          # easier, emit an xUnit report and let Circle tell you what
+          # failed.
           when: always
           name: Testing << parameters.file >>
           command: |
@@ -53,6 +57,7 @@ jobs:
       # FIXME move to 0.latest
       - run: aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/deployment-utils/feature.global-queue/docker.env /tmp/circleci_workspace/deployment-utils.docker.env
       - setup_remote_docker
+      - aws-ecr/ecr-login
       - run: docker pull 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:feature.global-queue
       - run:
           # FIXME move to 0.latest
@@ -97,7 +102,7 @@ jobs:
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/tmp/venv/lib/python3.5/site-packages/ \
-            python tests/test_config.py
+              python tests/test_config.py
       - run_test: {file: 'discovery'}
       - run_test: {file: 'sync_canary'}
       - run_test: {file: 'automatic_fields'}
