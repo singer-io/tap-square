@@ -38,6 +38,70 @@ Some apis allow sorting based on the `updated_at` value while others do not. If 
 stream the `cursor` value is saved and used to paginate through the API
 (https://developer.squareup.com/docs/working-with-apis/pagination).
 
+## Authentication
+
+Authentication is handled with oauth v2. In the tap configuration the following fields are required for authentication to work correctly:
+
+* client_id
+* client_secret
+* refresh_token
+
+These values are all obtained from the oauth steps documented on [square's documentation page](https://developer.squareup.com/docs/build-basics/access-tokens#get-an-oauth-access-token). The url for oauth credentials once logged in should be something like `https://developer.squareup.com/apps/<app_id>/oauth`. The application id and secret refer to the client_id and client_secret values above. The refresh token is obtained by selecting `Authorize an Account` and then selecting the account.
+
+## Quick Start
+
+1. Install
+
+    Clone this repository, and then install using setup.py. We recommend using a virtualenv:
+
+    ```bash
+    $ virtualenv -p python3 venv
+    $ source venv/bin/activate
+    $ pip install -e .
+    ```
+1. Create your tap's `config.json` file.  The tap config file for this tap should include these entries:
+   - `start_date` - the default value to use if no bookmark exists for an endpoint (rfc3339 date string)
+   - `user_agent` (string, optional): Process and email for API logging purposes. Example: `tap-square <api_user_email@your_company.com>`
+   - `sandbox` (string, optional): Whether to communication with square's sandbox or prod account for this application. If you're not sure leave out. Defaults to false.
+
+   And the other values mentioned in [the authentication section above](#authentication).
+
+    ```json
+	{
+		"client_id": "<app_id>",
+		"start_date": "2020-08-21T00:00:00Z",
+		"refresh_token": "<refresh_token>",
+		"client_secret": "<app_secret>",
+		"sandbox": "<true|false>",
+		"user_agent": "Stitch Tap (+support@stitchdata.com)"
+	}
+	```
+
+1. Run the Tap in Discovery Mode
+    This creates a catalog.json for selecting objects/fields to integrate:
+    ```bash
+    tap-square --config config.json --discover > catalog.json
+    ```
+   See the Singer docs on discovery mode
+   [here](https://github.com/singer-io/getting-started/blob/master/docs/DISCOVERY_MODE.md#discovery-mode).
+
+5. Run the Tap in Sync Mode (with catalog) and [write out to state file](https://github.com/singer-io/getting-started/blob/master/docs/RUNNING_AND_DEVELOPING.md#running-a-singer-tap-with-a-singer-target)
+
+    For Sync mode:
+    ```bash
+    $ tap-square --config tap_config.json --catalog catalog.json >> state.json
+    $ tail -1 state.json > state.json.tmp && mv state.json.tmp state.json
+    ```
+    To load to json files to verify outputs:
+    ```bash
+    $ tap-square --config tap_config.json --catalog catalog.json | target-json >> state.json
+    $ tail -1 state.json > state.json.tmp && mv state.json.tmp state.json
+    ```
+    To pseudo-load to [Stitch Import API](https://github.com/singer-io/target-stitch) with dry run:
+    ```bash
+    $ tap-square --config tap_config.json --catalog catalog.json | target-stitch --config target_config.json --dry-run >> state.json
+    $ tail -1 state.json > state.json.tmp && mv state.json.tmp state.json
+    ```
 ---
 
 Copyright &copy; 2020 Stitch
