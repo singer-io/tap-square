@@ -1,17 +1,16 @@
-import uuid
-import random
-import os
-from datetime import datetime, timedelta, timezone
-import requests
 import backoff
+from datetime import datetime, timedelta, timezone
+import os
+import random
+import requests
+import urllib.parse
+import uuid
 
 import singer
+from square.client import Client
 
-from tap_square.client import SquareClient, log_backoff
-from tap_square.streams import Orders, chunks, Settlements, CashDrawerShifts
 
 LOGGER = singer.get_logger()
-
 
 typesToKeyMap = {
     'ITEM': 'item_data',
@@ -21,8 +20,29 @@ typesToKeyMap = {
     'MODIFIER_LIST': 'modifier_list_data'
 }
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from list."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
-class TestClient(SquareClient):
+def get_batch_token_from_headers(headers):
+    link = headers.get('link')
+    if link:
+        batch_token_url = requests.utils.parse_header_links(link)[0]['url']
+        parsed_link = urllib.parse.urlparse(batch_token_url)
+        parsed_query = urllib.parse.parse_qs(parsed_link.query)
+        return parsed_query['batch_token'][0]
+    else:
+        return None
+
+def log_backoff(details):
+    '''
+    Logs a backoff retry message
+    '''
+    LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
+
+
+class TestClient():
     # This is the duration of a shift, we make this constant so we can
     # ensure the shifts don't overlap
     SHIFT_MINUTES = 10
@@ -68,7 +88,33 @@ class TestClient(SquareClient):
             'sandbox': 'true' if env == 'sandbox' else 'false',
         }
 
-        super().__init__(config)
+        self._refresh_token = config['refresh_token']
+        self._client_id = config['client_id']
+        self._client_secret = config['client_secret']
+
+        self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
+
+        self._access_token = self._get_access_token()
+        self._client = Client(access_token=self._access_token, environment=self._environment)
+
+    def _get_access_token(self):
+        body = {
+            'client_id': self._client_id,
+            'client_secret': self._client_secret,
+            'grant_type': 'refresh_token',
+            'refresh_token': self._refresh_token
+        }
+
+        client = Client(environment=self._environment)
+
+        with singer.http_request_timer('GET access token'):
+            result = client.o_auth.obtain_token(body)
+
+        if result.is_error():
+            error_message = result.errors if result.errors else result.body
+            raise RuntimeError(error_message)
+
+        return result.body['access_token']
 
     ##########################################################################
     ### V1 INFO
@@ -82,8 +128,315 @@ class TestClient(SquareClient):
         return self._environment == "sandbox"
 
     ##########################################################################
+    ### Tap Methods
+    ##########################################################################
+    class RetryableError(RuntimeError):
+        pass
+
+    @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        RetryableError,
+        max_time=180, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_v2_method(request_method, body, **kwargs):
+        result = request_method(body, **kwargs)
+
+        if result.is_error():
+            error_message = result.errors if result.errors else result.body
+            if 'Service Unavailable' in error_message:
+                raise RetryableError(error_message)
+            else:
+                raise RuntimeError(error_message)
+
+        return result
+
+    def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
+        cursor = body.get('cursor', '__initial__')
+        while cursor:
+            if cursor != '__initial__':
+                body['cursor'] = cursor
+
+            with singer.http_request_timer('GET ' + request_timer_suffix):
+                result = self._retryable_v2_method(request_method, body)
+
+            yield (result.body.get(body_key, []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
+
+    def get_catalog(self, object_type, start_time, bookmarked_cursor):
+        # Move the max_updated_at back the smallest unit possible
+        # because the begin_time query param is exclusive
+        start_time = singer.utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = singer.utils.strftime(start_time)
+
+        body = {
+            "object_types": [object_type],
+            "include_deleted_objects": True,
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        yield from self._get_v2_objects(
+            object_type,
+            lambda bdy: self._client.catalog.search_catalog_objects(body=bdy),
+            body,
+            'objects')
+
+    def get_employees(self, bookmarked_cursor):
+        body = {
+            'limit': 50,
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
+        yield from self._get_v2_objects(
+            'employees',
+            lambda bdy: self._client.employees.list_employees(**bdy),
+            body,
+            'employees')
+
+    def get_locations(self):
+        body = {}
+
+        yield from self._get_v2_objects(
+            'locations',
+            lambda bdy: self._client.locations.list_locations(**bdy),
+            body,
+            'locations')
+
+    def get_bank_accounts(self):
+        body = {}
+
+        yield from self._get_v2_objects(
+            'bank_accounts',
+            lambda bdy: self._client.bank_accounts.list_bank_accounts(**bdy),
+            body,
+            'bank_accounts')
+
+    def get_orders(self, location_ids, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "date_time_filter": {
+                            "updated_at": {
+                                "start_at": start_time
+                            }
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        body['location_ids'] = location_ids
+
+        yield from self._get_v2_objects(
+            'orders',
+            lambda bdy: self._client.orders.search_orders(body=bdy),
+            body,
+            'orders')
+
+    def get_inventories(self, start_time, bookmarked_cursor):
+        body = {'updated_after': start_time}
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
+        yield from self._get_v2_objects(
+            'inventories',
+            lambda bdy: self._client.inventory.batch_retrieve_inventory_counts(body=bdy),
+            body,
+            'counts')
+
+    def get_shifts(self):
+        body = {
+            "query": {
+                "sort": {
+                    "field": "UPDATED_AT",
+                    "order": "ASC"
+                }
+            }
+        }
+
+        yield from self._get_v2_objects(
+            'shifts',
+            lambda bdy: self._client.labor.search_shifts(body=bdy),
+            body,
+            'shifts')
+
+    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
+        start_time = singer.utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = singer.utils.strftime(start_time)
+
+        body = {
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        yield from self._get_v2_objects(
+            'refunds',
+            lambda bdy: self._client.refunds.list_payment_refunds(**bdy),
+            body,
+            'refunds')
+
+    def get_payments(self, start_time, bookmarked_cursor):
+        start_time = singer.utils.strptime_to_utc(start_time)
+        start_time = start_time - timedelta(milliseconds=1)
+        start_time = singer.utils.strftime(start_time)
+
+        body = {
+        }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+        else:
+            body['begin_time'] = start_time
+
+        yield from self._get_v2_objects(
+            'payments',
+            lambda bdy: self._client.payments.list_payments(**bdy),
+            body,
+            'payments')
+
+    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
+
+        end_time = singer.utils.strftime(singer.utils.now(), singer.utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                # initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
+
+            with singer.http_request_timer('GET cash drawer shifts'):
+                result = self._retryable_v2_method(
+                    lambda bdy: self._client.cash_drawers.list_cash_drawer_shifts(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=1000,
+                    ),
+                    None,
+                )
+
+            yield (result.body.get('items', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
+
+    def _get_v1_objects(self, url, params, request_timer_suffix, bookmarked_cursor):
+        headers = {
+            'content-type': 'application/json',
+            'authorization': 'Bearer {}'.format(self._access_token)
+        }
+
+        if bookmarked_cursor:
+            batch_token = bookmarked_cursor
+        else:
+            batch_token = '__initial__'
+
+        session = requests.Session()
+        session.headers.update(headers)
+
+        while batch_token:
+            if batch_token != '__initial__':
+                params['batch_token'] = batch_token
+
+            with singer.http_request_timer('GET ' + request_timer_suffix):
+                result = self._retryable_v1_method(session, url, params)
+
+            batch_token = get_batch_token_from_headers(result.headers)
+
+            yield (result.json(), batch_token)
+
+    @staticmethod
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=180, # seconds
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
+    def _retryable_v1_method(session, url, params):
+        result = session.get(url, params=params)
+        result.raise_for_status()
+
+        return result
+
+    def get_roles(self, bookmarked_cursor):
+        yield from self._get_v1_objects(
+            'https://connect.squareup.com/v1/me/roles',
+            dict(),
+            'roles',
+            bookmarked_cursor,
+        )
+
+    def get_settlements(self, location_id, start_time, bookmarked_cursor):
+        url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
+        params = {
+            'limit': 200,
+            'begin_time': start_time,
+        }
+        yield from self._get_v1_objects(
+            url,
+            params,
+            'roles',
+            bookmarked_cursor,
+        )
+    def get_all_location_ids(self):
+        all_location_ids = list()
+        for page, _ in self.get_locations():
+            for location in page:
+                all_location_ids.append(location['id'])
+
+        return all_location_ids
+
+    ##########################################################################
     ### GETs
     ##########################################################################
+    def get_orders_pages(self, start_time, bookmarked_cursor):
+        # refactored from orders.sync
+        all_location_ids = self.get_all_location_ids()
+        for location_ids_chunk in chunks(all_location_ids, 10):
+            # orders requests can only take up to 10 location_ids at a time
+            for page, cursor in self.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
+                yield page, cursor
+
+    def get_cds_pages(self, start_time, bookmarked_cursor):
+        # refactored from cash_drawer_shifts.sync
+        for location_id in self.get_all_location_ids():
+            # Cash Drawer Shifts requests can only take up to 1 location_id at a time
+            for page, cursor in self.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
+                yield page, cursor
+
+    def get_settlements_pages(self, start_time, bookmarked_cursor): #pylint: disable=unused-argument
+        # refactored from settlements.sync
+        for location_id in self.get_all_location_ids():
+            # Settlements requests can only take up to 1 location_id at a time
+            for page, batch_token in self.get_settlements(location_id, start_time, bookmarked_cursor):
+                yield page, batch_token
 
     def get_all(self, stream, start_date): # pylint: disable=too-many-return-statements
         if stream == 'items':
@@ -110,8 +463,7 @@ class TestClient(SquareClient):
         elif stream == 'inventories':
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
-            orders = Orders(self, {})
-            return [obj for page, _ in orders.sync(start_date, None) for obj in page]
+            return [obj for page, _ in self.get_orders_pages(start_date, None) for obj in page]
         elif stream == 'roles':
             return [obj for page, _ in self.get_roles(None) for obj in page
                     if not start_date or obj['updated_at'] >= start_date]
@@ -119,13 +471,12 @@ class TestClient(SquareClient):
             return [obj for page, _ in self.get_shifts() for obj in page
                     if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
-            settlements = Settlements(self, {})
-            return [obj for page, _ in settlements.sync(start_date) for obj in page]
+            return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
         elif stream == 'cash_drawer_shifts':
-            cash_drawer_shifts = CashDrawerShifts(self, {})
-            return [obj for page, _ in cash_drawer_shifts.sync(start_date) for obj in page]
+            return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
+
 
     @backoff.on_exception(
         backoff.expo,
