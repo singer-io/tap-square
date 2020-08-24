@@ -32,7 +32,7 @@ This tap:
 
 The Square API for some objects supports a `begin_time` parameter that limits the query to only return objects with a `created_at` after the `begin_time`. For an example see [Square's list payments api documentation](https://developer.squareup.com/reference/square/payments-api/list-payments). Others support searching and sorting by custom fields and this tap bookmarks using the `updated_at` field in those cases. For example, see [Square's search orders api documentation](https://developer.squareup.com/reference/square/orders-api/search-orders).
 
-Finally, some apis do not support incremental search, but in order to keep backwards compatible features with sourcerer the tap queries for all and then filters out by the `updated_at`. The shifts stream is one such example.
+Finally, some apis do not support incremental search, but to limit data volume output by the tap the tap queries for all and then filters out by the `updated_at` field. The [shifts stream](https://github.com/singer-io/tap-square/blob/42fbca80e22f0f292fa5202e9eaccb193ba7ea62/tap_square/streams.py#L207) is one such example.
 
 Some apis allow sorting based on the `updated_at` value while others do not. If sorting is not supported one can only use the maximum `updated_at` value if and only if the stream has completly synced. To bookmark progress during the sync of a
 stream the `cursor` value is saved and used to paginate through the API
