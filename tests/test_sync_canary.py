@@ -35,6 +35,10 @@ class TestSyncCanary(TestSquareBase, TestCase):
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         streams_to_select = self.testable_streams(environment, data_type)
+
+        print("\n\nRUNNING {}".format(self.name()))
+        print("WITH STREAMS: {}\n\n".format(streams_to_select))
+
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
         )
@@ -45,9 +49,6 @@ class TestSyncCanary(TestSquareBase, TestCase):
         """
         Verify that for each stream you can call sync just so it exercises the code.
         """
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(self.expected_streams()))
-
         self.set_environment(self.SANDBOX)
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_standard_sync(self.get_environment(), DataType.STATIC)
