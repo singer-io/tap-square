@@ -7,7 +7,7 @@ This is a [Singer](https://singer.io) tap that produces JSON-formatted data foll
 ## Description
 This tap:
 * Downloads data from [Square API](https://developer.squareup.com/reference/square)
-* Extracts from the following sources to produce [streams](https://github.com/singer-io/tap-square/blob/master/tap_square/streams.py):
+* Extracts from the following sources to produce [streams](https://github.com/singer-io/tap-square/blob/master/tap_square/streams.py). Below is a list of all the streams available. See the [streams file](https://github.com/singer-io/tap-square/blob/master/tap_square/streams.py) for a list of classes where each one has a constant indiciating if the stream's replication_method is INCREMENTAL or FULL_TABLE and what the replication_key is, usually `updated_at` field if it's incremental.
     * Items
     * Categories
     * Discounts
@@ -24,6 +24,7 @@ This tap:
     * Shifts
     * CashDrawerShifts
     * Settlements
+
 * Includes a schema for each resource reflecting most recent tested data retrieved using the api. See [the schema folder](https://github.com/singer-io/tap-square/tree/master/tap_square/schemas) for details.
 * Some streams incrementally pull data based on the previously saved state. See the [bookmarking strategy](#bookmarking-strategy) section for more details.
 
