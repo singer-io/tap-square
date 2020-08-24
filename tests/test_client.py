@@ -1183,7 +1183,7 @@ class TestClient():
             raise RuntimeError("Require non-blank obj_id or a non-blank obj, found {} and {}".format(obj_id, obj))
 
         if stream == 'items':
-            return self.update_item(obj_id, version, start_date).body.get('objects')
+            return self.update_item(obj, version, start_date).body.get('objects')
         elif stream == 'categories':
             return self.update_categories(obj_id, version).body.get('objects')
         elif stream == 'discounts':
@@ -1209,22 +1209,28 @@ class TestClient():
         else:
             raise NotImplementedError("{} is not implmented".format(stream))
 
-    def update_item(self, obj_id, version, start_date):
+    def update_item(self, obj, version, start_date):
         """Add a category, tax, and chagne the name of the item"""
+        obj_id = obj.get('id')
+        name = obj.get('item_data', {'item_data': None}).get('name')
+        item_data = obj.get('item_data')
+
         all_categories = self.get_all('categories', start_date)
         category = random.choice([category for category in all_categories if not category.get('is_deleted')])
         all_taxes = self.get_all('taxes', start_date)
         tax_ids = [random.choice(all_taxes).get('id')]
 
-        if not obj_id:
-            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+        item_data['category_id'] = category.get('id')
+        item_data['tax_ids'] = tax_ids
+
+        if not obj:
+            raise RuntimeError("Require existing obj, found {}".format(obj))
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'ITEM',
-                                          'item_data': {'name': self.make_id('item'),
-                                                        'category_id': category.get('id'),
-                                                        'tax_ids': tax_ids},
+                                          'item_data': item_data,
                                           'version': version}]}],
                 'idempotency_key': str(uuid.uuid4())}
+
         return self.post_catalog(body)
 
     PAYMENT_ACTION_TO_STATUS = {
