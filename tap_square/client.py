@@ -76,7 +76,7 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message:
+            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message:
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
