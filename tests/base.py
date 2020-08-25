@@ -231,11 +231,11 @@ class TestSquareBaseParent:
 
         def expected_incremental_streams(self):
             return set(stream for stream, rep_meth in self.expected_replication_method().items()
-                    if rep_meth == self.INCREMENTAL)
+                       if rep_meth == self.INCREMENTAL)
 
         def expected_full_table_streams(self):
             return set(stream for stream, rep_meth in self.expected_replication_method().items()
-                    if rep_meth == self.FULL)
+                       if rep_meth == self.FULL)
 
         @abstractmethod
         def testable_streams_dynamic(self):
@@ -327,7 +327,7 @@ class TestSquareBaseParent:
             for field in metadata:
                 is_field_metadata = len(field['breadcrumb']) > 1
                 inclusion_automatic_or_selected = (field['metadata']['inclusion'] == 'automatic'
-                                                or field['metadata']['selected'] is True)
+                                                   or field['metadata']['selected'] is True)
                 if is_field_metadata and inclusion_automatic_or_selected:
                     selected_fields.add(field['breadcrumb'][1])
             return selected_fields
@@ -442,7 +442,7 @@ class TestSquareBaseParent:
 
                 start_date_key = self.get_start_date_key(stream)
                 if (not any([stream_obj.get(start_date_key) and self.parse_date(stream_obj.get(start_date_key)) > self.parse_date(start_date_2)
-                            for stream_obj in stream_to_expected_records[stream]])
+                             for stream_obj in stream_to_expected_records[stream]])
                         or len(stream_to_expected_records[stream]) <= min_required_num_records_per_stream[stream]
                         or force_create_records):
 
@@ -572,8 +572,8 @@ class TestSquareBaseParent:
 
             # read target output
             first_record_count_by_stream = runner.examine_target_output_file(self, conn_id,
-                                                                            self.expected_streams(),
-                                                                            self.expected_primary_keys())
+                                                                             self.expected_streams(),
+                                                                             self.expected_primary_keys())
 
             return first_record_count_by_stream
 
@@ -610,8 +610,8 @@ class TestSquareBaseParent:
         def assertParentKeysEqual(self, expected_record, sync_record):
             """Compare the top level keys of an expected record and a sync record."""
             self.assertEqual(frozenset(expected_record.keys()), frozenset(sync_record.keys()),
-                            msg="Expected keys in expected_record to equal keys in sync_record. " +\
-                            "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
+                             msg="Expected keys in expected_record to equal keys in sync_record. " +\
+                             "[expected_record={}][sync_record={}]".format(expected_record, sync_record))
 
         ##########################################################################
         ### Tap Specific Assertions
