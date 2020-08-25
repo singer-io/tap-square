@@ -7,6 +7,7 @@ potential_paths = [
     '../tap-square/tests/',
 ]
 
+
 def go_to_tests_directory():
     for path in potential_paths:
         if os.path.exists(path):
@@ -18,11 +19,12 @@ def go_to_tests_directory():
 ### TEST
 ##########################################################################
 
+
 print("Acquiring path to tests directory.")
 cwd = go_to_tests_directory()
 
 print("Reading in filenames from tests directory.")
-files_in_dir = [name for name in os.listdir(cwd)]
+files_in_dir = os.listdir(cwd)
 
 print("Dropping files that are not of the form 'test_<feature>.py'.")
 test_files_in_dir = [fn for fn in files_in_dir if fn.startswith('test_') and fn.endswith('.py')]
