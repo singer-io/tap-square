@@ -17,7 +17,8 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
     START_DATE_1 = ""
     START_DATE_2 = ""
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_start_date_test"
 
     def testable_streams_dynamic(self):
@@ -88,7 +89,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         # run initial sync
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count_1 =  sum(first_record_count_by_stream.values())
+        replicated_row_count_1 = sum(first_record_count_by_stream.values())
         self.assertGreater(replicated_row_count_1, 0, msg="failed to replicate any data: {}".format(first_record_count_by_stream))
         print("total replicated row count: {}".format(replicated_row_count_1))
         synced_records_1 = runner.get_records_from_target_output()
@@ -119,7 +120,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         # run sync
         record_count_by_stream_2 = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count_2 =  sum(record_count_by_stream_2.values())
+        replicated_row_count_2 = sum(record_count_by_stream_2.values())
         self.assertGreater(replicated_row_count_2, 0, msg="failed to replicate any data")
         print("total replicated row count: {}".format(replicated_row_count_2))
 

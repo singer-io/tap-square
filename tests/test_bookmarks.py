@@ -13,17 +13,20 @@ LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
-    def testable_streams_static(self):
+    @staticmethod
+    def testable_streams_static():
         """ No static streams marked for incremental. """
         return set()
 
-    def cannot_update_streams(self):
+    @staticmethod
+    def cannot_update_streams():
         return {
             'refunds',  # Does not have an endpoint for updating records
             'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
@@ -120,7 +123,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         # We should expect any records with rep-keys equal to the bookmark from the first sync to be returned by the second
         if 'orders' in testable_streams:
             for order in first_sync_records['orders']['messages']:
-                if order['data']['updated_at'] == first_sync_state.get('bookmarks',{}).get('orders',{}).get('updated_at'):
+                if order['data']['updated_at'] == first_sync_state.get('bookmarks', {}).get('orders', {}).get('updated_at'):
                     expected_records_second_sync['orders'].append(order['data'])
 
         streams_to_create_records = list(testable_streams)
@@ -152,7 +155,8 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
-            elif stream == 'orders':  # Use the first available order that is still 'OPEN'
+
+            if stream == 'orders':  # Use the first available order that is still 'OPEN'
                 for message in first_sync_records.get(stream).get('messages'):
                     if message.get('data')['state'] not in ['COMPLETED', 'CANCELED']:
                         first_rec = message.get('data')
@@ -182,7 +186,6 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
                 first_rec_location_id = first_rec.get('location_id')
-                inventory_to_look_at = first_rec
                 # IN_STOCK -> SOLD [quantity -1]
                 updated_record = self.client.create_specific_inventory_adjustment(
                     first_rec_catalog_obj_id, first_rec_location_id,
@@ -372,9 +375,10 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     primary_keys = stream_primary_keys.get(stream)
 
                 updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
-                self.assertLessEqual(len(expected_records), len(second_sync_data),
-                                     msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
-                                     "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                self.assertLessEqual(
+                    len(expected_records), len(second_sync_data),
+                    msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
+                    "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                 )
                 if (len(second_sync_data) - len(expected_records)) > 0:
                     LOGGER.warning('Second sync replicated %s records more than our create and update for %s',
