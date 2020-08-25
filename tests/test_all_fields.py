@@ -74,7 +74,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         source_key, autocomplete = ("card_on_file", False)
         description = "complete"
         payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
-        payment_response = self.client.update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_response = self.client.update_payment(payment_to_update.get('id'), action=description)
         payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
         updated_records.append(payment_record)
 
@@ -82,7 +82,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         source_key, autocomplete = ("gift_card", False)
         description = "cancel"
         payment_to_update = [payment.record for payment in payments_to_update if payment.source_key == source_key and payment.autocomplete == autocomplete][0]
-        payment_response = self.client.update_payment(payment_to_update.get('id'), obj=payment_to_update, action=description)
+        payment_response = self.client.update_payment(payment_to_update.get('id'), action=description)
         payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
         updated_records.append(payment_record)
 
