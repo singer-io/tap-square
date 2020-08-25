@@ -1,0 +1,2 @@
+[MASTER]
+init-hook='import sys; sys.path.append("/opt/code/tap-tester/"); sys.path.append("/code/tap-tester/");'
