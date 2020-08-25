@@ -1,11 +1,11 @@
-import backoff
 from datetime import datetime, timedelta, timezone
 import os
 import random
-import requests
 import urllib.parse
 import uuid
+import requests
 
+import backoff
 import singer
 from square.client import Client
 
@@ -20,10 +20,12 @@ typesToKeyMap = {
     'MODIFIER_LIST': 'modifier_list_data'
 }
 
+
 def chunks(lst, n):
     """Yield successive n-sized chunks from list."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
+
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -35,11 +37,16 @@ def get_batch_token_from_headers(headers):
     else:
         return None
 
+
 def log_backoff(details):
     '''
     Logs a backoff retry message
     '''
     LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
+
+
+class RetryableError(RuntimeError):
+    pass
 
 
 class TestClient():
@@ -1213,7 +1220,6 @@ class TestClient():
     def update_item(self, obj, version, start_date):
         """Add a category, tax, and chagne the name of the item"""
         obj_id = obj.get('id')
-        name = obj.get('item_data', {'item_data': None}).get('name')
         item_data = obj.get('item_data')
 
         all_categories = self.get_all('categories', start_date)
