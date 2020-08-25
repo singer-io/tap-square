@@ -500,11 +500,11 @@ class TestClient():
                 LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
                 continue
 
-            elif not set(found_object[0].keys()).issuperset(keys_exist):
+            if not set(found_object[0].keys()).issuperset(keys_exist):
                 LOGGER.warning("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
                 continue
 
-            elif all([found_object[0].get(key) == value for key, value in kwargs.items()]):
+            if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
                 LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
                 return found_object
             else:
@@ -661,7 +661,7 @@ class TestClient():
             catalog_obj_id = item_variation.get('id')
 
             # Get a random location to apply the adjustment
-            location_id =  all_locations[random.randint(0, len(all_locations) - 1)].get('id')
+            location_id = all_locations[random.randint(0, len(all_locations) - 1)].get('id')
             changes.append(self._inventory_adjustment_change(catalog_obj_id, location_id))
 
         all_counts = []
@@ -682,7 +682,7 @@ class TestClient():
         assert (len(all_counts) == num_records), "num_records={}, but len(all_counts)={}, all_counts={}, len(all_counts) should be num_records".format(num_records, len(all_counts), all_counts)
         return all_counts
 
-    def create_specific_inventory_adjustment(self, start_date, catalog_obj_id, location_id, from_state, to_state, quantity):
+    def create_specific_inventory_adjustment(self, catalog_obj_id, location_id, from_state, to_state, quantity):
         change = [self._inventory_adjustment_change(catalog_obj_id, location_id, from_state, to_state, quantity)]
         body = {
             'changes': change,
@@ -714,6 +714,7 @@ class TestClient():
             raise RuntimeError("this method does not account for the adjustment {} -> {}".format(from_state, to_state))
         occurred_at = datetime.strftime(
             datetime.now(tz=timezone.utc) - timedelta(hours=random.randint(1, 12)), '%Y-%m-%dT%H:%M:%SZ')
+
         return {
             'type': 'ADJUSTMENT',
             'adjustment': {
@@ -725,8 +726,6 @@ class TestClient():
                 'quantity': quantity,
             }
         }
-
-        return adjustments[to_state]
 
     def create_refunds(self, start_date, num_records, payment_response=None):
         refunds = []
@@ -770,9 +769,9 @@ class TestClient():
 
         refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
-            LOGGER.error("body: {}".format(body))
-            LOGGER.error("response: {}".format(refund))
-            LOGGER.error("payment attempted to be refunded: {}".format(payment_obj))
+            LOGGER.error("body: %s", body)
+            LOGGER.error("response: %s", refund)
+            LOGGER.error("payment attempted to be refunded: %s", payment_obj)
             raise RuntimeError(refund.errors)
 
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, status='COMPLETED')
@@ -798,13 +797,15 @@ class TestClient():
             'gift_card': 'cnon:gift-card-nonce-ok'
         }
         source_id = source.get(source_key)
-        body ={'id': self.make_id('payment'),
-               'idempotency_key': str(uuid.uuid4()),
-               'amount_money': {'amount': random.randint(100,10000), # in cents
-                               'currency': 'USD'},
-               'source_id': source_id,
-               'autocomplete': autocomplete,
-               'note': self.make_id('payment'),}
+        body = {
+            'id': self.make_id('payment'),
+            'idempotency_key': str(uuid.uuid4()),
+            'amount_money': {'amount': random.randint(100, 10000), # in cents
+                             'currency': 'USD'},
+            'source_id': source_id,
+            'autocomplete': autocomplete,
+            'note': self.make_id('payment'),
+        }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
             print("body: {}".format(body))
@@ -1096,10 +1097,10 @@ class TestClient():
         all_locations = self.get_all('locations', start_date)
         for _ in range(num_records):
             location_id = random.choice(all_locations).get('id')
-            body = {'order': {'location_id': location_id,},
+            body = {'order': {'location_id': location_id, },
                     'idempotency_key': str(uuid.uuid4())}
             now = datetime.now(tz=timezone.utc)
-            expires_at = datetime.strftime(now + timedelta(hours=random.randint(2,24)), '%Y-%m-%dT%H:%M:%SZ')
+            expires_at = datetime.strftime(now + timedelta(hours=random.randint(2, 24)), '%Y-%m-%dT%H:%M:%SZ')
             pickup_at = datetime.strftime(now + timedelta(hours=1), '%Y-%m-%dT%H:%M:%SZ')
             body['order']['fulfillments'] = [{
                 'type': 'PICKUP',
@@ -1150,7 +1151,7 @@ class TestClient():
                     }],
                     'wage': {
                         'title': self.make_id('shift'),
-                        'hourly_rate' : {
+                        'hourly_rate': {
                             'amount_money': 1100,
                             'currency': 'USD'
                         }
@@ -1161,7 +1162,7 @@ class TestClient():
             resp = self._client.labor.create_shift(body=body)
             if resp.is_error():
                 raise RuntimeError(resp.errors)
-            LOGGER.info('Created a Shift with id %s', resp.body.get('shift',{}).get('id'))
+            LOGGER.info('Created a Shift with id %s', resp.body.get('shift', {}).get('id'))
 
             created_shifts.append(resp.body.get('shift'))
 
@@ -1203,7 +1204,7 @@ class TestClient():
         elif stream == 'orders':
             return [self.update_order(obj).body.get('order')]
         elif stream == 'payments':
-            return [self._update_payment(obj_id)]
+            return [self.update_payment(obj_id)]
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
         else:
@@ -1238,7 +1239,7 @@ class TestClient():
         'cancel': 'CANCELED',
     }
 
-    def _update_payment(self, obj_id: str, obj=None, action=None):
+    def update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""
         if not obj_id:
             raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))

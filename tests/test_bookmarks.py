@@ -185,22 +185,22 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                 inventory_to_look_at = first_rec
                 # IN_STOCK -> SOLD [quantity -1]
                 updated_record = self.client.create_specific_inventory_adjustment(
-                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='IN_STOCK', to_state='SOLD', quantity='1.0')
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
                 # UNLINKED_RETURN -> IN_STOCK [quantity +1]
                 updated_record = self.client.create_specific_inventory_adjustment(
-                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='UNLINKED_RETURN', to_state='IN_STOCK', quantity='2.0')
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
                 # NONE -> IN_STOCK [quantity +2]
                 updated_record = self.client.create_specific_inventory_adjustment(
-                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='NONE', to_state='IN_STOCK', quantity='1.0')
                 assert len(updated_record) == 1, "Failed to update the {} records as intended".format(stream)
                 # IN_STOCK -> WASTE [quantity +1]
                 updated_record = self.client.create_specific_inventory_adjustment(
-                    self.START_DATE, first_rec_catalog_obj_id, first_rec_location_id,
+                    first_rec_catalog_obj_id, first_rec_location_id,
                     from_state='IN_STOCK', to_state='WASTE', quantity='1.0')  # creates 2 records
                 assert len(updated_record) == 2, "Failed to update the {} records as intended".format(stream)
             else:
