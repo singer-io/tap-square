@@ -11,16 +11,17 @@ from base import TestSquareBaseParent
 class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     """ Test the tap discovery """
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_discovery_test"
 
     def testable_streams_dynamic(self):
         # Unused for discovery testing
-        return set()
+        return self.dynamic_data_streams()
 
     def testable_streams_static(self):
         # Unused for discovery testing
-        return set()
+        return self.static_data_streams()
 
     def expected_replication_keys(self):
         """
@@ -109,7 +110,7 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
                         self.expected_replication_keys()[stream],
                         set(stream_properties[0].get(
                             "metadata", {self.REPLICATION_KEYS: None}).get(
-                            self.REPLICATION_KEYS, []))))
+                                self.REPLICATION_KEYS, []))))
 
                 # verify primary key(s)
                 self.assertEqual(
@@ -167,9 +168,9 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
 
                 # verify that primary, replication and foreign keys
                 # are given the inclusion of automatic in metadata.
-                actual_automatic_fields =  {item.get("breadcrumb", ["properties", None])[1]
-                                            for item in metadata
-                                            if item.get("metadata").get("inclusion") == "automatic"}
+                actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
+                                           for item in metadata
+                                           if item.get("metadata").get("inclusion") == "automatic"}
                 self.assertEqual(expected_automatic_fields,
                                  actual_automatic_fields,
                                  msg="expected {} automatic fields but got {}".format(
