@@ -5,6 +5,7 @@ import tap_tester.connections as connections
 import tap_tester.runner      as runner
 
 from base import TestSquareBaseParent
+from test_client import TestClient
 
 LOGGER = singer.get_logger()
 
@@ -47,14 +48,15 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
     def tearDownClass(cls):
         cls.set_environment(cls, cls.SANDBOX)
         cleanup = {'categories': 10000}
+        client = TestClient(env=os.environ['TAP_SQUARE_ENVIRONMENT'])
         for stream, limit in cleanup.items():
             print("Checking if cleanup is required.")
-            all_records = cls.client.get_all(stream, start_date=cls.STATIC_START_DATE)
+            all_records = client.get_all(stream, start_date=cls.STATIC_START_DATE)
             all_ids = [rec.get('id') for rec in all_records if not rec.get('is_deleted')]
             if len(all_ids) > limit / 2:
                 chunk = int(len(all_ids) - (limit / 2))
                 print("Cleaning up {} excess records".format(chunk))
-                cls.client.delete_catalog(all_ids[:chunk])
+                client.delete_catalog(all_ids[:chunk])
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
