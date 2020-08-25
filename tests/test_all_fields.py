@@ -4,7 +4,7 @@ from collections import namedtuple
 import tap_tester.runner      as runner
 import tap_tester.connections as connections
 
-from base import TestSquareBaseParent
+from base import TestSquareBaseParent, DataType
 
 
 PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
@@ -52,7 +52,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             ("card", True),
         }
         for source_key, autocomplete in descriptions:
-            payment_response = self.client._create_payment(autocomplete=autocomplete, source_key=source_key)
+            payment_response = self.client.create_payment(autocomplete=autocomplete, source_key=source_key)
             payment_record = PaymentRecordDetails(source_key, autocomplete, self.ensure_dict_object(payment_response))
             payment_records.append(payment_record)
 
@@ -123,7 +123,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         # execute specific creates and updates for the payments stream in addition to the standard create
         if 'payments' in self.TESTABLE_STREAMS:
             created_payments = self.create_specific_payments()
-            updated_payments = self.update_specific_payments(created_payments)
+            self.update_specific_payments(created_payments)
 
         # ensure data exists for sync streams and set expectations
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, force_create_records=True)

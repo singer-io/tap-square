@@ -746,7 +746,7 @@ class TestClient():
         """
         # SETUP
         if not payment_response:
-            payment_response = self._create_payment(autocomplete=True, source_key="card")
+            payment_response = self.create_payment(autocomplete=True, source_key="card")
         payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
                                                           start_date=start_date, status=payment_response.get('status'))[0]
 
@@ -781,11 +781,11 @@ class TestClient():
     def create_payments(self, num_records):
         payments = []
         for _ in range(num_records):
-            payments.append(self._create_payment())
+            payments.append(self.create_payment())
 
         return payments
 
-    def _create_payment(self, autocomplete=False, source_key='card'):
+    def create_payment(self, autocomplete=False, source_key='card'):
         """
         Generate a pyament object
         : param autocomplete: boolean
