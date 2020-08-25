@@ -9,7 +9,8 @@ from base import TestSquareBaseParent, DataType
 class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
     """Test that with no fields selected for a stream automatic fields are still replicated"""
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_automatic_fields"
 
     def testable_streams_dynamic(self):
@@ -74,7 +75,7 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         # run initial sync
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count =  sum(first_record_count_by_stream.values())
+        replicated_row_count = sum(first_record_count_by_stream.values())
         synced_records = runner.get_records_from_target_output()
 
         # Verify target has records for all synced streams
