@@ -4,7 +4,6 @@ To run change the desired flags below and use the following command from the tap
   'python ../tap-square/tests/client_tester.py'
 """
 from datetime import datetime
-import random
 
 from test_client import TestClient
 
