@@ -1,17 +1,16 @@
 import os
-import unittest
 from collections import namedtuple
 
 import tap_tester.runner      as runner
 import tap_tester.connections as connections
 
-from base import TestSquareBase, DataType
+from base import TestSquareBaseParent
 
 
 PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
 
-class TestSquareAllFields(TestSquareBase, unittest.TestCase):
+class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
     TESTABLE_STREAMS = set()
 

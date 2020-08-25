@@ -1,16 +1,14 @@
 import os
 import unittest
-import simplejson
 
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase
-from test_client import TestClient
+from base import TestSquareBaseParent
 
 
-class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
+class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
 
     def name(self):
@@ -122,7 +120,7 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
 
                 second_sync_data = [record.get("data") for record
                                     in second_sync_records.get(stream, {}).get("messages", {"data": {}})]
-        
+
                 # TESTING INCREMENTAL STREAMS
                 if stream in self.expected_incremental_streams():
 

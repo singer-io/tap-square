@@ -1,17 +1,15 @@
 import os
 
+import singer
 import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-import singer
-from unittest import TestCase
-from base import TestSquareBase
+from base import TestSquareBaseParent
 
 LOGGER = singer.get_logger()
 
 
-class TestSquarePagination(TestSquareBase, TestCase):
+class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
     DEFAULT_BATCH_LIMIT = 1000

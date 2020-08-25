@@ -1,20 +1,18 @@
 import os
 from datetime import datetime as dt
 from datetime import timedelta
-from unittest import TestCase
 
 import singer
 
 import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase, DataType
+from base import TestSquareBaseParent, DataType
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareStartDate(TestSquareBase, TestCase):
+class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
     START_DATE = ""
     START_DATE_1 = ""
     START_DATE_2 = ""

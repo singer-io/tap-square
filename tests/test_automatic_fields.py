@@ -1,14 +1,12 @@
 import os
 
-from unittest import TestCase
-
 import tap_tester.connections as connections
 import tap_tester.runner      as runner
 
-from base import TestSquareBase, DataType
+from base import TestSquareBaseParent, DataType
 
 
-class TestAutomaticFields(TestSquareBase, TestCase):
+class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
     """Test that with no fields selected for a stream automatic fields are still replicated"""
 
     def name(self):

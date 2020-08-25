@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import singer
 
@@ -7,12 +6,12 @@ import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase
+from base import TestSquareBaseParent
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
+class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
     def name(self):
         return "tap_tester_square_incremental_replication"
@@ -411,4 +410,3 @@ class TestSquareIncrementalReplication(TestSquareBase, unittest.TestCase):
                         sync_record = sync_records[0]
 
                         self.assertRecordsEqual(stream, updated_record, sync_record)
-

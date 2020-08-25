@@ -2,15 +2,13 @@
 Test tap discovery
 """
 import re
-import os
 
-from unittest import TestCase
 from tap_tester import menagerie, connections, runner
 
-from base import TestSquareBase
+from base import TestSquareBaseParent
 
 
-class DiscoveryTest(TestSquareBase, TestCase):
+class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     """ Test the tap discovery """
 
     def name(self):
