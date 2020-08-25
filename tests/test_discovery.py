@@ -15,13 +15,15 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     def name():
         return "tap_tester_square_discovery_test"
 
-    def testable_streams_dynamic(self):
+    @staticmethod
+    def testable_streams_dynamic():
         # Unused for discovery testing
-        return self.dynamic_data_streams()
+        return set()
 
-    def testable_streams_static(self):
+    @staticmethod
+    def testable_streams_static():
         # Unused for discovery testing
-        return self.static_data_streams()
+        return set()
 
     def expected_replication_keys(self):
         """

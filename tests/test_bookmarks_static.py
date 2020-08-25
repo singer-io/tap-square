@@ -11,13 +11,15 @@ from base import TestSquareBaseParent
 class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_incremental_replication"
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
 
-    def testable_streams_dynamic(self):
+    @staticmethod
+    def testable_streams_dynamic():
         return set()
 
     @classmethod
@@ -96,7 +98,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         first_sync_state = menagerie.get_state(conn_id)
 
         # Get the set of records from a first sync
-        first_sync_records = runner.get_records_from_target_output()
+        runner.get_records_from_target_output()
 
         # Set expectations for 2nd sync
         expected_records_second_sync = {x: [] for x in self.expected_streams()}
@@ -164,9 +166,10 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                 # For incremental streams we should see 0 records
                 # For full table streams we should see the same records from the first sync
                 expected_records = expected_records_second_sync.get(stream, [])
-                self.assertEqual(len(expected_records), len(second_sync_data),
-                                 msg="Expected number of records do not match actual for 2nd sync.\n" +
-                                 "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
+                self.assertEqual(
+                    len(expected_records), len(second_sync_data),
+                    msg="Expected number of records do not match actual for 2nd sync.\n" +
+                    "Expected: {}\nActual: {}".format(len(expected_records), len(second_sync_data))
                 )
 
 
