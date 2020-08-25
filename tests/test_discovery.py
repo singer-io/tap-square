@@ -2,25 +2,26 @@
 Test tap discovery
 """
 import re
-import os
 
-from unittest import TestCase
 from tap_tester import menagerie, connections, runner
 
-from base import TestSquareBase
+from base import TestSquareBaseParent
 
 
-class DiscoveryTest(TestSquareBase, TestCase):
+class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     """ Test the tap discovery """
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_discovery_test"
 
-    def testable_streams_dynamic(self):
+    @staticmethod
+    def testable_streams_dynamic():
         # Unused for discovery testing
         return set()
 
-    def testable_streams_static(self):
+    @staticmethod
+    def testable_streams_static():
         # Unused for discovery testing
         return set()
 
@@ -111,7 +112,7 @@ class DiscoveryTest(TestSquareBase, TestCase):
                         self.expected_replication_keys()[stream],
                         set(stream_properties[0].get(
                             "metadata", {self.REPLICATION_KEYS: None}).get(
-                            self.REPLICATION_KEYS, []))))
+                                self.REPLICATION_KEYS, []))))
 
                 # verify primary key(s)
                 self.assertEqual(
@@ -169,9 +170,9 @@ class DiscoveryTest(TestSquareBase, TestCase):
 
                 # verify that primary, replication and foreign keys
                 # are given the inclusion of automatic in metadata.
-                actual_automatic_fields =  {item.get("breadcrumb", ["properties", None])[1]
-                                            for item in metadata
-                                            if item.get("metadata").get("inclusion") == "automatic"}
+                actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
+                                           for item in metadata
+                                           if item.get("metadata").get("inclusion") == "automatic"}
                 self.assertEqual(expected_automatic_fields,
                                  actual_automatic_fields,
                                  msg="expected {} automatic fields but got {}".format(

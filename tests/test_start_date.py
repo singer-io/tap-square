@@ -1,25 +1,24 @@
 import os
 from datetime import datetime as dt
 from datetime import timedelta
-from unittest import TestCase
 
 import singer
 
 import tap_tester.connections as connections
-import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
-from base import TestSquareBase, DataType
+from base import TestSquareBaseParent, DataType
 
 LOGGER = singer.get_logger()
 
 
-class TestSquareStartDate(TestSquareBase, TestCase):
+class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
     START_DATE = ""
     START_DATE_1 = ""
     START_DATE_2 = ""
 
-    def name(self):
+    @staticmethod
+    def name():
         return "tap_tester_square_start_date_test"
 
     def testable_streams_dynamic(self):
@@ -90,7 +89,7 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         # run initial sync
         first_record_count_by_stream = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count_1 =  sum(first_record_count_by_stream.values())
+        replicated_row_count_1 = sum(first_record_count_by_stream.values())
         self.assertGreater(replicated_row_count_1, 0, msg="failed to replicate any data: {}".format(first_record_count_by_stream))
         print("total replicated row count: {}".format(replicated_row_count_1))
         synced_records_1 = runner.get_records_from_target_output()
@@ -121,7 +120,7 @@ class TestSquareStartDate(TestSquareBase, TestCase):
         # run sync
         record_count_by_stream_2 = self.run_and_verify_sync(conn_id)
 
-        replicated_row_count_2 =  sum(record_count_by_stream_2.values())
+        replicated_row_count_2 = sum(record_count_by_stream_2.values())
         self.assertGreater(replicated_row_count_2, 0, msg="failed to replicate any data")
         print("total replicated row count: {}".format(replicated_row_count_2))
 
