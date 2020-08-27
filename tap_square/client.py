@@ -325,13 +325,26 @@ class SquareClient():
 
     def get_settlements(self, location_id, start_time, bookmarked_cursor):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
-        params = {
-            'limit': 200,
-            'begin_time': start_time,
-        }
-        yield from self._get_v1_objects(
-            url,
-            params,
-            'roles',
-            bookmarked_cursor,
-        )
+
+        now = utils.now()
+        start_time_dt = utils.strptime_to_utc(start_time)
+        end_time_dt = now
+
+        while start_time_dt < now:
+            params = {
+                'limit': 200,
+                'begin_time': utils.strftime(start_time_dt),
+            }
+            # If query range is over a year, shorten to a year
+            if now - start_time_dt > timedelta(weeks=52):
+                end_time_dt = start_time_dt + timedelta(weeks=52)
+                params['end_time'] = utils.strftime(end_time_dt)
+            yield from self._get_v1_objects(
+                url,
+                params,
+                'settlements',
+                bookmarked_cursor,
+            )
+            # Attempt again to sync til "now"
+            start_time_dt = end_time_dt
+            end_time_dt = now
