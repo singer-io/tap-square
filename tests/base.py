@@ -604,8 +604,8 @@ class TestSquareBaseParent:
             expected_pks_set = set(expected_pks)
             self.assertEqual(len(expected_pks), len(expected_pks_set), msg="Our expectations contain a duplicate record.")
 
-            # Verify that all expected records and ONLY the expected records were replicated
-            self.assertEqual(expected_pks_set, sync_pks_set)
+            # Verify sync pks have all expected records pks in it
+            self.assertTrue(sync_pks_set.issuperset(expected_pks_set))
 
         def assertParentKeysEqual(self, expected_record, sync_record):
             """Compare the top level keys of an expected record and a sync record."""
