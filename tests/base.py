@@ -196,6 +196,8 @@ class TestSquareBaseParent:
             return {
                 'employees',
                 'roles',
+                'bank_accounts',
+                'settlements',
             }
 
         def sandbox_streams(self):
