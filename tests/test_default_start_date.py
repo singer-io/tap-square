@@ -78,7 +78,7 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         streams_without_data = self.untestable_streams()
 
         # Verify we can run a check and sync with the given start date
-        record_count_by_stream =  self.run_standard_sync(self.get_environment(), data_type)
+        record_count_by_stream = self.run_standard_sync(self.get_environment(), data_type)
 
         # Verify we get records for streams with data
         for stream in testable_streams:
