@@ -21,17 +21,23 @@ def get_batch_token_from_headers(headers):
     else:
         return None
 
+def should_not_retry(ex):
+    """
+    Marks certain exception types (e.g., 400) as non-retryable
+    """
+    if hasattr(ex, "response") and hasattr(ex.response, "status_code") and ex.response.status_code == 400:
+        return True
+    return False
 
 def log_backoff(details):
     '''
     Logs a backoff retry message
     '''
-    LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
+    LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
 class RetryableError(RuntimeError):
     pass
-
 
 class SquareClient():
     def __init__(self, config):
@@ -68,6 +74,7 @@ class SquareClient():
         backoff.expo,
         RetryableError,
         max_time=180, # seconds
+        giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
@@ -306,6 +313,7 @@ class SquareClient():
         backoff.expo,
         requests.exceptions.RequestException,
         max_time=180, # seconds
+        giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
@@ -325,13 +333,31 @@ class SquareClient():
 
     def get_settlements(self, location_id, start_time, bookmarked_cursor):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
-        params = {
-            'limit': 200,
-            'begin_time': start_time,
-        }
-        yield from self._get_v1_objects(
-            url,
-            params,
-            'roles',
-            bookmarked_cursor,
-        )
+
+        now = utils.now()
+        start_time_dt = utils.strptime_to_utc(start_time)
+        end_time_dt = now
+
+        # Parameter `begin_time` cannot be before 1 Jan 2013 00:00:00Z
+        # Doc: https://developer.squareup.com/reference/square/settlements-api/v1-list-settlements
+        if start_time_dt < utils.strptime_to_utc("2013-01-01T00:00:00Z"):
+            raise Exception("Start Date for Settlements stream cannot come before `2013-01-01T00:00:00Z`, current start_date: {}".format(start_time))
+
+        while start_time_dt < now:
+            params = {
+                'limit': 200,
+                'begin_time': utils.strftime(start_time_dt),
+            }
+            # If query range is over a year, shorten to a year
+            if now - start_time_dt > timedelta(weeks=52):
+                end_time_dt = start_time_dt + timedelta(weeks=52)
+                params['end_time'] = utils.strftime(end_time_dt)
+            yield from self._get_v1_objects(
+                url,
+                params,
+                'settlements',
+                bookmarked_cursor,
+            )
+            # Attempt again to sync til "now"
+            start_time_dt = end_time_dt
+            end_time_dt = now
