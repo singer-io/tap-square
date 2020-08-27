@@ -330,6 +330,11 @@ class SquareClient():
         start_time_dt = utils.strptime_to_utc(start_time)
         end_time_dt = now
 
+        # Parameter `begin_time` cannot be before 1 Jan 2013 00:00:00Z
+        # Doc: https://developer.squareup.com/reference/square/settlements-api/v1-list-settlements
+        if start_time_dt < utils.strptime_to_utc("2013-01-01T00:00:00Z"):
+            raise Exception("Start Date for Settlements stream cannot come before `2013-01-01T00:00:00Z`, current start_date: {}".format(start_time))
+
         while start_time_dt < now:
             params = {
                 'limit': 200,
