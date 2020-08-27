@@ -21,17 +21,23 @@ def get_batch_token_from_headers(headers):
     else:
         return None
 
+def should_not_retry(ex):
+    """
+    Marks certain exception types (e.g., 400) as non-retryable
+    """
+    if hasattr(ex, "response") and hasattr(ex.response, "status_code") and ex.response.status_code == 400:
+        return True
+    return False
 
 def log_backoff(details):
     '''
     Logs a backoff retry message
     '''
-    LOGGER.warning('Network error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
+    LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
 class RetryableError(RuntimeError):
     pass
-
 
 class SquareClient():
     def __init__(self, config):
@@ -68,6 +74,7 @@ class SquareClient():
         backoff.expo,
         RetryableError,
         max_time=180, # seconds
+        giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
@@ -306,6 +313,7 @@ class SquareClient():
         backoff.expo,
         requests.exceptions.RequestException,
         max_time=180, # seconds
+        giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
     )
