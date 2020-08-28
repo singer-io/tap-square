@@ -152,6 +152,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             created_records[stream] += new_records
 
         for stream in testable_streams.difference(self.cannot_update_streams()):
+            first_rec = None
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
