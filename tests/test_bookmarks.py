@@ -80,7 +80,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Ensure tested streams have existing records
-        expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE)
+        expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE, force_create_records=True)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -152,6 +152,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             created_records[stream] += new_records
 
         for stream in testable_streams.difference(self.cannot_update_streams()):
+            first_rec = None
             # Update all streams (but save payments for last)
             if stream == 'payments':
                 continue
@@ -173,15 +174,20 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            else: # By default we want the first available record that has not been deleted
-                for message in first_sync_records.get(stream).get('messages'):
-                    data = message.get('data')
-                    if not data.get('is_deleted'):
-                        first_rec = message.get('data')
-                        break
+            else: # By default we want the last created record
+                last_message = first_sync_records.get(stream).get('messages')[-1]
+                if last_message.get('data') and not last_message.get('data').get('is_deleted'):
+                    first_rec = last_message.get('data')
+                else: # If last record happens to be deleted grab first available that wasn't
+                    LOGGER.warning("The last created record for %s was deleted.", stream)
+                    for message in first_sync_records.get(stream).get('messages'):
+                        data = message.get('data')
+                        if not data.get('is_deleted'):
+                            first_rec = message.get('data')
+                            break
 
                 if not first_rec:
-                    raise RuntimeError("Unable to find any {} that were not deleted.".format(stream))
+                    raise RuntimeError("Cannot find any {} records that were not deleted .".format(stream))
 
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
