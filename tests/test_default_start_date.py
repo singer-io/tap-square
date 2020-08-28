@@ -17,10 +17,8 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         return "tap_tester_start_date_default"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().difference({
-            'bank_accounts',
-            'settlements',
-        })
+        return self.dynamic_data_streams()
+
 
     def testable_streams_static(self):
         return self.static_data_streams()
