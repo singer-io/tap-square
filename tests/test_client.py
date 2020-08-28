@@ -1344,13 +1344,16 @@ class TestClient():
 
     def update_taxes(self, obj, version):
         obj_id = obj.get('id')
+        all_loc = obj.get('present_at_all_locations')
         LOGGER.info('THIS IS WHAT THE TAX RECORD LOOKS LIKE %s', obj)
+
         tax_data = obj.get('tax_data')
         tax_data['name'] = self.make_id('tax')
 
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'TAX',
                                           'version': version,
+                                          'present_at_all_locations': all_loc,
                                           'tax_data': tax_data}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_catalog(body)
