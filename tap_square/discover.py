@@ -7,13 +7,17 @@ from .streams import STREAMS
 def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
+# NB: These streams cannot be queried using Sandbox OAuth credentials
+PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
 
-def get_schemas():
+def get_schemas(sandbox):
 
     schemas = {}
     schemas_metadata = {}
 
     for stream_name, stream_object in STREAMS.items():
+        if sandbox and stream_name in PRODUCTION_ONLY_STREAMS:
+            continue
 
         schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
         with open(schema_path) as file:
@@ -40,9 +44,9 @@ def get_schemas():
     return schemas, schemas_metadata
 
 
-def discover():
+def discover(sandbox):
 
-    schemas, schemas_metadata = get_schemas()
+    schemas, schemas_metadata = get_schemas(sandbox)
     streams = []
 
     for schema_name, schema in schemas.items():

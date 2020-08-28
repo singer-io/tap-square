@@ -40,6 +40,7 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
+        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
 
         def setUp(self):
             missing_envs = [x for x in [
@@ -107,7 +108,7 @@ class TestSquareBaseParent:
         def expected_metadata(self):
             """The expected streams and metadata about the streams"""
 
-            return {
+            all_streams = {
                 "bank_accounts": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
@@ -184,6 +185,11 @@ class TestSquareBaseParent:
                 },
             }
 
+            if self.get_environment() == self.SANDBOX:
+                return {k: v for k, v in all_streams.items()
+                        if k not in self.PRODUCTION_ONLY_STREAMS}
+            return all_streams
+
         def expected_replication_method(self):
             """return a dictionary with key of table name and value of replication method"""
             return {table: properties.get(self.REPLICATION_METHOD, None)
@@ -196,6 +202,8 @@ class TestSquareBaseParent:
             return {
                 'employees',
                 'roles',
+                'bank_accounts',
+                'settlements',
             }
 
         def sandbox_streams(self):
