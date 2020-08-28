@@ -69,7 +69,7 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
-       - run:
+      - run:
           when: always
           name: 'All Tests Running'
           command: |
