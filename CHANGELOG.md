@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.6.2](https://github.com/singer-io/tap-square/tree/v0.6.2) (2020-06-22)
+
+* Fixes Discovery in Sandbox to ignore streams unavailable in the sandbox
+* Adds pagination to Settlements stream for time ranges over a year
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v0.6.0...v0.6.2)
+
+
 ## [v0.6.0](https://github.com/singer-io/tap-square/tree/v0.6.0) (2020-06-22)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v0.4.0...v0.6.0)
