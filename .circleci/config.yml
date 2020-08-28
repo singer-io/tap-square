@@ -180,19 +180,21 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
 
-            circleci tests split tests/test_sync_canary.py tests/test_config.py | xargs
+            function run_test() {
+              if [[ $1 == *"config"* ]]; then
+                python $1
+              else
+                run-test --tap=tap-square \
+                         --target=target-stitch \
+                         --orchestrator=stitch-orchestrator \
+                         --email=harrison+sandboxtest@stitchdata.com \
+                         --password=$SANDBOX_PASSWORD \
+                         --client-id=50 \
+                         $1
+              fi
+            }
 
-            if [[ $1 == *"config"* ]]; then
-              python $1
-            else
-              run-test --tap=tap-square \
-                       --target=target-stitch \
-                       --orchestrator=stitch-orchestrator \
-                       --email=harrison+sandboxtest@stitchdata.com \
-                       --password=$SANDBOX_PASSWORD \
-                       --client-id=50 \
-                       $1
-            fi
+            circleci tests split tests/test_sync_canary.py tests/test_config.py | xargs -n 1 run_test
 workflows:
   version: 2
   commit:
@@ -207,6 +209,7 @@ workflows:
           context: circleci-user
           requires:
             - queue
+            - smoke
   build_daily:
     triggers:
       - schedule:
