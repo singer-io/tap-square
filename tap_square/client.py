@@ -25,9 +25,9 @@ def should_not_retry(ex):
     """
     Marks certain exception types (e.g., 400) as non-retryable
     """
-    if (hasattr(ex, "response") and
-        hasattr(ex.response, "status_code") and
-        ex.response.status_code in {400, 401}):
+    if hasattr(ex, "response") and \
+       hasattr(ex.response, "status_code") and \
+       ex.response.status_code in {400, 401}:
         return True
     return False
 
