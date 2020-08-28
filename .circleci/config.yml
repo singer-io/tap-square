@@ -44,7 +44,6 @@ jobs:
           when: always
           name: 'Test Discovery'
           command: |
-            circleci tests split test_filenames.txt
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
