@@ -178,6 +178,10 @@ workflows:
           context: circleci-user
           requires:
             - queue
+      - test:
+          context: circleci-user
+          requires:
+            - build
   build_daily:
     triggers:
       - schedule:
