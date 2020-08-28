@@ -173,10 +173,10 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            else: # By default we want the first available record that has not been deleted
+            else: # By default we want the first available record that we created and that has not been deleted
                 for message in first_sync_records.get(stream).get('messages'):
                     data = message.get('data')
-                    if not data.get('is_deleted'):
+                    if not data.get('is_deleted') and data.get('id').startswith("#"):
                         first_rec = message.get('data')
                         break
 
