@@ -40,6 +40,7 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
+        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
 
         def setUp(self):
             missing_envs = [x for x in [
@@ -186,7 +187,7 @@ class TestSquareBaseParent:
 
             if self.get_environment() == self.SANDBOX:
                 return {k: v for k, v in all_streams.items()
-                        if k not in {'roles', 'bank_accounts', 'settlements'}}
+                        if k not in self.PRODUCTION_ONLY_STREAMS}
             return all_streams
 
         def expected_replication_method(self):
