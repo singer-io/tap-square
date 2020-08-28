@@ -40,110 +40,11 @@ jobs:
           name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-
-  test:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
-    parallelism: 2
-    steps:
-      - checkout
-      - add_ssh_keys
-      #  - run:
-      #     when: always
-      #     name: 'All Tests Running'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       python tests/test_config.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Automatic Fields'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_automatic_fields.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Schema and All Fields'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_all_fields.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Bookmarks for Dynamic Data Streams'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_bookmarks.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Bookmarks for Static Data Streams'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_bookmarks_static.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Start Date'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_start_date.py
-      # - run:
-      #     when: always
-      #     name: 'Testing Pagination'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_pagination.py
       - run:
           when: always
-          name: 'Testing Discovery'
+          name: 'Test Discovery'
           command: |
+            circleci tests split test_filenames.txt
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
@@ -168,6 +69,98 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
+       - run:
+          when: always
+          name: 'All Tests Running'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            python tests/test_config.py
+      - run:
+          when: always
+          name: 'Testing Automatic Fields'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_automatic_fields.py
+      - run:
+          when: always
+          name: 'Testing Schema and All Fields'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_all_fields.py
+      - run:
+          when: always
+          name: 'Testing Bookmarks for Dynamic Data Streams'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks.py
+      - run:
+          when: always
+          name: 'Testing Bookmarks for Static Data Streams'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks_static.py
+      - run:
+          when: always
+          name: 'Testing Start Date'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_start_date.py
+      - run:
+          when: always
+          name: 'Testing Pagination'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_pagination.py
 workflows:
   version: 2
   commit:
@@ -178,10 +171,6 @@ workflows:
           context: circleci-user
           requires:
             - queue
-      - test:
-          context: circleci-user
-          requires:
-            - build
   build_daily:
     triggers:
       - schedule:
