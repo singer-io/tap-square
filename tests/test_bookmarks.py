@@ -174,15 +174,13 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            else: # By default we want the first available record that we created and that has not been deleted
-                for message in first_sync_records.get(stream).get('messages'):
-                    data = message.get('data')
-                    if not data.get('is_deleted') and (stream == 'inventories' or data.get('id', '').startswith("#")):
-                        first_rec = message.get('data')
-                        break
+            else: # By default we want the last created record
+                last_message = first_sync_records.get(stream).get('messages')[0]
+                if  last_message.get('data') and not last_message.get('data').get('is_deleted'):
+                    first_rec = last_message.get('data')
 
                 if not first_rec:
-                    raise RuntimeError("Unable to find any {} records we explicitly created that were not deleted.".format(stream))
+                    raise RuntimeError("The last created record for {} was deleted.".format(stream))
 
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
