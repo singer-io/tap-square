@@ -70,6 +70,20 @@ jobs:
                      tests/test_sync_canary.py
       - run:
           when: always
+          name: 'Testing Default Start Date'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_default_start_date.py
+      - run:
+          when: always
           name: 'All Tests Running'
           command: |
             source dev_env.sh
