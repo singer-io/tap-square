@@ -107,7 +107,7 @@ class TestSquareBaseParent:
         def expected_metadata(self):
             """The expected streams and metadata about the streams"""
 
-            return {
+            all_streams = {
                 "bank_accounts": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
@@ -183,6 +183,11 @@ class TestSquareBaseParent:
                     self.REPLICATION_KEYS: {'updated_at'}
                 },
             }
+
+            if self.get_environment() == self.SANDBOX:
+                return {k: v for k, v in all_streams.items()
+                        if k not in {'roles', 'bank_accounts', 'settlements'}}
+            return all_streams
 
         def expected_replication_method(self):
             """return a dictionary with key of table name and value of replication method"""
