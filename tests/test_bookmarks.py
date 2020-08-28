@@ -80,7 +80,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Ensure tested streams have existing records
-        expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE)
+        expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE, force_create_records=True)
 
         # Instantiate connection with default start
         conn_id = connections.ensure_connection(self)
@@ -177,12 +177,12 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             else: # By default we want the first available record that we created and that has not been deleted
                 for message in first_sync_records.get(stream).get('messages'):
                     data = message.get('data')
-                    if not data.get('is_deleted') and data.get('id').startswith("#"):
+                    if not data.get('is_deleted') and (stream == 'inventories' or data.get('id', '').startswith("#")):
                         first_rec = message.get('data')
                         break
 
                 if not first_rec:
-                    raise RuntimeError("Unable to find any {} that were not deleted.".format(stream))
+                    raise RuntimeError("Unable to find any {} records we explicitly created that were not deleted.".format(stream))
 
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
