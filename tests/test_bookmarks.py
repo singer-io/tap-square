@@ -178,9 +178,16 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                 last_message = first_sync_records.get(stream).get('messages')[0]
                 if  last_message.get('data') and not last_message.get('data').get('is_deleted'):
                     first_rec = last_message.get('data')
+                else: # If last record happens to be deleted grab first available that wasn't
+                    LOGGER.warning("The last created record for %s was deleted.", stream)
+                    for message in first_sync_records.get(stream).get('messages'):
+                        data = message.get('data')
+                        if not data.get('is_deleted'):
+                            first_rec = message.get('data')
+                            break
 
                 if not first_rec:
-                    raise RuntimeError("The last created record for {} was deleted.".format(stream))
+                    raise RuntimeError("Cannot find any {} records that were not deleted .".format(stream))
 
             if stream == 'inventories': # This is an append only stream, we will make multiple 'updates'
                 first_rec_catalog_obj_id = first_rec.get('catalog_object_id')
