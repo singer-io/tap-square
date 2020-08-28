@@ -1193,11 +1193,11 @@ class TestClient():
         if stream == 'items':
             return self.update_item(obj, version, start_date).body.get('objects')
         elif stream == 'categories':
-            return self.update_categories(obj_id, version).body.get('objects')
+            return self.update_categories(obj, version).body.get('objects')
         elif stream == 'discounts':
-            return self.update_discounts(obj_id, version).body.get('objects')
+            return self.update_discounts(obj, version).body.get('objects')
         elif stream == 'taxes':
-            return self.update_taxes(obj_id, version).body.get('objects')
+            return self.update_taxes(obj, version).body.get('objects')
         elif stream == 'employees':
             return [self.update_employees_v1(obj)]
         elif stream == 'roles':
@@ -1273,11 +1273,14 @@ class TestClient():
 
         return self.get_object_matching_conditions('payments', obj_id, start_date=start_date, keys_exist=expected_keys_exist, status=expected_status)
 
-    def update_categories(self, obj_id, version):
+    def update_categories(self, obj, version):
+        obj_id = obj.get('id')
+        category_data = obj.get('category_data')
+        category_data['name'] = self.make_id('category')
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'CATEGORY',
                                           'version': version,
-                                          'category_data': {'name': self.make_id('category')}}]}],
+                                          'category_data': category_data}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_catalog(body)
 
@@ -1317,29 +1320,38 @@ class TestClient():
 
     def update_modifier_list(self, obj, version):
         obj_id = obj.get('id')
+        modifier_list_data = obj.get('modifier_list_data')
+        modifier_list_data['name'] = self.make_id('modifier_list')
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'MODIFIER_LIST',
                                           'version': version,
-                                          'modifier_list_data': {'name': self.make_id('modifier_list')}}]}],
+                                          'modifier_list_data': modifier_list_data}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_catalog(body)
 
-    def update_discounts(self, obj_id, version):
+    def update_discounts(self, obj, version):
+        obj_id = obj.get('id')
+        discount_data = obj.get('discount_data')
+        discount_data['name'] = self.make_id('discount')
+        discount_data['amount_money'] = {'amount': 34500,
+                                         'currency': 'USD'}
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'DISCOUNT',
                                           'version': version,
-                                          'discount_data': {'name': self.make_id('discount'),
-                                                            'discount_type': 'FIXED_AMOUNT',
-                                                            'amount_money': {'amount': 34500,
-                                                                             'currency': 'USD'}}}]}],
+                                          'discount_data': discount_data,}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_catalog(body)
 
-    def update_taxes(self, obj_id, version):
+    def update_taxes(self, obj, version):
+        obj_id = obj.get('id')
+        LOGGER.info('THIS IS WHAT THE TAX RECORD LOOKS LIKE %s', obj)
+        tax_data = obj.get('tax_data')
+        tax_data['name'] = self.make_id('tax')
+
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'TAX',
                                           'version': version,
-                                          'tax_data': {'name': self.make_id('tax')}}]}],
+                                          'tax_data': tax_data}]}],
                 'idempotency_key': str(uuid.uuid4())}
         return self.post_catalog(body)
 
