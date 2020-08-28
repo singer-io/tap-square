@@ -54,28 +54,28 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_discovery.py
-      # - run: # TODO Delete
-      #     when: always
-      #     name: 'Testing Sync Canary'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       run-test --tap=tap-square \
-      #                --target=target-stitch \
-      #                --orchestrator=stitch-orchestrator \
-      #                --email=harrison+sandboxtest@stitchdata.com \
-      #                --password=$SANDBOX_PASSWORD \
-      #                --client-id=50 \
-      #                tests/test_sync_canary.py
-      # - run:
-      #     when: always
-      #     name: 'All Tests Running'
-      #     command: |
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-      #       python tests/test_config.py
+      - run:
+          when: always
+          name: 'Testing Sync Canary'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_sync_canary.py
+      - run:
+          when: always
+          name: 'All Tests Running'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
+            python tests/test_config.py
       - run:
           when: always
           name: 'Testing Automatic Fields'
@@ -160,58 +160,16 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
-  smoke:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
-    parallelism: 2
-    steps:
-      - checkout
-      - add_ssh_keys
-      - run:
-          when: always
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
-          when: always
-          name: 'Running Smoke Test'
-          command: |
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
-
-            function run_test() {
-              if [[ $1 == *"config"* ]]; then
-                python $1
-              else
-                run-test --tap=tap-square \
-                         --target=target-stitch \
-                         --orchestrator=stitch-orchestrator \
-                         --email=harrison+sandboxtest@stitchdata.com \
-                         --password=$SANDBOX_PASSWORD \
-                         --client-id=50 \
-                         $1
-              fi
-            }
-
-            export -f run_test
-            # circleci tests split tests/test_sync_canary.py tests/test_config.py | xargs -n 1 run_test
-            circleci tests split tests/test_sync_canary.py tests/test_config.py | xargs -n 1 echo
 workflows:
   version: 2
   commit:
     jobs:
       - queue:
           context: circleci-user
-      - smoke:
-          context: circleci-user
-          requires:
-            - queue
       - build:
           context: circleci-user
           requires:
             - queue
-            - smoke
   build_daily:
     triggers:
       - schedule:
