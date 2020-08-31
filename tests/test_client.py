@@ -1344,10 +1344,8 @@ class TestClient():
 
     def update_taxes(self, obj, version):
         obj_id = obj.get('id')
-        LOGGER.info('THIS IS WHAT THE TAX RECORD LOOKS LIKE %s', obj)
         tax_data = obj.get('tax_data')
         tax_data['name'] = self.make_id('tax')
-
         body = {'batches': [{'objects': [{'id': obj_id,
                                           'type': 'TAX',
                                           'version': version,
