@@ -80,7 +80,8 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
 
         # Verify we get records for streams with data
         for stream in testable_streams:
-            if stream in streams_without_data:
-                self.assertGreaterEqual(record_count_by_stream.get(stream, 0), 0)
-            else:
-                self.assertGreater(record_count_by_stream.get(stream), 0)
+            with self.subTest(stream=stream):
+                if stream in streams_without_data:
+                    self.assertGreaterEqual(record_count_by_stream.get(stream, 0), 0)
+                else:
+                    self.assertGreater(record_count_by_stream.get(stream, 0), 0, "no records found for stream {}".format(stream))
