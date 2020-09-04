@@ -623,6 +623,8 @@ class TestClient():
             return self.create_payments(num_records)
         elif stream == 'shifts':
             return self.create_shift(start_date, end_date, num_records)
+        elif stream == 'customers':
+            return self.create_customers(num_records)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
@@ -821,6 +823,46 @@ class TestClient():
 
         response = new_payment.body.get('payment')
         return response
+
+    def create_customers(self, num_records):
+        customers = []
+        for _ in range(num_records):
+            created_customer = self.create_customer()
+            customers += created_customer
+        return customers
+
+    def create_customer(self):
+        """
+        Generate a customer object
+        """
+        body = {
+            'id': self.make_id('customer'),
+            'idempotency_key': str(uuid.uuid4()),
+            'given_name': 'given',
+            'family_name': 'family',
+            'company_name': 'company',
+            'nickname': 'nickname',
+            'email_address': 'a@b.com',
+            'address': {
+                'address_line_1': 'address',
+                'administrative_district_level_1': 'GA',
+                'locality': 'Atlanta',
+                'postal_code': '12345',
+                'country': 'US',
+                'first_name': 'a',
+                'last_name': 'b'
+            },
+            'phone_number': '9999999999',
+            'note': self.make_id('customer'),
+            'birthday': '1998-09-01T00:00:00-00:00',
+        }
+        response = self._client.customers.create_customer(body)
+        if response.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(response))
+            raise RuntimeError(response.errors)
+
+        return response.body.get('customer')
 
     def create_modifier_list(self, num_records):
         objects = []
