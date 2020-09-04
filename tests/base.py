@@ -117,6 +117,11 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                 },
+                "customers": {
+                    self.PRIMARY_KEYS: {'id'},
+                    self.REPLICATION_METHOD: self.INCREMENTAL,
+                    self.REPLICATION_KEYS: {'updated_at'}
+                },
                 "categories": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.INCREMENTAL,
