@@ -324,6 +324,33 @@ class TestClient():
             body,
             'payments')
 
+    def get_customers(self, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+                'limit': 100,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "updated_at": {
+                            "start_at": start_time
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        yield from self._get_v2_objects(
+            'customers',
+            lambda bdy: self._client.customers.search_customers(body=bdy),
+            body,
+            'customers')
+
     def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
             cursor = bookmarked_cursor
@@ -412,6 +439,7 @@ class TestClient():
             'roles',
             bookmarked_cursor,
         )
+
     def get_all_location_ids(self):
         all_location_ids = list()
         for page, _ in self.get_locations():
@@ -481,6 +509,8 @@ class TestClient():
             return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
         elif stream == 'cash_drawer_shifts':
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
+        elif stream == 'customers':
+            return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
@@ -827,8 +857,7 @@ class TestClient():
     def create_customers(self, num_records):
         customers = []
         for _ in range(num_records):
-            created_customer = self.create_customer()
-            customers += created_customer
+            customers.append(self.create_customer())
         return customers
 
     def create_customer(self):
@@ -854,7 +883,6 @@ class TestClient():
             },
             'phone_number': '9999999999',
             'note': self.make_id('customer'),
-            'birthday': '1998-09-01T00:00:00-00:00',
         }
         response = self._client.customers.create_customer(body)
         if response.is_error():
@@ -1256,6 +1284,8 @@ class TestClient():
             return [self.update_payment(obj_id)]
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
+        elif stream == 'customers':
+            return [self.update_customer(obj_id)]
         else:
             raise NotImplementedError("{} is not implmented".format(stream))
 
@@ -1286,6 +1316,16 @@ class TestClient():
         'complete': 'COMPLETED',
         'cancel': 'CANCELED',
     }
+
+    def update_customer(self, obj_id: str):
+        if not obj_id:
+            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+
+        body = {'family_name': self.make_id('customer')}
+        resp = self._client.customers.update_customer(customer_id=obj_id, body=body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp.body.get('customer')
 
     def update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""
