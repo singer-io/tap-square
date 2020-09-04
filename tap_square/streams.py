@@ -260,6 +260,17 @@ class Settlements(FullTableStream):
                 yield page, batch_token
 
 
+class Customers(Stream):
+    tap_stream_id = 'customers'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+
+    def sync(self, start_time, bookmarked_cursor):
+        for page, cursor in self.client.get_customers(start_time, bookmarked_cursor):
+            yield page, cursor
+
 STREAMS = {
     'items': Items,
     'categories': Categories,
@@ -277,4 +288,5 @@ STREAMS = {
     'shifts': Shifts,
     'cash_drawer_shifts': CashDrawerShifts,
     'settlements': Settlements,
+    'customers': Customers
 }
