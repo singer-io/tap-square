@@ -1,4 +1,3 @@
-import random
 from datetime import datetime as dt
 from datetime import timedelta
 
@@ -61,17 +60,6 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
 
-        days_prior = random.randint(7, 358) # 1 week to 57 weeks
-
-        # Testing start date prior to default
-        self.START_DATE = dt.strftime(default_start_date - timedelta(days=days_prior), self.START_DATE_FORMAT)
-        self.set_environment(self.SANDBOX)
-        self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.sandbox_streams()))
-        self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.sandbox_streams()))
-        self.set_environment(self.PRODUCTION)
-        self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
-        self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
-
     def default_start_date_test(self, data_type, testable_streams):
         streams_without_data = self.untestable_streams()
 
@@ -80,7 +68,8 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
 
         # Verify we get records for streams with data
         for stream in testable_streams:
-            if stream in streams_without_data:
-                self.assertGreaterEqual(record_count_by_stream.get(stream, 0), 0)
-            else:
-                self.assertGreater(record_count_by_stream.get(stream), 0)
+            with self.subTest(stream=stream):
+                if stream in streams_without_data:
+                    self.assertGreaterEqual(record_count_by_stream.get(stream, 0), 0)
+                else:
+                    self.assertGreater(record_count_by_stream.get(stream, 0), 0, "no records found for stream {}".format(stream))

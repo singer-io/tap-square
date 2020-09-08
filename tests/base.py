@@ -117,6 +117,11 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                 },
+                "customers": {
+                    self.PRIMARY_KEYS: {'id'},
+                    self.REPLICATION_METHOD: self.INCREMENTAL,
+                    self.REPLICATION_KEYS: {'updated_at'}
+                },
                 "categories": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -463,6 +468,7 @@ class TestSquareBaseParent:
                         stream_to_expected_records[stream].append(created_records)
                     elif isinstance(created_records, list):
                         stream_to_expected_records[stream].extend(created_records)
+                        self.assertEqual(num_records, len(created_records))
                     else:
                         raise NotImplementedError("created_records unknown type: {}".format(created_records))
 

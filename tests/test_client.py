@@ -324,6 +324,33 @@ class TestClient():
             body,
             'payments')
 
+    def get_customers(self, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+                'limit': 100,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "updated_at": {
+                            "start_at": start_time
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        yield from self._get_v2_objects(
+            'customers',
+            lambda bdy: self._client.customers.search_customers(body=bdy),
+            body,
+            'customers')
+
     def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
             cursor = bookmarked_cursor
@@ -412,6 +439,7 @@ class TestClient():
             'roles',
             bookmarked_cursor,
         )
+
     def get_all_location_ids(self):
         all_location_ids = list()
         for page, _ in self.get_locations():
@@ -481,6 +509,8 @@ class TestClient():
             return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
         elif stream == 'cash_drawer_shifts':
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
+        elif stream == 'customers':
+            return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
@@ -623,6 +653,8 @@ class TestClient():
             return self.create_payments(num_records)
         elif stream == 'shifts':
             return self.create_shift(start_date, end_date, num_records)
+        elif stream == 'customers':
+            return self.create_customers(num_records)
         else:
             raise NotImplementedError("create not implemented for stream {}".format(stream))
 
@@ -821,6 +853,44 @@ class TestClient():
 
         response = new_payment.body.get('payment')
         return response
+
+    def create_customers(self, num_records):
+        customers = []
+        for _ in range(num_records):
+            customers.append(self.create_customer())
+        return customers
+
+    def create_customer(self):
+        """
+        Generate a customer object
+        """
+        body = {
+            'id': self.make_id('customer'),
+            'idempotency_key': str(uuid.uuid4()),
+            'given_name': 'given',
+            'family_name': 'family',
+            'company_name': 'company',
+            'nickname': 'nickname',
+            'email_address': 'a@b.com',
+            'address': {
+                'address_line_1': 'address',
+                'administrative_district_level_1': 'GA',
+                'locality': 'Atlanta',
+                'postal_code': '12345',
+                'country': 'US',
+                'first_name': 'a',
+                'last_name': 'b'
+            },
+            'phone_number': '9999999999',
+            'note': self.make_id('customer'),
+        }
+        response = self._client.customers.create_customer(body)
+        if response.is_error():
+            print("body: {}".format(body))
+            print("response: {}".format(response))
+            raise RuntimeError(response.errors)
+
+        return response.body.get('customer')
 
     def create_modifier_list(self, num_records):
         objects = []
@@ -1214,6 +1284,8 @@ class TestClient():
             return [self.update_payment(obj_id)]
         elif stream == 'shifts':
             return [self.update_shift(obj).body.get('shift')]
+        elif stream == 'customers':
+            return [self.update_customer(obj_id)]
         else:
             raise NotImplementedError("{} is not implmented".format(stream))
 
@@ -1244,6 +1316,16 @@ class TestClient():
         'complete': 'COMPLETED',
         'cancel': 'CANCELED',
     }
+
+    def update_customer(self, obj_id: str):
+        if not obj_id:
+            raise RuntimeError("Require non-blank obj_id, found {}".format(obj_id))
+
+        body = {'family_name': self.make_id('customer')}
+        resp = self._client.customers.update_customer(customer_id=obj_id, body=body)
+        if resp.is_error():
+            raise RuntimeError(resp.errors)
+        return resp.body.get('customer')
 
     def update_payment(self, obj_id: str, action=None):
         """Cancel or a Complete an APPROVED payment"""

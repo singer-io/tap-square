@@ -162,6 +162,33 @@ class SquareClient():
             body,
             'bank_accounts')
 
+    def get_customers(self, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            body = {
+                "cursor": bookmarked_cursor,
+                'limit': 100,
+            }
+        else:
+            body = {
+                "query": {
+                    "filter": {
+                        "updated_at": {
+                            "start_at": start_time
+                        }
+                    },
+                    "sort": {
+                        "sort_field": "UPDATED_AT",
+                        "sort_order": "ASC"
+                    }
+                }
+            }
+
+        yield from self._get_v2_objects(
+            'customers',
+            lambda bdy: self._client.customers.search_customers(body=bdy),
+            body,
+            'customers')
+
     def get_orders(self, location_ids, start_time, bookmarked_cursor):
         if bookmarked_cursor:
             body = {
