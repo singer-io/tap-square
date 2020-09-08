@@ -24,6 +24,7 @@ This tap:
     * Shifts
     * CashDrawerShifts
     * Settlements
+    * Customers
 
 * Includes a schema for each resource reflecting most recent tested data retrieved using the api. See [the schema folder](https://github.com/singer-io/tap-square/tree/master/tap_square/schemas) for details.
 * Some streams incrementally pull data based on the previously saved state. See the [bookmarking strategy](#bookmarking-strategy) section for more details.
