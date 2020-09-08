@@ -26,6 +26,7 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
         'roles': 100,
         'refunds': 100,
         'payments': 100,
+        'customers': 100,
         'modifier_lists': DEFAULT_BATCH_LIMIT,
         'orders': 500,
         'shifts': 200,
