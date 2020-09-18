@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.7.1](https://github.com/singer-io/tap-square/tree/v0.7.1) (2020-09-18)
+
+* Add `cardholder_name` to `payments` schema
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v0.7.0...v0.7.1)
+
 ## [v0.7.0](https://github.com/singer-io/tap-square/tree/v0.7.0) (2020-09-08)
 
 * Add customers stream
