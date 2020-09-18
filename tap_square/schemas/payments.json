@@ -139,6 +139,12 @@
                 "integer"
               ]
             },
+            "cardholder_name": {
+              "type": [
+                "null",
+                "string"
+              ]
+            },
             "fingerprint": {
               "type": [
                 "null",
