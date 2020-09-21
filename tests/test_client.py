@@ -780,7 +780,7 @@ class TestClient():
         jitter=backoff.full_jitter,
         on_backoff=log_backoff,
     )
-    def create_refund(self, start_date, payment_response=None, retryable=True):
+    def create_refund(self, start_date, payment_response=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -815,10 +815,6 @@ class TestClient():
 
         refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
-            if retryable and any([err.get('code') == "VERSION_MISMATCH" for err in refund.errors]):
-                LOGGER.warning("VERSION_MISMATCH Exception Caught: retrying create refund")
-                return self.create_refund(start_date, payment_response=payment_response, retryable=False)
-
             LOGGER.error("body: %s", body)
             LOGGER.error("response: %s", refund)
             LOGGER.error("payment attempted to be refunded: %s", payment_obj)
