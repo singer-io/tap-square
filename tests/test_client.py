@@ -775,8 +775,15 @@ class TestClient():
 
     @backoff.on_exception(
         backoff.expo,
-        requests.exceptions.RequestException,
+        RuntimeError,
         max_tries=3,
+        jitter=backoff.full_jitter,
+        on_backoff=log_backoff,
+    )
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_time=120, # seconds
         jitter=backoff.full_jitter,
         on_backoff=log_backoff,
     )
