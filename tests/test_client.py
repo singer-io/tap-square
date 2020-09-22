@@ -773,10 +773,6 @@ class TestClient():
             refunds += created_refund
         return refunds
 
-
-        jitter=backoff.full_jitter,
-        on_backoff=log_backoff,
-    )
     @backoff.on_exception(
         backoff.expo,
         (requests.exceptions.RequestException, RuntimeError),
