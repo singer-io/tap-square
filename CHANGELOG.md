@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.0.0](https://github.com/singer-io/tap-square/tree/v1.0.0) (2020-09-30)
+
+* Move tap-square to GA
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v0.7.1...v1.0.0)
+
 ## [v0.7.1](https://github.com/singer-io/tap-square/tree/v0.7.1) (2020-09-18)
 
 * Add `cardholder_name` to `payments` schema
