@@ -1,4 +1,6 @@
 version: 2
+orbs:
+  slack: circleci/slack@3.4.2
 
 jobs:
   queue:
@@ -174,6 +176,10 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
+      - slack/status:
+          #-slack/notify-on-failure
+          channel: 'tap-tester'
+
 workflows:
   version: 2
   commit:
