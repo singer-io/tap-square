@@ -451,6 +451,11 @@ class TestSquareBaseParent:
             stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
             for stream in create_test_data_streams:
+
+                # WORKAROUND to limit on # of locations permitted. We currently are at the max
+                if stream == 'locations':
+                    continue
+
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 
                 start_date_key = self.get_start_date_key(stream)
