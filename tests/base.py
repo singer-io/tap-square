@@ -451,11 +451,6 @@ class TestSquareBaseParent:
             stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
             for stream in create_test_data_streams:
-
-                # WORKAROUND to limit on # of locations permitted. We currently are at the max
-                if stream == 'locations':
-                    continue
-
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 
                 start_date_key = self.get_start_date_key(stream)
@@ -467,6 +462,10 @@ class TestSquareBaseParent:
                     num_records = max(1, min_required_num_records_per_stream[stream] + 1 - len(stream_to_expected_records[stream]))
 
                     LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
+                    # WORKAROUND to prevent more locations being created. We currently are at the max(300)
+                    if stream == 'locations':
+                        continue
+
                     created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
                     if isinstance(created_records, dict):
