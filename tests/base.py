@@ -463,18 +463,17 @@ class TestSquareBaseParent:
 
                     LOGGER.info("Data missing for stream %s, will create %s record(s)", stream, num_records)
                     # WORKAROUND to prevent more locations being created. We currently are at the max(300)
-                    if stream == 'locations':
-                        continue
+                    if stream != 'locations':
 
-                    created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
+                        created_records = self.client.create(stream, start_date=start_date, num_records=num_records)
 
-                    if isinstance(created_records, dict):
-                        stream_to_expected_records[stream].append(created_records)
-                    elif isinstance(created_records, list):
-                        stream_to_expected_records[stream].extend(created_records)
-                        self.assertEqual(num_records, len(created_records))
-                    else:
-                        raise NotImplementedError("created_records unknown type: {}".format(created_records))
+                        if isinstance(created_records, dict):
+                            stream_to_expected_records[stream].append(created_records)
+                        elif isinstance(created_records, list):
+                            stream_to_expected_records[stream].extend(created_records)
+                            self.assertEqual(num_records, len(created_records))
+                        else:
+                            raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
                 print("Adjust expectations for stream: {}".format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
