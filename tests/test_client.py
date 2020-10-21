@@ -773,6 +773,13 @@ class TestClient():
             refunds += created_refund
         return refunds
 
+    @backoff.on_exception(
+        backoff.expo,
+        (requests.exceptions.RequestException, RuntimeError),
+        max_tries=3,
+        jitter=backoff.full_jitter,
+        on_backoff=log_backoff,
+    )
     def create_refund(self, start_date, payment_response=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
