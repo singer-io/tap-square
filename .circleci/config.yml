@@ -46,7 +46,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -60,7 +59,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -74,7 +72,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -88,7 +85,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             python tests/test_config.py
       - run:
           when: always
@@ -96,7 +92,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -110,7 +105,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -124,7 +118,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -138,7 +131,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -152,7 +144,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
@@ -166,7 +157,6 @@ jobs:
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            PYTHONPATH=$PYTHONPATH:/usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/ \
             run-test --tap=tap-square \
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
