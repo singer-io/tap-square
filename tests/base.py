@@ -652,9 +652,9 @@ class TestSquareBaseParent:
 
                 # Square api for some reason adds legacy_tax_ids in item_data but not when the item is created. If they are equal to tax_ids (which we compare with the expected record correctly) they're ignored if they are missing only in the expected record
                 if ('item_data' in expected_record and
-                    'item_data' in sync_record and
-                    'legacy_tax_ids' in sync_record['item_data'] and
-                    'legacy_tax_ids' not in expected_record['item_data']):
+                        'item_data' in sync_record and
+                        'legacy_tax_ids' in sync_record['item_data'] and
+                        'legacy_tax_ids' not in expected_record['item_data']):
                     self.assertIn('tax_ids', sync_record['item_data'])
                     self.assertEqual(sync_record_copy['item_data'].pop('legacy_tax_ids'),
                                      sync_record['item_data']['tax_ids'])
