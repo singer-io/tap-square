@@ -326,6 +326,27 @@
         "string"
       ]
     },
+    "risk_evaluation": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "created_at": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        "risk_level": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
+    },
     "receipt_url": {
       "type": [
         "null",
