@@ -276,6 +276,18 @@
             "string"
           ]
         },
+        "legacy_tax_ids": {
+          "type": [
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
         "tax_ids": {
           "type": [
             "null",
