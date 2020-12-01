@@ -98,6 +98,8 @@ def sync(config, state, catalog):
                         transformed_record,
                     )
 
+            state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
+            singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)
     singer.write_state(state)
