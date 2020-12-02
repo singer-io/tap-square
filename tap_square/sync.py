@@ -63,6 +63,7 @@ def sync(config, state, catalog):
                     singer.write_state(state)
 
                 state = singer.clear_bookmark(state, tap_stream_id, 'sync_start')
+                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
                 state = singer.write_bookmark(
                     state,
                     tap_stream_id,
@@ -85,9 +86,11 @@ def sync(config, state, catalog):
                             max_record_value = transformed_record[replication_key]
 
                     state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
-                    state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
                     singer.write_state(state)
 
+                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
+                state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
+                singer.write_state(state)
             else:
                 for record in stream_obj.sync(start_time, bookmarked_cursor):
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
@@ -95,8 +98,9 @@ def sync(config, state, catalog):
                         tap_stream_id,
                         transformed_record,
                     )
-            state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
-            singer.write_state(state)
+
+                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
+                singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)
     singer.write_state(state)
