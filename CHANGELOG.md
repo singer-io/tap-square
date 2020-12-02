@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.0.2](https://github.com/singer-io/tap-square/tree/v1.0.2) (2020-12-02)
+
+* Fix birthday, cursor pagination, and state saving [\#84](https://github.com/singer-io/tap-square/pull/84) ([cosimon](https://github.com/cosimon))
+* Fix circle to stop tap-tester sharing PYTHONPATH with tap-square [\#85](https://github.com/singer-io/tap-square/pull/85) ([asaf-erlich](https://github.com/asaf-erlich))
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v1.0.1...v1.0.2)
+
 ## [v1.0.1](https://github.com/singer-io/tap-square/tree/v1.0.1) (2020-10-16)
 
 * Fix the `all_fields_schema` test to not create Locations
