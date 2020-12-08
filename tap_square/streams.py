@@ -260,6 +260,8 @@ class Settlements(FullTableStream):
                 yield page, batch_token
 
 
+# TODO: We think Customers should be listed as FULL_TABLE
+# It could be that customers should call list_customers and work similarly to the Employees Stream
 class Customers(Stream):
     tap_stream_id = 'customers'
     key_properties = ['id']

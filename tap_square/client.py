@@ -171,7 +171,9 @@ class SquareClient():
                     }
                 },
                 "sort": {
+                    # It seems like this is wrong. It should be "field" and "order" not prefixed with sort_
                     "sort_field": "UPDATED_AT",
+                    # UPDATED_AT is not be a correct field to sort on. CREATED_AT only.
                     "sort_order": "ASC"
                 }
             }
