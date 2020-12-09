@@ -1,3 +1,4 @@
+from datetime import timedelta
 import singer
 from singer import Transformer, metadata
 from .client import SquareClient
@@ -6,6 +7,13 @@ from .streams import STREAMS
 
 LOGGER = singer.get_logger()
 
+def get_date_windows(start_time):
+    window_start = singer.utils.strptime_to_utc(start_time)
+    now = singer.utils.now()
+    while window_start < now:
+        window_end = window_start + timedelta(days=7)
+        yield singer.utils.strftime(window_start), singer.utils.strftime(window_end)
+        window_start = window_end
 
 def sync(config, state, catalog):
     client = SquareClient(config)
@@ -71,6 +79,23 @@ def sync(config, state, catalog):
                     sync_start_bookmark,
                 )
                 singer.write_state(state)
+
+            elif tap_stream_id == 'customers':
+                replication_key = stream_obj.replication_key
+                cursor = None
+                for window_start, window_end in get_date_windows(start_time):
+                    LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
+                    for page, cursor in stream_obj.sync(window_start, window_end, cursor):
+                        for record in page:
+                            transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+                            singer.write_record(
+                                tap_stream_id,
+                                transformed_record,
+                            )
+
+                    state = singer.write_bookmark(state, tap_stream_id, replication_key, window_end)
+                    singer.write_state(state)
+
 
             elif stream_obj.replication_method == 'INCREMENTAL':
                 replication_key = stream_obj.replication_key

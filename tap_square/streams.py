@@ -267,8 +267,8 @@ class Customers(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, start_time, bookmarked_cursor):
-        for page, cursor in self.client.get_customers(start_time, bookmarked_cursor):
+    def sync(self, start_time, end_time, cursor):
+        for page, cursor in self.client.get_customers(start_time, end_time, cursor):
             yield page, cursor
 
 STREAMS = {
