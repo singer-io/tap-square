@@ -17,7 +17,7 @@ def get_date_windows(start_time):
         yield singer.utils.strftime(window_start), singer.utils.strftime(window_end)
         window_start = window_end
 
-def sync(config, state, catalog):
+def sync(config, state, catalog): # pylint: disable=too-many-statements
     client = SquareClient(config)
 
     with Transformer() as transformer:
@@ -44,7 +44,6 @@ def sync(config, state, catalog):
             bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
 
             if tap_stream_id == 'shifts':
-                replication_key = stream_obj.replication_key
 
                 sync_start_bookmark = singer.get_bookmark(
                     state,
@@ -83,7 +82,6 @@ def sync(config, state, catalog):
                 singer.write_state(state)
 
             elif tap_stream_id == 'customers':
-                replication_key = stream_obj.replication_key
                 cursor = None
                 for window_start, window_end in get_date_windows(start_time):
                     LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
@@ -94,13 +92,10 @@ def sync(config, state, catalog):
                                 tap_stream_id,
                                 transformed_record,
                             )
-
                     state = singer.write_bookmark(state, tap_stream_id, replication_key, window_end)
                     singer.write_state(state)
 
-
             elif stream_obj.replication_method == 'INCREMENTAL':
-                replication_key = stream_obj.replication_key
                 max_record_value = start_time
                 for page, cursor in stream_obj.sync(start_time, bookmarked_cursor):
                     for record in page:
