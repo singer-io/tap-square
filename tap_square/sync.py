@@ -12,6 +12,8 @@ def get_date_windows(start_time):
     now = singer.utils.now()
     while window_start < now:
         window_end = window_start + timedelta(days=7)
+        if window_end > now:
+            window_end = now
         yield singer.utils.strftime(window_start), singer.utils.strftime(window_end)
         window_start = window_end
 
