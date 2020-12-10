@@ -1,5 +1,9 @@
 # Changelog
 
+## [v1.1.0](https://github.com/singer-io/tap-square/tree/v1.0.2) (2020-12-10)
+
+* Fix customers stream to use date windowing to query [\#87](https://github.com/singer-io/tap-square/pull/84) ([cosimon](https://github.com/cosimon))
+
 ## [v1.0.2](https://github.com/singer-io/tap-square/tree/v1.0.2) (2020-12-02)
 
 * Fix birthday, cursor pagination, and state saving [\#84](https://github.com/singer-io/tap-square/pull/84) ([cosimon](https://github.com/cosimon))
