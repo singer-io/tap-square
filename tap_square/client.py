@@ -87,7 +87,7 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message:
+            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429:
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
@@ -162,23 +162,20 @@ class SquareClient():
             body,
             'bank_accounts')
 
-    def get_customers(self, start_time, bookmarked_cursor):
+    def get_customers(self, start_time, end_time, cursor):
         body = {
             "query": {
                 "filter": {
                     "updated_at": {
-                        "start_at": start_time
+                        "start_at": start_time, # Inclusive on start_at
+                        'end_at': end_time      # Exclusive on end_at
                     }
                 },
-                "sort": {
-                    "sort_field": "UPDATED_AT",
-                    "sort_order": "ASC"
-                }
             }
         }
 
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
+        if cursor is not None:
+            body['cursor'] = cursor
 
         yield from self._get_v2_objects(
             'customers',
