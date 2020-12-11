@@ -40,38 +40,8 @@ def sync(config, state, catalog): # pylint: disable=too-many-statements
                 stream.replication_key
             )
 
-            start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
-            bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
-
-            if tap_stream_id in ('shifts', 'customers'):
-                state = stream_obj.sync(start_time, state, stream_schema, stream_metadata)
-
-            elif stream_obj.replication_method == 'INCREMENTAL':
-                max_record_value = start_time
-                cursor = None
-                for page, cursor in stream_obj.sync(start_time, cursor):
-                    for record in page:
-                        transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                        singer.write_record(
-                            tap_stream_id,
-                            transformed_record,
-                        )
-                        if record[replication_key] > max_record_value:
-                            max_record_value = transformed_record[replication_key]
-
-                    state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
-                    singer.write_state(state)
-
-            else:
-                for record in stream_obj.sync(start_time, bookmarked_cursor):
-                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                    singer.write_record(
-                        tap_stream_id,
-                        transformed_record,
-                    )
-
-                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
-                singer.write_state(state)
+            state = stream_obj.sync(state, stream_schema, stream_metadata, config)
+            singer.write_state(state)
 
     state = singer.set_currently_syncing(state, None)
     singer.write_state(state)
