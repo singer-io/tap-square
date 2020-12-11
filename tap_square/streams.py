@@ -264,7 +264,7 @@ class Shifts(Stream):
             self.tap_stream_id,
             'sync_start',
             singer.utils.strftime(singer.utils.now(),
-                                    format_str=singer.utils.DATETIME_PARSE)
+                                  format_str=singer.utils.DATETIME_PARSE)
         )
         state = singer.write_bookmark(
             state,
