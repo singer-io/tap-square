@@ -13,7 +13,6 @@ def chunks(lst, n):
 class Stream:
     def __init__(self, client, state):
         self.client = client
-        self.state = state
 
 
 class CatalogStream(Stream):
@@ -22,8 +21,8 @@ class CatalogStream(Stream):
     replication_key = None
 
     def sync(self, state, stream_schema, stream_metadata, config):
-        start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
-        bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
 
         max_record_value = start_time
         cursor = None
@@ -31,13 +30,13 @@ class CatalogStream(Stream):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(
-                    tap_stream_id,
+                    self.tap_stream_id,
                     transformed_record,
                 )
-                if record[replication_key] > max_record_value:
-                    max_record_value = transformed_record[replication_key]
+                if record[self.replication_key] > max_record_value:
+                    max_record_value = transformed_record[self.replication_key]
 
-            state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
             singer.write_state(state)
         return state
 
@@ -62,8 +61,8 @@ class FullTableStream(Stream):
                     self.tap_stream_id,
                     transformed_record,
                 )
-            singer.write_bookmark(self.state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(self.state)
+            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(state)
 
         state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         singer.write_state(state)
@@ -122,8 +121,8 @@ class Employees(FullTableStream):
             for record in page:
                 if record['updated_at'] >= start_time:
                     yield record
-            singer.write_bookmark(self.state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(self.state)
+            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(state)
         return state
 
 
@@ -206,7 +205,7 @@ class Orders(Stream):
     object_type = 'ORDER'
 
     def sync(self, state, stream_schema, stream_metadata, config):
-        start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         max_record_value = start_time
         cursor = None
         all_location_ids = Locations.get_all_location_ids(self.client)
@@ -217,13 +216,13 @@ class Orders(Stream):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                     singer.write_record(
-                        tap_stream_id,
+                        self.tap_stream_id,
                         transformed_record,
                     )
-                    if record[replication_key] > max_record_value:
-                        max_record_value = transformed_record[replication_key]
+                    if record[self.replication_key] > max_record_value:
+                        max_record_value = transformed_record[self.replication_key]
 
-                state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
+                state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
                 singer.write_state(state)
         return state
 
@@ -248,7 +247,7 @@ class Shifts(Stream):
     replication_key = 'updated_at'
 
     def sync(self, state, stream_schema, stream_metadata, config):
-        start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
 
         sync_start_bookmark = singer.get_bookmark(
             state,
@@ -273,15 +272,15 @@ class Shifts(Stream):
                         self.tap_stream_id,
                         transformed_record,
                     )
-            state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
+            state = singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
             singer.write_state(state)
 
-        state = singer.clear_bookmark(state, tap_stream_id, 'sync_start')
-        state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
+        state = singer.clear_bookmark(state, self.tap_stream_id, 'sync_start')
+        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         state = singer.write_bookmark(
             state,
-            tap_stream_id,
-            replication_key,
+            self.tap_stream_id,
+            self.replication_key,
             sync_start_bookmark,
         )
         singer.write_state(state)
@@ -304,8 +303,8 @@ class Roles(FullTableStream):
             for record in page:
                 if record['updated_at'] >= start_time:
                     yield record
-            singer.write_bookmark(self.state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(self.state)
+            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
+            singer.write_state(state)
         return state
 
 
@@ -344,7 +343,8 @@ class Customers(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, start_time, state, stream_schema, stream_metadata):
+    def sync(self, state, stream_schema, stream_metadata, config):
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         cursor = None
         for window_start, window_end in get_date_windows(start_time):
             LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
@@ -352,7 +352,7 @@ class Customers(Stream):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                     singer.write_record(
-                        tap_stream_id,
+                        self.tap_stream_id,
                         transformed_record,
                     )
             state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, window_end)
