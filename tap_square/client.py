@@ -201,7 +201,7 @@ class SquareClient():
         }
 
         if cursor:
-            body["cursor"] = cursor,
+            body["cursor"] = cursor
 
         body['location_ids'] = location_ids
 
