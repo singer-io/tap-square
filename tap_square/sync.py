@@ -44,60 +44,15 @@ def sync(config, state, catalog): # pylint: disable=too-many-statements
             bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
 
             if tap_stream_id == 'shifts':
-
-                sync_start_bookmark = singer.get_bookmark(
-                    state,
-                    tap_stream_id,
-                    'sync_start',
-                    singer.utils.strftime(singer.utils.now(),
-                                          format_str=singer.utils.DATETIME_PARSE)
-                )
-                state = singer.write_bookmark(
-                    state,
-                    tap_stream_id,
-                    'sync_start',
-                    sync_start_bookmark,
-                )
-                for page, cursor in stream_obj.sync(start_time, bookmarked_cursor):
-                    for record in page:
-                        if record[replication_key] >= start_time:
-                            transformed_record = transformer.transform(
-                                record, stream_schema, stream_metadata,
-                            )
-                            singer.write_record(
-                                tap_stream_id,
-                                transformed_record,
-                            )
-                    state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
-                    singer.write_state(state)
-
-                state = singer.clear_bookmark(state, tap_stream_id, 'sync_start')
-                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
-                state = singer.write_bookmark(
-                    state,
-                    tap_stream_id,
-                    replication_key,
-                    sync_start_bookmark,
-                )
-                singer.write_state(state)
+                state = stream_obj.sync(start_time, state, stream_schema, stream_metadata)
 
             elif tap_stream_id == 'customers':
-                cursor = None
-                for window_start, window_end in get_date_windows(start_time):
-                    LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
-                    for page, cursor in stream_obj.sync(window_start, window_end, cursor):
-                        for record in page:
-                            transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                            singer.write_record(
-                                tap_stream_id,
-                                transformed_record,
-                            )
-                    state = singer.write_bookmark(state, tap_stream_id, replication_key, window_end)
-                    singer.write_state(state)
+                state = stream_obj.sync(start_time, state, stream_schema, stream_metadata)
 
             elif stream_obj.replication_method == 'INCREMENTAL':
                 max_record_value = start_time
-                for page, cursor in stream_obj.sync(start_time, bookmarked_cursor):
+                cursor = None
+                for page, cursor in stream_obj.sync(start_time, cursor):
                     for record in page:
                         transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                         singer.write_record(
@@ -107,12 +62,9 @@ def sync(config, state, catalog): # pylint: disable=too-many-statements
                         if record[replication_key] > max_record_value:
                             max_record_value = transformed_record[replication_key]
 
-                    state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
+                    state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
                     singer.write_state(state)
 
-                state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
-                state = singer.write_bookmark(state, tap_stream_id, replication_key, max_record_value)
-                singer.write_state(state)
             else:
                 for record in stream_obj.sync(start_time, bookmarked_cursor):
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
