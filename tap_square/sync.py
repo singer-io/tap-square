@@ -43,10 +43,7 @@ def sync(config, state, catalog): # pylint: disable=too-many-statements
             start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
             bookmarked_cursor = singer.get_bookmark(state, tap_stream_id, 'cursor')
 
-            if tap_stream_id == 'shifts':
-                state = stream_obj.sync(start_time, state, stream_schema, stream_metadata)
-
-            elif tap_stream_id == 'customers':
+            if tap_stream_id in ('shifts', 'customers'):
                 state = stream_obj.sync(start_time, state, stream_schema, stream_metadata)
 
             elif stream_obj.replication_method == 'INCREMENTAL':
