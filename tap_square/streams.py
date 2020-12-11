@@ -206,10 +206,44 @@ class Shifts(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, start_time, bookmarked_cursor): #pylint: disable=unused-argument
+    def sync(start_time, state, bookmarked_cursor, stream_schema, stream_metadata):
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        sync_start_bookmark = singer.get_bookmark(
+            state,
+            self.tap_stream_id,
+            'sync_start',
+            singer.utils.strftime(singer.utils.now(),
+                                    format_str=singer.utils.DATETIME_PARSE)
+        )
+        state = singer.write_bookmark(
+            state,
+            self.tap_stream_id,
+            'sync_start',
+            sync_start_bookmark,
+        )
         for page, cursor in self.client.get_shifts():
-            yield page, cursor
+            for record in page:
+                if record[self.replication_key] >= start_time:
+                    transformed_record = transformer.transform(
+                        record, stream_schema, stream_metadata,
+                    )
+                    singer.write_record(
+                        self.tap_stream_id,
+                        transformed_record,
+                    )
+            state = singer.write_bookmark(state, tap_stream_id, 'cursor', cursor)
+            singer.write_state(state)
 
+        state = singer.clear_bookmark(state, tap_stream_id, 'sync_start')
+        state = singer.clear_bookmark(state, tap_stream_id, 'cursor')
+        state = singer.write_bookmark(
+            state,
+            tap_stream_id,
+            replication_key,
+            sync_start_bookmark,
+        )
+        singer.write_state(state)
+        return state
 
 class Roles(FullTableStream):
     # Square Docs: you must use Connect V1 to manage employees and employee roles.
@@ -267,10 +301,21 @@ class Customers(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def sync(self, start_time, end_time, start_cursor):
-        cursor = start_cursor
-        for page, cursor in self.client.get_customers(start_time, end_time, cursor):
-            yield page, cursor
+    def sync(start_time, state, stream_schema, stream_metadata, config):
+        start_time = singer.get_bookmark(state, tap_stream_id, replication_key, config['start_date'])
+        cursor = None
+        for window_start, window_end in get_date_windows(start_time):
+            LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
+            for page, cursor in self.client.get_customers(window_start, window_end, cursor):
+                for record in page:
+                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+                    singer.write_record(
+                        tap_stream_id,
+                        transformed_record,
+                    )
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, window_end)
+            singer.write_state(state)
+        return state
 
 STREAMS = {
     'items': Items,

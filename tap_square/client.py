@@ -183,27 +183,25 @@ class SquareClient():
             body,
             'customers')
 
-    def get_orders(self, location_ids, start_time, bookmarked_cursor):
-        if bookmarked_cursor:
-            body = {
-                "cursor": bookmarked_cursor,
-            }
-        else:
-            body = {
-                "query": {
-                    "filter": {
-                        "date_time_filter": {
-                            "updated_at": {
-                                "start_at": start_time
-                            }
+    def get_orders(self, location_ids, start_time, cursor):
+        body = {
+            "query": {
+                "filter": {
+                    "date_time_filter": {
+                        "updated_at": {
+                            "start_at": start_time
                         }
-                    },
-                    "sort": {
-                        "sort_field": "UPDATED_AT",
-                        "sort_order": "ASC"
                     }
+                },
+                "sort": {
+                    "sort_field": "UPDATED_AT",
+                    "sort_order": "ASC"
                 }
             }
+        }
+
+        if cursor:
+            body["cursor"] = cursor,
 
         body['location_ids'] = location_ids
 
