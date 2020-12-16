@@ -56,15 +56,17 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+
         self.START_DATE = self.get_properties().get('start_date')
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
-        if production_testable_streams:
-            print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-            self.bookmarks_test(production_testable_streams)
+
+        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        self.bookmarks_test(production_testable_streams)
 
     def bookmarks_test(self, testable_streams):
         """
@@ -369,6 +371,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                      msg="Unexpected state for {}\n".format(stream) + \
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))
+
+                if stream == 'customers': # BUG https://stitchdata.atlassian.net/browse/SRCE-4639
+                    continue  # WORKAROUND
 
                 # TESTING APPLICABLE TO ALL STREAMS
 
