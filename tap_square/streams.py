@@ -120,6 +120,9 @@ class Employees(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
+    def get_pages(self, bookmarked_cursor, start_time):
+        raise NotImplementedError("Functionality fully implemented in sync()")
+
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
