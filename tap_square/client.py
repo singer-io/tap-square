@@ -104,7 +104,7 @@ class SquareClient():
             with singer.http_request_timer('GET ' + request_timer_suffix):
                 result = self._retryable_v2_method(request_method, body)
 
-            yield (result.body.get(body_key, []), result.body.get('cursor'))
+            yield result.body.get(body_key, [])
 
             cursor = result.body.get('cursor')
 
@@ -280,7 +280,7 @@ class SquareClient():
                     None,
                 )
 
-            yield (result.body.get('items', []), result.body.get('cursor'))
+            yield result.body.get('items', [])
 
             cursor = result.body.get('cursor')
 

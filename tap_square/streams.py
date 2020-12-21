@@ -34,7 +34,7 @@ class CatalogStream(Stream):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         max_record_value = start_time
         cursor = None
-        for page, cursor in self.client.get_catalog(self.object_type, start_time, cursor):
+        for page in self.client.get_catalog(self.object_type, start_time, cursor):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(
@@ -62,7 +62,7 @@ class FullTableStream(Stream):
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        for page, cursor in self.get_pages(bookmarked_cursor, start_time):
+        for page in self.get_pages(bookmarked_cursor, start_time):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(
@@ -127,7 +127,7 @@ class Employees(FullTableStream):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
 
-        for page, cursor in self.client.get_employees(bookmarked_cursor):
+        for page in self.client.get_employees(bookmarked_cursor):
             for record in page:
                 if record['updated_at'] >= start_time:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
@@ -167,8 +167,8 @@ class Locations(FullTableStream):
         return all_location_ids
 
     def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
-        for page, cursor in self.client.get_locations():
-            yield page, cursor
+        for page in self.client.get_locations():
+            yield page
 
 
 class BankAccounts(FullTableStream):
@@ -180,8 +180,8 @@ class BankAccounts(FullTableStream):
     object_type = 'BANK ACCOUNTS'
 
     def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
-        for page, cursor in self.client.get_bank_accounts():
-            yield page, cursor
+        for page in self.client.get_bank_accounts():
+            yield page
 
 
 class Refunds(FullTableStream):
@@ -193,8 +193,8 @@ class Refunds(FullTableStream):
     object_type = 'REFUND'
 
     def get_pages(self, bookmarked_cursor, start_time):
-        for page, cursor in self.client.get_refunds(start_time, bookmarked_cursor):
-            yield page, cursor
+        for page in self.client.get_refunds(start_time, bookmarked_cursor):
+            yield page
 
 
 class Payments(FullTableStream):
@@ -206,8 +206,8 @@ class Payments(FullTableStream):
     object_type = 'PAYMENT'
 
     def get_pages(self, bookmarked_cursor, start_time):
-        for page, cursor in self.client.get_payments(start_time, bookmarked_cursor):
-            yield page, cursor
+        for page in self.client.get_payments(start_time, bookmarked_cursor):
+            yield page
 
 
 class Orders(Stream):
@@ -226,7 +226,7 @@ class Orders(Stream):
 
         for location_ids_chunk in chunks(all_location_ids, 10):
             # orders requests can only take up to 10 location_ids at a time
-            for page, cursor in self.client.get_orders(location_ids_chunk, start_time, cursor):
+            for page in self.client.get_orders(location_ids_chunk, start_time, cursor):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                     singer.write_record(
@@ -249,8 +249,8 @@ class Inventories(FullTableStream):
     replication_key = None
 
     def get_pages(self, bookmarked_cursor, start_time):
-        for page, cursor in self.client.get_inventories(start_time, bookmarked_cursor):
-            yield page, cursor
+        for page in self.client.get_inventories(start_time, bookmarked_cursor):
+            yield page
 
 
 class Shifts(Stream):
@@ -276,7 +276,7 @@ class Shifts(Stream):
             'sync_start',
             sync_start_bookmark,
         )
-        for page, cursor in self.client.get_shifts():
+        for page in self.client.get_shifts():
             for record in page:
                 if record[self.replication_key] >= start_time:
                     transformed_record = transformer.transform(
@@ -309,13 +309,13 @@ class Roles(FullTableStream):
     replication_key = None
 
     def get_pages(self, bookmarked_cursor, start_time):  #pylint: disable=unused-argument
-        for page, cursor in self.client.get_roles(bookmarked_cursor):
-            yield page, cursor
+        for page in self.client.get_roles(bookmarked_cursor):
+            yield page
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        for page, cursor in self.get_pages(bookmarked_cursor, start_time):
+        for page in self.get_pages(bookmarked_cursor, start_time):
             for record in page:
                 if record['updated_at'] >= start_time:
                     transformed_record = transformer.transform(
@@ -340,8 +340,8 @@ class CashDrawerShifts(FullTableStream):
     def get_pages(self, bookmarked_cursor, start_time):
         for location_id in Locations.get_all_location_ids(self.client):
             # Cash Drawer Shifts requests can only take up to 1 location_id at a time
-            for page, cursor in self.client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
-                yield page, cursor
+            for page in self.client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
+                yield page
 
 
 class Settlements(FullTableStream):
@@ -370,7 +370,7 @@ class Customers(Stream):
         cursor = None
         for window_start, window_end in get_date_windows(start_time):
             LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
-            for page, cursor in self.client.get_customers(window_start, window_end, cursor):
+            for page in self.client.get_customers(window_start, window_end, cursor):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                     singer.write_record(
