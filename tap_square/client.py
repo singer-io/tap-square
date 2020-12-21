@@ -95,7 +95,8 @@ class SquareClient():
         return result
 
     def _get_v2_objects(self, request_timer_suffix, request_method, body, body_key):
-        cursor = body.get('cursor', '__initial__')
+        cursor = '__initial__' # initial value so while loop is always entered one time
+
         while cursor:
             if cursor != '__initial__':
                 body['cursor'] = cursor
@@ -107,7 +108,7 @@ class SquareClient():
 
             cursor = result.body.get('cursor')
 
-    def get_catalog(self, object_type, start_time, bookmarked_cursor):
+    def get_catalog(self, object_type, start_time):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
         start_time = utils.strptime_to_utc(start_time)
@@ -119,10 +120,7 @@ class SquareClient():
             "include_deleted_objects": True,
         }
 
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
+        body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             object_type,
@@ -130,13 +128,10 @@ class SquareClient():
             body,
             'objects')
 
-    def get_employees(self, bookmarked_cursor):
+    def get_employees(self):
         body = {
             'limit': 50,
         }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
 
         yield from self._get_v2_objects(
             'employees',
@@ -183,7 +178,7 @@ class SquareClient():
             body,
             'customers')
 
-    def get_orders(self, location_ids, start_time, cursor):
+    def get_orders(self, location_ids, start_time):
         body = {
             "query": {
                 "filter": {
@@ -200,9 +195,6 @@ class SquareClient():
             }
         }
 
-        if cursor:
-            body["cursor"] = cursor
-
         body['location_ids'] = location_ids
 
         yield from self._get_v2_objects(
@@ -211,11 +203,8 @@ class SquareClient():
             body,
             'orders')
 
-    def get_inventories(self, start_time, bookmarked_cursor):
+    def get_inventories(self, start_time):
         body = {'updated_after': start_time}
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
 
         yield from self._get_v2_objects(
             'inventories',
@@ -239,18 +228,14 @@ class SquareClient():
             body,
             'shifts')
 
-    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
+    def get_refunds(self, start_time):  # TODO:check sort_order input
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
 
         body = {
+            'begin_time': start_time
         }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'refunds',
@@ -258,18 +243,14 @@ class SquareClient():
             body,
             'refunds')
 
-    def get_payments(self, start_time, bookmarked_cursor):
+    def get_payments(self, start_time):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
 
         body = {
+            'begin_time': start_time
         }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'payments',
@@ -277,18 +258,15 @@ class SquareClient():
             body,
             'payments')
 
-    def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
-        if bookmarked_cursor:
-            cursor = bookmarked_cursor
-        else:
-            cursor = '__initial__' # initial value so while loop is always entered one time
+    def get_cash_drawer_shifts(self, location_id, start_time):
+        cursor = '__initial__' # initial value so while loop is always entered one time
 
         end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs
                 # it to be a valid bookmarked cursor or None
-                cursor = bookmarked_cursor
+                cursor = None
 
             with singer.http_request_timer('GET cash drawer shifts'):
                 result = self._retryable_v2_method(
@@ -306,16 +284,13 @@ class SquareClient():
 
             cursor = result.body.get('cursor')
 
-    def _get_v1_objects(self, url, params, request_timer_suffix, bookmarked_cursor):
+    def _get_v1_objects(self, url, params, request_timer_suffix):
         headers = {
             'content-type': 'application/json',
             'authorization': 'Bearer {}'.format(self._access_token)
         }
 
-        if bookmarked_cursor:
-            batch_token = bookmarked_cursor
-        else:
-            batch_token = '__initial__'
+        batch_token = '__initial__'
 
         session = requests.Session()
         session.headers.update(headers)
@@ -346,15 +321,14 @@ class SquareClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
+    def get_roles(self):
         yield from self._get_v1_objects(
             'https://connect.squareup.com/v1/me/roles',
             dict(),
             'roles',
-            bookmarked_cursor,
         )
 
-    def get_settlements(self, location_id, start_time, bookmarked_cursor):
+    def get_settlements(self, location_id, start_time):
         url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
 
         now = utils.now()
@@ -379,7 +353,6 @@ class SquareClient():
                 url,
                 params,
                 'settlements',
-                bookmarked_cursor,
             )
             # Attempt again to sync til "now"
             start_time_dt = end_time_dt
