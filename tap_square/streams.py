@@ -120,17 +120,18 @@ class Employees(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor, start_time): #pylint: disable=unused-argument
-        for page, cursor in self.client.get_employees(bookmarked_cursor):
-            yield page, cursor
-
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        for page, cursor in self.get_pages(bookmarked_cursor, start_time):
+
+        for page, cursor in self.client.get_employees(bookmarked_cursor):
             for record in page:
                 if record['updated_at'] >= start_time:
-                    yield record
+                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+                    singer.write_record(
+                        self.tap_stream_id,
+                        transformed_record,
+                    )
             singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
             singer.write_state(state)
         return state
@@ -314,7 +315,13 @@ class Roles(FullTableStream):
         for page, cursor in self.get_pages(bookmarked_cursor, start_time):
             for record in page:
                 if record['updated_at'] >= start_time:
-                    yield record
+                    transformed_record = transformer.transform(
+                        record, stream_schema, stream_metadata,
+                    )
+                    singer.write_record(
+                        self.tap_stream_id,
+                        transformed_record,
+                    )
             singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
             singer.write_state(state)
         return state
