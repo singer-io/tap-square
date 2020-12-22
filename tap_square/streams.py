@@ -57,9 +57,9 @@ class FullTableStream(Stream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages_safe(self, state, *args):
+    def get_pages_safe(self, state, bookmarked_cursor, start_time):
         try:
-            yield from self.get_pages(*args)
+            yield from self.get_pages(bookmarked_cursor, start_time)
         except (RuntimeError, RequestException):
             # NB> If we get a non-retryable error we should delete the
             # pagination cursor bookmark before re-raising the exception.
@@ -69,7 +69,7 @@ class FullTableStream(Stream):
             singer.write_state(state)
             raise
 
-    def get_pages(self, *args):
+    def get_pages(self, bookmarked_cursor, start_time):
         raise NotImplementedError("Child classes of FullTableStreams require `get_pages` implementation")
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
@@ -134,14 +134,14 @@ class Employees(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor):
+    def get_pages(self, bookmarked_cursor, start_time):
         yield from self.client.get_employees(bookmarked_cursor)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = config['start_date']
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
 
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor):
+        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
                 if record['updated_at'] >= start_time:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
@@ -183,7 +183,7 @@ class Locations(FullTableStream):
 
         return all_location_ids
 
-    def get_pages(self):
+    def get_pages(self, bookmarked_cursor, start_time):
         yield from self.client.get_locations()
 
 
@@ -195,7 +195,7 @@ class BankAccounts(FullTableStream):
     replication_key = None
     object_type = 'BANK ACCOUNTS'
 
-    def get_pages(self):
+    def get_pages(self, bookmarked_cursor, start_time):
         yield from self.client.get_bank_accounts()
 
 
@@ -271,7 +271,7 @@ class Shifts(FullTableStream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
 
-    def get_pages(self, bookmarked_cursor):
+    def get_pages(self, bookmarked_cursor, start_time):
         yield from self.client.get_shifts(bookmarked_cursor)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
@@ -293,7 +293,7 @@ class Shifts(FullTableStream):
 
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
 
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor):
+        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
                 if record[self.replication_key] >= start_time:
                     transformed_record = transformer.transform(
@@ -325,13 +325,13 @@ class Roles(FullTableStream):
     valid_replication_keys = []
     replication_key = None
 
-    def get_pages(self, bookmarked_cursor):
+    def get_pages(self, bookmarked_cursor, start_time):
         yield from self.client.get_roles(bookmarked_cursor)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = config['start_date']
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor):
+        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
                 if record['updated_at'] >= start_time:
                     transformed_record = transformer.transform(
