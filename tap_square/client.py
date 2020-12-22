@@ -39,7 +39,7 @@ def log_backoff(details):
     LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
-class RetryableError(RuntimeError):
+class RetryableError(Exception):
     pass
 
 

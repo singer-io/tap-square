@@ -56,28 +56,34 @@ class FullTableStream(Stream):
     valid_replication_keys = []
     replication_key = None
 
+    def get_pages_safe(self, state, bookmarked_cursor, start_time):
+        try:
+            yield from self.get_pages(bookmarked_cursor, start_time)
+        except RuntimeError as ex:
+            # NB> If we get a non-retryable error we should delete the
+            # pagination cursor bookmark before re-raising the exception.
+            LOGGER.fatal("Received fatal exception during syncing of stream %s, Clearing cursor bookmark.", self.tap_stream_id)
+
+            state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
+            singer.write_state(state)
+            raise
+
     def get_pages(self, bookmarked_cursor, start_time):
         raise NotImplementedError("Child classes of FullTableStreams require `get_pages` implementation")
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        try:
-            for page, _ in self.get_pages(bookmarked_cursor, start_time):
-                for record in page:
-                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                    singer.write_record(
-                        self.tap_stream_id,
-                        transformed_record,
-                    )
-                singer.write_bookmark(state, self.tap_stream_id, 'cursor', bookmarked_cursor)
-                singer.write_state(state)
-        except Exception:
-            # TODO Find out the exception type here for when the cursor is bad
-            state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
+
+        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
+            for record in page:
+                transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+                singer.write_record(
+                    self.tap_stream_id,
+                    transformed_record,
+                )
+            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
             singer.write_state(state)
-            # TODO Do we want to add anything to this exception?
-            raise
 
         state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         singer.write_state(state)
