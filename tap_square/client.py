@@ -162,7 +162,7 @@ class SquareClient():
             body,
             'bank_accounts')
 
-    def get_customers(self, start_time, end_time, cursor):
+    def get_customers(self, start_time, end_time):
         body = {
             "query": {
                 "filter": {
@@ -174,16 +174,13 @@ class SquareClient():
             }
         }
 
-        if cursor is not None:
-            body['cursor'] = cursor
-
         yield from self._get_v2_objects(
             'customers',
             lambda bdy: self._client.customers.search_customers(body=bdy),
             body,
             'customers')
 
-    def get_orders(self, location_ids, start_time, cursor):
+    def get_orders(self, location_ids, start_time):
         body = {
             "query": {
                 "filter": {
@@ -199,9 +196,6 @@ class SquareClient():
                 }
             }
         }
-
-        if cursor:
-            body["cursor"] = cursor
 
         body['location_ids'] = location_ids
 
@@ -223,7 +217,7 @@ class SquareClient():
             body,
             'counts')
 
-    def get_shifts(self):
+    def get_shifts(self, bookmarked_cursor):
         body = {
             "query": {
                 "sort": {
@@ -232,6 +226,9 @@ class SquareClient():
                 }
             }
         }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
 
         yield from self._get_v2_objects(
             'shifts',
@@ -247,6 +244,7 @@ class SquareClient():
         body = {
         }
 
+        # TODO Always include body['begin_time'] = start_time
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
         else:
@@ -266,6 +264,7 @@ class SquareClient():
         body = {
         }
 
+        # TODO Always include body['begin_time'] = start_time
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
         else:
