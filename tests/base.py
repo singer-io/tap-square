@@ -24,6 +24,27 @@ class DataType(Enum):
 
 
 class TestSquareBaseParent:
+
+    DEFAULT_BATCH_LIMIT = 1000
+    API_LIMIT = {
+        'items': DEFAULT_BATCH_LIMIT,
+        'inventories': DEFAULT_BATCH_LIMIT,
+        'categories': DEFAULT_BATCH_LIMIT,
+        'discounts': DEFAULT_BATCH_LIMIT,
+        'taxes': DEFAULT_BATCH_LIMIT,
+        'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
+        'employees': 50,
+        'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
+        'roles': 100,
+        'refunds': 100,
+        'payments': 100,
+        'customers': 100,
+        'modifier_lists': DEFAULT_BATCH_LIMIT,
+        'orders': 500,
+        'shifts': 200,
+        'settlements': 200,
+    }
+
     # Creating TestSquareBase inside a parent class to avoid
     # unittest trying to run methods in base class starting with 'test'
     class TestSquareBase(ABC, TestCase):
@@ -450,6 +471,8 @@ class TestSquareBaseParent:
 
             stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
+            import ipdb; ipdb.set_trace()
+            1+1
             for stream in create_test_data_streams:
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 
@@ -570,15 +593,16 @@ class TestSquareBaseParent:
                     selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
                     self.assertEqual(expected_automatic_fields, selected_fields)
 
-        def run_and_verify_sync(self, conn_id):
+        def run_and_verify_sync(self, conn_id, clear_state=True):
             """
             Clear the connections state in menagerie and Run a Sync.
             Verify the exit code following the sync.
 
             Return the connection id and record count by stream
             """
-            #clear state
-            menagerie.set_state(conn_id, {})
+            if clear_state:
+                #clear state
+                menagerie.set_state(conn_id, {})
 
             # run sync
             sync_job_name = runner.run_sync_mode(self, conn_id)

@@ -514,6 +514,12 @@ class TestClient():
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
+    def get_first_page_and_cursor(self, stream, start_date): # pylint: disable=too-many-return-statements
+        if stream == 'refunds':
+            return next(self.get_refunds(start_date, None))
+        else:
+            raise NotImplementedError("Not implemented for stream {}".format(stream))
+
 
     @backoff.on_exception(
         backoff.expo,
