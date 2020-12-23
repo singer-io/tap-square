@@ -107,7 +107,7 @@ class SquareClient():
             yield (result.body.get(body_key, []), cursor)
 
 
-    def get_catalog(self, object_type, start_time, bookmarked_cursor):
+    def get_catalog(self, object_type, start_time):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
         start_time = utils.strptime_to_utc(start_time)
@@ -119,10 +119,7 @@ class SquareClient():
             "include_deleted_objects": True,
         }
 
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
+        body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             object_type,

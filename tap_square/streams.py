@@ -34,8 +34,7 @@ class CatalogStream(Stream):
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         max_record_value = start_time
-        cursor = None
-        for page, _ in self.client.get_catalog(self.object_type, start_time, cursor):
+        for page, _ in self.client.get_catalog(self.object_type, start_time):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(
