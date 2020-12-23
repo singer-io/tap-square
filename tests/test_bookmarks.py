@@ -384,7 +384,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                    'We are running another sync to attempt to catch them.', stream)
 
                     # Run another sync since square can't keep up
-                    third_sync_record_count = self.run_sync(conn_id)
+                    _ = self.run_sync(conn_id)
 
                     # Get the set of records from a thrid sync and apply
                     third_sync_records = runner.get_records_from_target_output()
