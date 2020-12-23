@@ -25,26 +25,6 @@ class DataType(Enum):
 
 class TestSquareBaseParent:
 
-    DEFAULT_BATCH_LIMIT = 1000
-    API_LIMIT = {
-        'items': DEFAULT_BATCH_LIMIT,
-        'inventories': DEFAULT_BATCH_LIMIT,
-        'categories': DEFAULT_BATCH_LIMIT,
-        'discounts': DEFAULT_BATCH_LIMIT,
-        'taxes': DEFAULT_BATCH_LIMIT,
-        'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
-        'employees': 50,
-        'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-        'roles': 100,
-        'refunds': 100,
-        'payments': 100,
-        'customers': 100,
-        'modifier_lists': DEFAULT_BATCH_LIMIT,
-        'orders': 500,
-        'shifts': 200,
-        'settlements': 200,
-    }
-
     # Creating TestSquareBase inside a parent class to avoid
     # unittest trying to run methods in base class starting with 'test'
     class TestSquareBase(ABC, TestCase):
@@ -55,13 +35,32 @@ class TestSquareBaseParent:
         PRIMARY_KEYS = "table-key-properties"
         REPLICATION_METHOD = "forced-replication-method"
         START_DATE_KEY = 'start-date-key'
-        API_LIMIT = "max-row-limit"
         INCREMENTAL = "INCREMENTAL"
         FULL = "FULL_TABLE"
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
+
+        DEFAULT_BATCH_LIMIT = 1000
+        API_LIMIT = {
+            'items': DEFAULT_BATCH_LIMIT,
+            'inventories': DEFAULT_BATCH_LIMIT,
+            'categories': DEFAULT_BATCH_LIMIT,
+            'discounts': DEFAULT_BATCH_LIMIT,
+            'taxes': DEFAULT_BATCH_LIMIT,
+            'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
+            'employees': 50,
+            'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
+            'roles': 100,
+            'refunds': 100,
+            'payments': 100,
+            'customers': 100,
+            'modifier_lists': DEFAULT_BATCH_LIMIT,
+            'orders': 500,
+            'shifts': 200,
+            'settlements': 200,
+        }
 
         def setUp(self):
             missing_envs = [x for x in [
@@ -471,8 +470,6 @@ class TestSquareBaseParent:
 
             stream_to_expected_records = {stream: [] for stream in self.expected_streams()}
 
-            import ipdb; ipdb.set_trace()
-            1+1
             for stream in create_test_data_streams:
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
 

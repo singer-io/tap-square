@@ -7,7 +7,6 @@ import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBaseParent
-from test_pagination import TestSquarePagination
 
 LOGGER = singer.get_logger()
 
@@ -68,8 +67,6 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
-        import ipdb; ipdb.set_trace()
-        1+1
         if production_testable_streams:
             print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
             self.bookmarks_test(production_testable_streams)
@@ -90,14 +87,19 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
         # Ensure tested streams have existing records
-        expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
-        first_page_records, cursor = self.client.get_first_page_and_cursor(testable_streams[0], self.START_DATE)
-        expected_records = [record for record in expected_records_before_removing_first_page
-                            if record not in first_page_records]
+        stream_to_expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
+        stream_to_first_page_records = dict()
+        stream_to_cursor = dict()
+        stream_to_expected_records = dict()
+        for testable_stream in testable_streams:
+            stream_to_first_page_records[testable_stream], stream_to_cursor[testable_stream] = self.client.get_first_page_and_cursor(testable_stream, self.START_DATE)
+            first_page_records_set = set(stream_to_first_page_records[testable_stream])
+            stream_to_expected_records[testable_stream] = [record for record in stream_to_expected_records_before_removing_first_page[testable_stream]
+                                                           if record not in first_page_records_set]
 
         # verify the expected test data exceeds API LIMIT for all testable streams
-        for stream in self.TESTABLE_STREAMS:
-            record_count = len(expected_records[stream])
+        for stream in testable_streams:
+            record_count = len(stream_to_expected_records[stream])
             print("Verifying data is sufficient for stream {}. ".format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
@@ -112,23 +114,22 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         # table and field selection
         self.perform_and_verify_table_and_field_selection(
-            conn_id, found_catalogs, streams_to_select=self.TESTABLE_STREAMS, select_all_fields=True
+            conn_id, found_catalogs, streams_to_select=testable_streams, select_all_fields=True
         )
 
-        menagerie.set_state(conn_id,
-                            {
-                                "bookmarks": {
-                                    testable_streams[0]: {
-                                        "cursor": cursor
-                                    }
-                                }
-                            })
+        bookmarks = {
+            testable_stream: {
+                "cursor": stream_to_cursor[testable_stream]
+            }
+            for testable_stream in testable_streams
+        }
+        menagerie.set_state(conn_id, {"bookmarks": bookmarks})
 
         # run initial sync
         record_count_by_stream = self.run_and_verify_sync(conn_id, clear_state=False)
 
         synced_records = runner.get_records_from_target_output()
-        for stream in self.TESTABLE_STREAMS:
+        for stream in testable_streams:
             with self.subTest(stream=stream):
                 # Verify we are paginating for testable synced streams
                 self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
@@ -150,4 +151,4 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
                 # Verify by pks that the replicated records match our expectations
-                self.assertPKsEqual(stream, expected_records.get(stream), actual_records)
+                self.assertPKsEqual(stream, stream_to_expected_records.get(stream), actual_records)

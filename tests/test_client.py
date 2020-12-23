@@ -514,9 +514,11 @@ class TestClient():
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
-    def get_first_page_and_cursor(self, stream, start_date): # pylint: disable=too-many-return-statements
+    def get_first_page_and_cursor(self, stream, start_date):
         if stream == 'refunds':
             return next(self.get_refunds(start_date, None))
+        elif stream == 'inventories':
+            return next(self.get_inventories(start_date, None))
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
