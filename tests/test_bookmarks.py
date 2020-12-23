@@ -380,8 +380,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     #       and we were unable to produce a scenario in which a subsequent sync failed to pick
                     #       up the create and update after failing to catch them in the 2nd sync.
 
-                    LOGGER.warning('Second sync missed %s records that were just created and updated. ' + \
-                                   'We are running another sync to attempt to catch them.', stream)
+                    LOGGER.warning('Second sync missed %s records that were just created and updated.', stream)
 
                     # Run another sync since square can't keep up
                     _ = self.run_sync(conn_id)
