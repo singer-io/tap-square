@@ -18,44 +18,18 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         return "tap_tester_square_incremental_replication_cursor"
 
     def testable_streams_dynamic(self):
-        # return {"inventories"}
         return self.dynamic_data_streams().intersection(
             self.expected_full_table_streams()).difference(
                 self.untestable_streams())
 
     @staticmethod
     def testable_streams_static():
-        """ No static streams marked for incremental. """
+        """ No static streams contain cursor bookmarks. """
         return set()
-
-    @staticmethod
-    def cannot_update_streams():
-        return {
-            'refunds',  # Does not have an endpoint for updating records
-            'modifier_lists',  # Has endpoint but just adds/removes mod_list from an item.
-        }
 
     @classmethod
     def tearDownClass(cls):
         print("\n\nTEST TEARDOWN\n\n")
-
-    def run_sync(self, conn_id):
-        """
-        Run a sync job and make sure it exited properly.
-        Return a dictionary with keys of streams synced
-        and values of records synced for each stream
-        """
-        # Run a sync job using orchestrator
-        sync_job_name = runner.run_sync_mode(self, conn_id)
-
-        # Verify tap and target exit codes
-        exit_status = menagerie.get_exit_status(conn_id, sync_job_name)
-        menagerie.verify_sync_exit_status(self, exit_status, sync_job_name)
-
-        # Verify actual rows were synced
-        sync_record_count = runner.examine_target_output_file(
-            self, conn_id, self.expected_streams(), self.expected_primary_keys())
-        return sync_record_count
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -73,16 +47,11 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
     def bookmarks_test(self, testable_streams):
         """
-        Verify for each stream that you can do a sync which records bookmarks.
-        Verify that the bookmark is the max value sent to the target for the `date` PK field
-        Verify that the 2nd sync respects the bookmark
-        Verify that all data of the 2nd sync is >= the bookmark from the first sync
-        Verify that the number of records in the 2nd sync is less then the first
-        Verify inclusivivity of bookmarks
+        Verify for each stream that you can do a sync which records bookmark cursor
+        Verify that the number of records in the sync is equal to all expected records minus the first page
 
         PREREQUISITE
-        For EACH stream that is incrementally replicated there are multiple rows of data with
-            different values for the replication key
+        For EACH stream that is interruptable with a bookmark cursor and not another one is replicated there are more than 1 page of data
         """
         print("\n\nRUNNING {}\n\n".format(self.name()))
 
