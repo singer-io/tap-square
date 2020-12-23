@@ -164,6 +164,19 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
+      - run:
+          when: always
+          name: 'Testing Cursor Bookmark'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks_cursor.py
 workflows:
   version: 2
   commit:
