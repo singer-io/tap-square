@@ -16,7 +16,7 @@ def sync(config, state, catalog): # pylint: disable=too-many-statements
             stream_schema = stream.schema.to_dict()
             stream_metadata = metadata.to_map(stream.metadata)
 
-            LOGGER.info('Staring sync for stream: %s', tap_stream_id)
+            LOGGER.info('Starting sync for stream: %s', tap_stream_id)
 
             state = singer.set_currently_syncing(state, tap_stream_id)
             singer.write_state(state)

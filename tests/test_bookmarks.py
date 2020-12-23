@@ -65,8 +65,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.bookmarks_test(production_testable_streams)
+        if production_testable_streams:
+            print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+            self.bookmarks_test(production_testable_streams)
 
     def bookmarks_test(self, testable_streams):
         """
