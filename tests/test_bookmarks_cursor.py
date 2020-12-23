@@ -18,10 +18,10 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         return "tap_tester_square_incremental_replication_cursor"
 
     def testable_streams_dynamic(self):
-        return {"inventories"}
-        # return self.dynamic_data_streams().intersection(
-        #     self.expected_full_table_streams()).difference(
-        #         self.untestable_streams())
+        # return {"inventories"}
+        return self.dynamic_data_streams().intersection(
+            self.expected_full_table_streams()).difference(
+                self.untestable_streams())
 
     @staticmethod
     def testable_streams_static():
