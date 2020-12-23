@@ -45,7 +45,7 @@ class TestSquareBaseParent:
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
             'items': DEFAULT_BATCH_LIMIT,
-            'inventories': DEFAULT_BATCH_LIMIT,
+            'inventories': 100,
             'categories': DEFAULT_BATCH_LIMIT,
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,

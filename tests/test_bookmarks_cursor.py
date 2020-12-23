@@ -88,23 +88,28 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         # Ensure tested streams have existing records
         stream_to_expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
-        stream_to_first_page_records = dict()
-        stream_to_cursor = dict()
-        stream_to_expected_records = dict()
-        for testable_stream in testable_streams:
-            stream_to_first_page_records[testable_stream], stream_to_cursor[testable_stream] = self.client.get_first_page_and_cursor(testable_stream, self.START_DATE)
-            first_page_records_set = set(stream_to_first_page_records[testable_stream])
-            stream_to_expected_records[testable_stream] = [record for record in stream_to_expected_records_before_removing_first_page[testable_stream]
-                                                           if record not in first_page_records_set]
+
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in testable_streams:
-            record_count = len(stream_to_expected_records[stream])
+            record_count = len(stream_to_expected_records_before_removing_first_page[stream])
             print("Verifying data is sufficient for stream {}. ".format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +
                                "{} does not have sufficient data in expecatations.\n ".format(stream))
+
+        stream_to_first_page_records = dict()
+        stream_to_cursor = dict()
+        stream_to_expected_records = dict()
+        for testable_stream in testable_streams:
+            stream_to_first_page_records[testable_stream], stream_to_cursor[testable_stream] = self.client.get_first_page_and_cursor(testable_stream, self.START_DATE)
+            first_page_pks_to_records = self.getPKsToRecordsDict(testable_stream, stream_to_first_page_records[testable_stream])
+            all_pks_to_records = self.getPKsToRecordsDict(testable_stream, stream_to_expected_records_before_removing_first_page[testable_stream])
+            stream_to_expected_records[testable_stream] = [
+                record for pk, record in all_pks_to_records.items()
+                if pk not in first_page_pks_to_records
+            ]
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False)
