@@ -373,8 +373,22 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                      "\tState: {}\n".format(second_sync_state) + \
                                      "\tBookmark: {}".format(second_state))
 
-                if stream == 'customers': # BUG https://stitchdata.atlassian.net/browse/SRCE-4639
-                    continue  # WORKAROUND
+                if stream == 'customers' and len(second_sync_data) == 0: # BUG https://stitchdata.atlassian.net/browse/SRCE-4639
+                    # NOTE: Square sometimes lags on the customers stream, so we'll give them one more shot
+                    #       before we say this stream fails in catching the create and update. This was tested
+                    #       manually while syncing all streams and while sycning only the customers stream
+                    #       and we were unable to produce a scenario in which a subsequent sync failed to pick
+                    #       up the create and update after failing to catch them in the 2nd sync.
+
+                    LOGGER.warning('Second sync missed %s records that were just created and updated.', stream)
+
+                    # Run another sync since square can't keep up
+                    _ = self.run_sync(conn_id)
+
+                    # Get the set of records from a thrid sync and apply
+                    third_sync_records = runner.get_records_from_target_output()
+                    second_sync_data = [record.get("data") for record
+                                        in third_sync_records.get(stream, {}).get("messages", [])]
 
                 # TESTING APPLICABLE TO ALL STREAMS
 
