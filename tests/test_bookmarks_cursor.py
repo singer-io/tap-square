@@ -1,5 +1,3 @@
-import os
-
 import singer
 
 import tap_tester.connections as connections
@@ -18,7 +16,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         return "tap_tester_square_incremental_replication_cursor"
 
     def testable_streams_dynamic(self):
-        all_testable_streams =  self.dynamic_data_streams().intersection(
+        all_testable_streams = self.dynamic_data_streams().intersection(
             self.expected_full_table_streams()).difference(
                 self.untestable_streams())
 
@@ -105,7 +103,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         menagerie.set_state(conn_id, {"bookmarks": bookmarks})
 
         # run initial sync
-        record_count_by_stream = self.run_and_verify_sync(conn_id, clear_state=False)
+        self.run_and_verify_sync(conn_id, clear_state=False)
 
         synced_records = runner.get_records_from_target_output()
         for stream in testable_streams:
