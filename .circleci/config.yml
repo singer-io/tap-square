@@ -13,7 +13,7 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'setup virtual env'
+          name: 'Setup virtual env'
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
@@ -31,7 +31,7 @@ jobs:
             source /usr/local/share/virtualenvs/tap-square/bin/activate
             pylint tests -d 'broad-except,chained-comparison,empty-docstring,fixme,invalid-name,line-too-long,missing-class-docstring,missing-function-docstring,missing-module-docstring,no-else-raise,no-else-return,too-few-public-methods,too-many-arguments,too-many-branches,too-many-lines,too-many-locals,ungrouped-imports,wrong-spelling-in-comment,wrong-spelling-in-docstring,duplicate-code,no-name-in-module,attribute-defined-outside-init,too-many-statements,cell-var-from-loop,too-many-public-methods,missing-docstring'
       - run:
-          name: 'json validator'
+          name: 'JSON Validator'
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json /usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/tap_square/schemas/*.json
@@ -43,11 +43,11 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'integration tests setup'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
-          name: 'all tests running'
+          name: 'All Tests Running'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -60,7 +60,7 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'setup virtual env'
+          name: 'Setup virtual env'
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
@@ -68,11 +68,11 @@ jobs:
             pip install --upgrade setuptools
             pip install .[dev]
       - run:
-          name: 'integration tests setup'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
-          name: 'test discovery'
+          name: 'Test Discovery'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -80,7 +80,7 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_discovery.py
 
@@ -91,7 +91,7 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'setup virtual env'
+          name: 'Setup virtual env'
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
@@ -99,11 +99,11 @@ jobs:
             pip install --upgrade setuptools
             pip install .[dev]
       - run:
-          name: 'integration tests setup'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
-          name: 'testing sync canary'
+          name: 'Testing Sync Canary'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -111,7 +111,7 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
 
@@ -122,7 +122,7 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'setup virtual env'
+          name: 'Setup virtual env'
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
@@ -130,11 +130,11 @@ jobs:
             pip install --upgrade setuptools
             pip install .[dev]
       - run:
-          name: 'integration tests setup'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
-          name: 'testing default start date'
+          name: 'Testing Default Start Date'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -142,7 +142,7 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_default_start_date.py
 
@@ -153,7 +153,7 @@ jobs:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'setup virtual env'
+          name: 'Setup virtual env'
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
@@ -162,12 +162,12 @@ jobs:
             pip install .[dev]
       - run:
           when: always
-          name: 'integration tests setup'
+          name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
           when: always
-          name: 'testing automatic fields'
+          name: 'Testing Automatic Fields'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -175,12 +175,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_automatic_fields.py
       - run:
           when: always
-          name: 'testing schema and all fields'
+          name: 'Testing Schema and All Fields'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -188,12 +188,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_all_fields.py
       - run:
           when: always
-          name: 'testing bookmarks for dynamic data streams'
+          name: 'Testing Bookmarks for Dynamic Data Streams'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -201,12 +201,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_bookmarks.py
       - run:
           when: always
-          name: 'testing bookmarks for static data streams'
+          name: 'Testing Bookmarks for Static Data Streams'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -214,12 +214,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_bookmarks_static.py
       - run:
           when: always
-          name: 'testing start date'
+          name: 'Testing Start Date'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -227,12 +227,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_start_date.py
       - run:
           when: always
-          name: 'testing pagination'
+          name: 'Testing Pagination'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
@@ -240,12 +240,12 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
       - run:
           when: always
-          name: 'testing cursor bookmark'
+          name: 'Testing Cursor Bookmark'
           command: |
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
