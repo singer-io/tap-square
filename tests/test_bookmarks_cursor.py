@@ -18,9 +18,17 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         return "tap_tester_square_incremental_replication_cursor"
 
     def testable_streams_dynamic(self):
-        return self.dynamic_data_streams().intersection(
+        all_testable_streams =  self.dynamic_data_streams().intersection(
             self.expected_full_table_streams()).difference(
                 self.untestable_streams())
+
+        # Shifts have cursor bookmarks because the api doesn't
+        # support incremental queries, but we fake it being
+        # incremental
+        all_testable_streams.add('shifts')
+
+        LOGGER.info("testable_streams=%s", all_testable_streams)
+        return all_testable_streams
 
     @staticmethod
     def testable_streams_static():
@@ -36,13 +44,11 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         self.START_DATE = self.get_properties().get('start_date')
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
         if production_testable_streams:
-            print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
             self.bookmarks_test(production_testable_streams)
 
     def bookmarks_test(self, testable_streams):
@@ -97,6 +103,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
             }
             for testable_stream in testable_streams
         }
+        LOGGER.info("Saving bookmarks to menagerie state %s", bookmarks)
         menagerie.set_state(conn_id, {"bookmarks": bookmarks})
 
         # run initial sync
@@ -105,10 +112,6 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         synced_records = runner.get_records_from_target_output()
         for stream in testable_streams:
             with self.subTest(stream=stream):
-                # Verify we are paginating for testable synced streams
-                self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
-                                   msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
-
                 data = synced_records.get(stream, [])
                 actual_records = [row['data'] for row in data['messages']]
                 record_messages_keys = [set(row['data'].keys()) for row in data['messages']]
@@ -125,4 +128,4 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
                 # Verify by pks that the replicated records match our expectations
-                self.assertPKsEqual(stream, stream_to_expected_records.get(stream), actual_records)
+                self.assertPKsEqual(stream, stream_to_expected_records.get(stream), actual_records, assert_pk_count_same=True)

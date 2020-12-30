@@ -101,6 +101,7 @@ class SquareClient():
                 body['cursor'] = cursor
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
+                LOGGER.info("About to call http query with body %s", body)
                 result = self._retryable_v2_method(request_method, body)
 
             cursor = result.body.get('cursor')
@@ -321,6 +322,7 @@ class SquareClient():
                 params['batch_token'] = batch_token
 
             with singer.http_request_timer('GET ' + request_timer_suffix):
+                LOGGER.info("About to call http query with url %s and params %s", url, params)
                 result = self._retryable_v1_method(session, url, params)
 
             batch_token = get_batch_token_from_headers(result.headers)

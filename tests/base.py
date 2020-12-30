@@ -626,10 +626,13 @@ class TestSquareBaseParent:
         ### Standard Assertion Patterns
         ##########################################################################
 
-        def assertPKsEqual(self, stream, expected_records, sync_records):
+        def assertPKsEqual(self, stream, expected_records, sync_records, assert_pk_count_same=False):
             """
             Compare the values of the primary keys for expected and synced records.
             For this comparison to be valid we also check for duplicate primary keys.
+
+            Parameters:
+            arg1 (int): Description of arg1
             """
             primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
 
@@ -645,6 +648,9 @@ class TestSquareBaseParent:
 
             # Verify sync pks have all expected records pks in it
             self.assertTrue(sync_pks_set.issuperset(expected_pks_set))
+
+            if assert_pk_count_same:
+                self.assertEqual(expected_pks_set, sync_pks_set)
 
         def assertParentKeysEqual(self, expected_record, sync_record):
             """Compare the top level keys of an expected record and a sync record."""

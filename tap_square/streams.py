@@ -74,6 +74,7 @@ class FullTableStream(Stream):
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
+        LOGGER.info("During sync of stream %s found bookmarked_cursor %s", self.tap_stream_id, bookmarked_cursor)
 
         for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
@@ -139,6 +140,7 @@ class Employees(FullTableStream):
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = config['start_date']
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
+        LOGGER.info("During sync of stream %s found bookmarked_cursor %s", self.tap_stream_id, bookmarked_cursor)
 
         for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
@@ -291,6 +293,7 @@ class Shifts(FullTableStream):
         )
 
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
+        LOGGER.info("During sync of stream %s found bookmarked_cursor %s", self.tap_stream_id, bookmarked_cursor)
 
         for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
@@ -330,6 +333,7 @@ class Roles(FullTableStream):
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = config['start_date']
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
+        LOGGER.info("During sync of stream %s found bookmarked_cursor %s", self.tap_stream_id, bookmarked_cursor)
         for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
                 if record['updated_at'] >= start_time:
