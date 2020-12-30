@@ -25,6 +25,7 @@ class DataType(Enum):
 
 # TODO refactor methods so that it is clear which streams fall into which categories for testing
 class TestSquareBaseParent:
+
     # Creating TestSquareBase inside a parent class to avoid
     # unittest trying to run methods in base class starting with 'test'
     class TestSquareBase(ABC, TestCase):
@@ -35,13 +36,32 @@ class TestSquareBaseParent:
         PRIMARY_KEYS = "table-key-properties"
         REPLICATION_METHOD = "forced-replication-method"
         START_DATE_KEY = 'start-date-key'
-        API_LIMIT = "max-row-limit"
         INCREMENTAL = "INCREMENTAL"
         FULL = "FULL_TABLE"
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
+
+        DEFAULT_BATCH_LIMIT = 1000
+        API_LIMIT = {
+            'items': DEFAULT_BATCH_LIMIT,
+            'inventories': 100,
+            'categories': DEFAULT_BATCH_LIMIT,
+            'discounts': DEFAULT_BATCH_LIMIT,
+            'taxes': DEFAULT_BATCH_LIMIT,
+            'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
+            'employees': 50,
+            'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
+            'roles': 100,
+            'refunds': 100,
+            'payments': 100,
+            'customers': 100,
+            'modifier_lists': DEFAULT_BATCH_LIMIT,
+            'orders': 500,
+            'shifts': 200,
+            'settlements': 200,
+        }
 
         def setUp(self):
             missing_envs = [x for x in [
@@ -571,15 +591,16 @@ class TestSquareBaseParent:
                     selected_fields = self.get_selected_fields_from_metadata(catalog_entry['metadata'])
                     self.assertEqual(expected_automatic_fields, selected_fields)
 
-        def run_and_verify_sync(self, conn_id):
+        def run_and_verify_sync(self, conn_id, clear_state=True):
             """
             Clear the connections state in menagerie and Run a Sync.
             Verify the exit code following the sync.
 
             Return the connection id and record count by stream
             """
-            #clear state
-            menagerie.set_state(conn_id, {})
+            if clear_state:
+                #clear state
+                menagerie.set_state(conn_id, {})
 
             # run sync
             sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -605,10 +626,13 @@ class TestSquareBaseParent:
         ### Standard Assertion Patterns
         ##########################################################################
 
-        def assertPKsEqual(self, stream, expected_records, sync_records):
+        def assertPKsEqual(self, stream, expected_records, sync_records, assert_pk_count_same=False):
             """
             Compare the values of the primary keys for expected and synced records.
             For this comparison to be valid we also check for duplicate primary keys.
+
+            Parameters:
+            arg1 (int): Description of arg1
             """
             primary_keys = list(self.expected_primary_keys().get(stream)) if self.expected_primary_keys().get(stream) else self.makeshift_primary_keys().get(stream)
 
@@ -624,6 +648,9 @@ class TestSquareBaseParent:
 
             # Verify sync pks have all expected records pks in it
             self.assertTrue(sync_pks_set.issuperset(expected_pks_set))
+
+            if assert_pk_count_same:
+                self.assertEqual(expected_pks_set, sync_pks_set)
 
         def assertParentKeysEqual(self, expected_record, sync_record):
             """Compare the top level keys of an expected record and a sync record."""

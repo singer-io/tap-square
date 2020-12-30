@@ -39,7 +39,7 @@ def log_backoff(details):
     LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
-class RetryableError(RuntimeError):
+class RetryableError(Exception):
     pass
 
 
@@ -103,11 +103,11 @@ class SquareClient():
             with singer.http_request_timer('GET ' + request_timer_suffix):
                 result = self._retryable_v2_method(request_method, body)
 
-            yield (result.body.get(body_key, []), result.body.get('cursor'))
-
             cursor = result.body.get('cursor')
+            yield (result.body.get(body_key, []), cursor)
 
-    def get_catalog(self, object_type, start_time, bookmarked_cursor):
+
+    def get_catalog(self, object_type, start_time):
         # Move the max_updated_at back the smallest unit possible
         # because the begin_time query param is exclusive
         start_time = utils.strptime_to_utc(start_time)
@@ -119,10 +119,7 @@ class SquareClient():
             "include_deleted_objects": True,
         }
 
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
+        body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             object_type,
@@ -162,7 +159,7 @@ class SquareClient():
             body,
             'bank_accounts')
 
-    def get_customers(self, start_time, end_time, cursor):
+    def get_customers(self, start_time, end_time):
         body = {
             "query": {
                 "filter": {
@@ -174,16 +171,13 @@ class SquareClient():
             }
         }
 
-        if cursor is not None:
-            body['cursor'] = cursor
-
         yield from self._get_v2_objects(
             'customers',
             lambda bdy: self._client.customers.search_customers(body=bdy),
             body,
             'customers')
 
-    def get_orders(self, location_ids, start_time, cursor):
+    def get_orders(self, location_ids, start_time):
         body = {
             "query": {
                 "filter": {
@@ -199,9 +193,6 @@ class SquareClient():
                 }
             }
         }
-
-        if cursor:
-            body["cursor"] = cursor
 
         body['location_ids'] = location_ids
 
@@ -223,7 +214,7 @@ class SquareClient():
             body,
             'counts')
 
-    def get_shifts(self):
+    def get_shifts(self, bookmarked_cursor):
         body = {
             "query": {
                 "sort": {
@@ -233,24 +224,26 @@ class SquareClient():
             }
         }
 
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
+
         yield from self._get_v2_objects(
             'shifts',
             lambda bdy: self._client.labor.search_shifts(body=bdy),
             body,
             'shifts')
 
-    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
+    def get_refunds(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
 
         body = {
         }
+        body['begin_time'] = start_time
 
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'refunds',
@@ -265,11 +258,10 @@ class SquareClient():
 
         body = {
         }
+        body['begin_time'] = start_time
 
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'payments',

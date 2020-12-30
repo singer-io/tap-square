@@ -270,7 +270,7 @@ class TestClient():
             body,
             'counts')
 
-    def get_shifts(self):
+    def get_shifts(self, bookmarked_cursor):
         body = {
             "query": {
                 "sort": {
@@ -279,6 +279,9 @@ class TestClient():
                 }
             }
         }
+
+        if bookmarked_cursor:
+            body['cursor'] = bookmarked_cursor
 
         yield from self._get_v2_objects(
             'shifts',
@@ -503,7 +506,7 @@ class TestClient():
             return [obj for page, _ in self.get_roles(None) for obj in page
                     if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
-            return [obj for page, _ in self.get_shifts() for obj in page
+            return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
         elif stream == 'settlements':
             return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
@@ -514,6 +517,36 @@ class TestClient():
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
+    def get_first_page_and_cursor(self, stream, start_date):
+        if stream == 'refunds':
+            return next(self.get_refunds(start_date, None))
+        elif stream == 'inventories':
+            return next(self.get_inventories(start_date, None))
+        elif stream == 'payments':
+            return next(self.get_payments(start_date, None))
+        elif stream == 'employees':
+            employees, cursor = next(self.get_roles(None))
+            employees_after_start_date = [
+                role for role in employees
+                if not start_date or role['updated_at'] >= start_date
+            ]
+            return employees_after_start_date, cursor
+        elif stream == 'roles':
+            roles, cursor = next(self.get_roles(None))
+            roles_after_start_date = [
+                role for role in roles
+                if not start_date or role['updated_at'] >= start_date
+            ]
+            return roles_after_start_date, cursor
+        elif stream == 'shifts':
+            shifts, cursor = next(self.get_shifts(None))
+            shifts_after_start_date = [
+                shift for shift in shifts
+                if not start_date or shift['updated_at'] >= start_date
+            ]
+            return shifts_after_start_date, cursor
+        else:
+            raise NotImplementedError("Not implemented for stream {}".format(stream))
 
     @backoff.on_exception(
         backoff.expo,
@@ -934,10 +967,10 @@ class TestClient():
 
     def _create_item(self, start_date, num_records=1):
         mod_lists = self.get_all('modifier_lists', start_date)
-        if mod_lists:
-            mod_list_id = random.choice(mod_lists).get('id')
-        else:
-            mod_list_id = self.create_modifier_list(num_records).body.get('objects').get('id')
+        if not mod_lists:
+            mod_lists = self.create_modifier_list(1).body.get('objects')
+
+        mod_list_id = random.choice(mod_lists).get('id')
 
         item_ids = [self.make_id('item') for n in range(num_records)]
         objects = [{'id': item_id,

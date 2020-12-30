@@ -6,7 +6,7 @@ jobs:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:0.latest
     steps:
       - run: deployment_utils queue
-  build:
+  pylint-and-json-validator:
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
     steps:
@@ -35,13 +35,43 @@ jobs:
           command: |
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             stitch-validate-json /usr/local/share/virtualenvs/tap-square/lib/python3.5/site-packages/tap_square/schemas/*.json
+
+  all-integ-tests-running-test:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+    steps:
+      - checkout
+      - add_ssh_keys
       - run:
-          when: always
           name: 'Integration Tests Setup'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
-          when: always
+          name: 'All Tests Running'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            python tests/test_config.py
+
+  discovery-test:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+    steps:
+      - checkout
+      - add_ssh_keys
+      - run:
+          name: 'Setup virtual env'
+          command: |
+            python3 -m venv /usr/local/share/virtualenvs/tap-square
+            source /usr/local/share/virtualenvs/tap-square/bin/activate
+            pip install --upgrade pip
+            pip install --upgrade setuptools
+            pip install .[dev]
+      - run:
+          name: 'Integration Tests Setup'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
+      - run:
           name: 'Test Discovery'
           command: |
             source dev_env.sh
@@ -53,8 +83,26 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_discovery.py
+
+  sync-canary-test:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+    steps:
+      - checkout
+      - add_ssh_keys
       - run:
-          when: always
+          name: 'Setup virtual env'
+          command: |
+            python3 -m venv /usr/local/share/virtualenvs/tap-square
+            source /usr/local/share/virtualenvs/tap-square/bin/activate
+            pip install --upgrade pip
+            pip install --upgrade setuptools
+            pip install .[dev]
+      - run:
+          name: 'Integration Tests Setup'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
+      - run:
           name: 'Testing Sync Canary'
           command: |
             source dev_env.sh
@@ -66,8 +114,26 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
+
+  default-start-date-test:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+    steps:
+      - checkout
+      - add_ssh_keys
       - run:
-          when: always
+          name: 'Setup virtual env'
+          command: |
+            python3 -m venv /usr/local/share/virtualenvs/tap-square
+            source /usr/local/share/virtualenvs/tap-square/bin/activate
+            pip install --upgrade pip
+            pip install --upgrade setuptools
+            pip install .[dev]
+      - run:
+          name: 'Integration Tests Setup'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
+      - run:
           name: 'Testing Default Start Date'
           command: |
             source dev_env.sh
@@ -79,13 +145,26 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_default_start_date.py
+
+  non-parallizable-tests:
+    docker:
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+    steps:
+      - checkout
+      - add_ssh_keys
+      - run:
+          name: 'Setup virtual env'
+          command: |
+            python3 -m venv /usr/local/share/virtualenvs/tap-square
+            source /usr/local/share/virtualenvs/tap-square/bin/activate
+            pip install --upgrade pip
+            pip install --upgrade setuptools
+            pip install .[dev]
       - run:
           when: always
-          name: 'All Tests Running'
+          name: 'Integration Tests Setup'
           command: |
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            python tests/test_config.py
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
       - run:
           when: always
           name: 'Testing Automatic Fields'
@@ -164,13 +243,46 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_pagination.py
+      - run:
+          when: always
+          name: 'Testing Cursor Bookmark'
+          command: |
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            run-test --tap=tap-square \
+                     --target=target-stitch \
+                     --orchestrator=stitch-orchestrator \
+                     --email=harrison+sandboxtest@stitchdata.com \
+                     --password=$SANDBOX_PASSWORD \
+                     --client-id=50 \
+                     tests/test_bookmarks_cursor.py
 workflows:
   version: 2
   commit:
     jobs:
       - queue:
           context: circleci-user
-      - build:
+      - pylint-and-json-validator:
+          context: circleci-user
+          requires:
+            - queue
+      - all-integ-tests-running-test:
+          context: circleci-user
+          requires:
+            - queue
+      - discovery-test:
+          context: circleci-user
+          requires:
+            - queue
+      - sync-canary-test:
+          context: circleci-user
+          requires:
+            - queue
+      - default-start-date-test:
+          context: circleci-user
+          requires:
+            - queue
+      - non-parallizable-tests:
           context: circleci-user
           requires:
             - queue
@@ -183,5 +295,15 @@ workflows:
               only:
                 - master
     jobs:
-      - build:
+      - pylint-and-json-validator:
+          context: circleci-user
+      - all-integ-tests-running-test:
+          context: circleci-user
+      - discovery-test:
+          context: circleci-user
+      - sync-canary-test:
+          context: circleci-user
+      - default-start-date-test:
+          context: circleci-user
+      - non-parallizable-tests:
           context: circleci-user
