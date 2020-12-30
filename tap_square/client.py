@@ -234,19 +234,17 @@ class SquareClient():
             body,
             'shifts')
 
-    def get_refunds(self, start_time, bookmarked_cursor):  # TODO:check sort_order input
+    def get_refunds(self, start_time, bookmarked_cursor):
         start_time = utils.strptime_to_utc(start_time)
         start_time = start_time - timedelta(milliseconds=1)
         start_time = utils.strftime(start_time)
 
         body = {
         }
+        body['begin_time'] = start_time
 
-        # TODO Always include body['begin_time'] = start_time
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'refunds',
@@ -261,12 +259,10 @@ class SquareClient():
 
         body = {
         }
+        body['begin_time'] = start_time
 
-        # TODO Always include body['begin_time'] = start_time
         if bookmarked_cursor:
             body['cursor'] = bookmarked_cursor
-        else:
-            body['begin_time'] = start_time
 
         yield from self._get_v2_objects(
             'payments',
