@@ -23,6 +23,7 @@ class DataType(Enum):
     STATIC = 2
 
 
+# TODO refactor methods so that it is clear which streams fall into which categories for testing
 class TestSquareBaseParent:
 
     # Creating TestSquareBase inside a parent class to avoid
