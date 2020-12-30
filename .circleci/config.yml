@@ -253,7 +253,7 @@ jobs:
                      --target=target-stitch \
                      --orchestrator=stitch-orchestrator \
                      --email=harrison+sandboxtest@stitchdata.com \
-                     --password=$sandbox_password \
+                     --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_bookmarks_cursor.py
 workflows:
