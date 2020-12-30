@@ -27,7 +27,6 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         # incremental
         all_testable_streams.add('shifts')
 
-        LOGGER.info("testable_streams=%s", all_testable_streams)
         return all_testable_streams
 
     @staticmethod
@@ -103,7 +102,6 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
             }
             for testable_stream in testable_streams
         }
-        LOGGER.info("Saving bookmarks to menagerie state %s", bookmarks)
         menagerie.set_state(conn_id, {"bookmarks": bookmarks})
 
         # run initial sync
