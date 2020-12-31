@@ -1,5 +1,17 @@
 # Changelog
 
+## [v1.2.0](https://github.com/singer-io/tap-square/tree/v1.2.0) (2020-12-31)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v1.1.0...v1.2.0)
+
+**Merged pull requests:**
+
+- run 3rd sync if customers stream needs it in bookmarks test [\#93](https://github.com/singer-io/tap-square/pull/93) ([kspeer825](https://github.com/kspeer825))
+- Remove bookmark cursor from incremental streams and test bookmark cursor for every stream using it [\#92](https://github.com/singer-io/tap-square/pull/92) ([asaf-erlich](https://github.com/asaf-erlich))
+- Refactor sync code into invidual stream classes [\#91](https://github.com/singer-io/tap-square/pull/91) ([asaf-erlich](https://github.com/asaf-erlich))
+- stabilize bookmarks by removing customers from all assertions [\#90](https://github.com/singer-io/tap-square/pull/90) ([kspeer825](https://github.com/kspeer825))
+- change cron time [\#89](https://github.com/singer-io/tap-square/pull/89) ([kspeer825](https://github.com/kspeer825))
+
 ## [v1.1.0](https://github.com/singer-io/tap-square/tree/v1.0.2) (2020-12-10)
 
 * Fix customers stream to use date windowing to query [\#87](https://github.com/singer-io/tap-square/pull/84) ([cosimon](https://github.com/cosimon))
