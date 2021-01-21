@@ -391,6 +391,146 @@
                     "object"
                   ]
                 },
+                "catalog_object_id": {
+                  "type": ["null", "string"]
+                },
+                "name": {
+                  "type": ["null", "string"]
+                },
+                "note": {
+                  "type": ["null", "string"]
+                },
+                "quantity_unit": {
+                  "type": ["null", "object"],
+                  "properties": {
+                    "precision": {
+                      "type": ["null", "integer"]
+                    },
+                    "measurement_unit": {
+                      "type": ["null", "object"],
+                      "properties": {
+                        "area_unit": {
+                          "type": ["null", "string"]
+                        },
+                        "custom_unit": {
+                          "type": ["null", "object"],
+                          "properties": {
+                            "abbreviation": {
+                              "type": ["null", "string"]
+                            },
+                            "name": {
+                              "type": ["null", "string"]
+                            }
+                          }
+                        },
+                        "generic_unit": {
+                          "type": ["null", "string"]
+                        },
+                        "length_unit": {
+                          "type": ["null", "string"]
+                        },
+                        "time_unit": {
+                          "type": ["null", "string"]
+                        },
+                        "type": {
+                          "type": ["null", "string"]
+                        },
+                        "volume_unit": {
+                          "type": ["null", "string"]
+                        },
+                        "weight_unit": {
+                          "type": ["null", "string"]
+                        }
+                      }
+                    }
+                  }
+                },
+                "return_modifiers": {
+                  "type": ["null", "array"],
+                  "items": {
+                    "type": ["null", "object"],
+                    "properties": {
+                      "base_price_money": {
+                        "properties": {
+                          "currency": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "amount": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      },
+                      "catalog_object_id": {
+                        "type": ["null", "string"]
+                      },
+                      "name": {
+                        "type": ["null", "string"]
+                      },
+                      "source_modifier_uid": {
+                        "type": ["null", "string"]
+                      },
+                      "total_price_money": {
+                        "properties": {
+                          "currency": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "amount": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      },
+                      "uid": {
+                        "type": ["null", "string"]
+                      }
+                    }
+                  }
+                },
+                "source_line_item_uid": {
+                  "type": ["null", "string"]
+                },
+                "total_discount_money": {
+                  "properties": {
+                    "currency": {
+                      "type": [
+                        "null",
+                        "string"
+                      ]
+                    },
+                    "amount": {
+                      "type": [
+                        "null",
+                        "integer"
+                      ]
+                    }
+                  },
+                  "type": [
+                    "null",
+                    "object"
+                  ]
+                },
+                "variation_name": {
+                  "type": ["null", "string"]
+                },
                 "total_tax_money": {
                   "properties": {
                     "currency": {
@@ -476,6 +616,80 @@
                     "null",
                     "string"
                   ]
+                },
+                "applied_discounts": {
+                  "type": [
+                    "null",
+                    "array"
+                  ],
+                  "items": {
+                    "properties": {
+                      "discount_uid": {
+                        "type": ["null", "string"]
+                      },
+                      "applied_money": {
+                        "properties": {
+                          "currency": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "amount": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      },
+                      "uid": {
+                        "type": ["null", "string"]
+                      }
+                    },
+                    "type": ["null", "object"]
+                  }
+                },
+                "applied_taxes": {
+                  "type": [
+                    "null",
+                    "array"
+                  ],
+                  "items": {
+                    "properties": {
+                      "tax_uid": {
+                        "type": ["null", "string"]
+                      },
+                      "applied_money": {
+                        "properties": {
+                          "currency": {
+                            "type": [
+                              "null",
+                              "string"
+                            ]
+                          },
+                          "amount": {
+                            "type": [
+                              "null",
+                              "integer"
+                            ]
+                          }
+                        },
+                        "type": [
+                          "null",
+                          "object"
+                        ]
+                      },
+                      "uid": {
+                        "type": ["null", "string"]
+                      }
+                    },
+                    "type": ["null", "object"]
+                  }
                 },
                 "total_discount_money": {
                   "properties": {

@@ -103,6 +103,12 @@
                             "string"
                           ]
                         },
+                        "sold_out": {
+                          "type": [
+                            "null",
+                            "boolean"
+                          ]
+                        },
                         "track_inventory": {
                           "type": [
                             "null",
