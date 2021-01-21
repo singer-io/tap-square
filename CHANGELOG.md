@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.3.0](https://github.com/singer-io/tap-square/tree/v1.w.0) (2021-01-21)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v1.2.0...v1.3.0)
+
+* Update the schema for the `return_line_items` property under orders [#95](https://github.com/singer-io/tap-square/pull/95)
+
 ## [v1.2.0](https://github.com/singer-io/tap-square/tree/v1.2.0) (2020-12-31)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v1.1.0...v1.2.0)
