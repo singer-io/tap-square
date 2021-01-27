@@ -17,8 +17,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install --upgrade pip
-            pip install --upgrade setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'pylint tap'
@@ -64,8 +63,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install --upgrade pip
-            pip install --upgrade setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'Integration Tests Setup'
@@ -95,8 +93,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install --upgrade pip
-            pip install --upgrade setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'Integration Tests Setup'
@@ -126,8 +123,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install --upgrade pip
-            pip install --upgrade setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           name: 'Integration Tests Setup'
@@ -157,8 +153,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install --upgrade pip
-            pip install --upgrade setuptools
+            pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
           when: always
