@@ -398,8 +398,8 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                         'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
                         'Time between record update and: \n\tsync start = %s\tsync end: %s',
                         stream,
-                        second_sync_time_start - customers_create_time,  second_sync_time_end - customers_create_time,
-                        second_sync_time_start - customers_update_time,  second_sync_time_end - customers_update_time,
+                        second_sync_time_start - customers_create_time, second_sync_time_end - customers_create_time,
+                        second_sync_time_start - customers_update_time, second_sync_time_end - customers_update_time,
                     )
 
                     # TODO TIMING | get the time the third sync ran
@@ -434,8 +434,8 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                         'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
                         'Time between record update and: \n\tsync start = %s\tsync end: %s',
                         stream,
-                        third_sync_time_start - customers_create_time,  third_sync_time_end - customers_create_time,
-                        third_sync_time_start - customers_update_time,  third_sync_time_end - customers_update_time,
+                        third_sync_time_start - customers_create_time, third_sync_time_end - customers_create_time,
+                        third_sync_time_start - customers_update_time, third_sync_time_end - customers_update_time,
                     )
 
                 self.assertLessEqual(
