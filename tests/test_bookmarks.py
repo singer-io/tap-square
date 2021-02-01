@@ -394,9 +394,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                     # TEST_ISSUE_1 | Log the time diffs for record created, updated, second sync ran
                     LOGGER.warning(
-                        'Second sync missed %s records that were just created and updated.\n
-                        Time between record create and: \n\tsync start = %s\tsync end: %s\n
-                        Time between record update and: \n\tsync start = %s\tsync end: %s',
+                        'Second sync missed %s records that were just created and updated.\n' +
+                        'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
+                        'Time between record update and: \n\tsync start = %s\tsync end: %s',
                         stream,
                         second_sync_time_start - customers_create_time,  second_sync_time_end - customers_create_time,
                         second_sync_time_start - customers_update_time,  second_sync_time_end - customers_update_time,
@@ -430,9 +430,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                 if stream == 'customers' and len(second_sync_data) != len(expected_records): # TEST_ISSUE_1
                     # TEST_ISSUE_1 | Log the time diffs for record created, updated, third sync ran
                     LOGGER.warning(
-                        'Third sync missed %s records that were just created and updated.\n
-                        Time between record create and: \n\tsync start = %s\tsync end: %s\n
-                        Time between record update and: \n\tsync start = %s\tsync end: %s',
+                        'Third sync missed %s records that were just created and updated.\n' +
+                        'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
+                        'Time between record update and: \n\tsync start = %s\tsync end: %s',
                         stream,
                         third_sync_time_start - customers_create_time,  third_sync_time_end - customers_create_time,
                         third_sync_time_start - customers_update_time,  third_sync_time_end - customers_update_time,
