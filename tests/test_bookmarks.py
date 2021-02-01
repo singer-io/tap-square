@@ -412,6 +412,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     third_sync_records = runner.get_records_from_target_output()
                     second_sync_data = [record.get("data") for record
                                         in third_sync_records.get(stream, {}).get("messages", [])]
+                else:  # TEST_ISSUE_1
+                    third_sync_time_start = perf_counter()
+                    third_sync_time_end = perf_counter()
 
                 # TESTING APPLICABLE TO ALL STREAMS
 
