@@ -1,7 +1,7 @@
 import os
+from time import perf_counter
 
 import singer
-
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -41,6 +41,8 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         Run a sync job and make sure it exited properly.
         Return a dictionary with keys of streams synced
         and values of records synced for each stream
+
+        TEST_ISSUE_1 | https://stitchdata.atlassian.net/browse/SRCE-4690
         """
         # Run a sync job using orchestrator
         sync_job_name = runner.run_sync_mode(self, conn_id)
@@ -148,6 +150,10 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                 created_records['payments'].append(payment)
                 expected_records_second_sync['payments'].append(payment)
             else:
+                # TEST_ISSUE_1 | get the time that the customer record was created
+                if stream == 'customers':
+                    customers_create_time = perf_counter()
+
                 # Create
                 new_records = self.client.create(stream, start_date=self.START_DATE)
 
@@ -220,6 +226,10 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             else:
                 first_rec_id = first_rec.get('id')
                 first_rec_version = first_rec.get('version')
+
+                if stream == 'customers':  # TEST_ISSUE_1 get the time that the customer record was updated
+                    customers_update_time = perf_counter()
+
                 updated_record = self.client.update(stream, obj_id=first_rec_id, version=first_rec_version,
                                                     obj=first_rec, start_date=self.START_DATE)
                 assert updated_record, "Failed to update a {} record".format(stream)
@@ -304,7 +314,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                  msg="Expectations are invalid for full table stream {}".format(stream))
 
         # Run a second sync job using orchestrator
+        second_sync_time_start = perf_counter()  # TEST_ISSUE_1 get the time that the 2nd sync starts
         second_sync_record_count = self.run_sync(conn_id)
+        second_sync_time_end = perf_counter()  # TEST_ISSUE_1 get the time that the 2nd sync ends
 
         # Get the set of records from a second sync
         second_sync_records = runner.get_records_from_target_output()
@@ -380,15 +392,29 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     #       and we were unable to produce a scenario in which a subsequent sync failed to pick
                     #       up the create and update after failing to catch them in the 2nd sync.
 
-                    LOGGER.warning('Second sync missed %s records that were just created and updated.', stream)
+                    # TEST_ISSUE_1 | Log the time diffs for record created, updated, second sync ran
+                    LOGGER.warning(
+                        'Second sync missed %s records that were just created and updated.\n' +
+                        'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
+                        'Time between record update and: \n\tsync start = %s\tsync end: %s',
+                        stream,
+                        second_sync_time_start - customers_create_time, second_sync_time_end - customers_create_time,
+                        second_sync_time_start - customers_update_time, second_sync_time_end - customers_update_time,
+                    )
 
+                    # TODO TIMING | get the time the third sync ran
                     # Run another sync since square can't keep up
+                    third_sync_time_start = perf_counter()  # TEST_ISSUE_1 get the time that the 3rd sync starts
                     _ = self.run_sync(conn_id)
+                    third_sync_time_end = perf_counter()  # TEST_ISSUE_1 get the time that the 3rd sync ends
 
                     # Get the set of records from a thrid sync and apply
                     third_sync_records = runner.get_records_from_target_output()
                     second_sync_data = [record.get("data") for record
                                         in third_sync_records.get(stream, {}).get("messages", [])]
+                else:  # TEST_ISSUE_1
+                    third_sync_time_start = perf_counter()
+                    third_sync_time_end = perf_counter()
 
                 # TESTING APPLICABLE TO ALL STREAMS
 
@@ -403,6 +429,18 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     primary_keys = stream_primary_keys.get(stream)
 
                 updated_pk_values = {tuple([record.get(pk) for pk in primary_keys]) for record in updated_records[stream]}
+
+                if stream == 'customers' and len(second_sync_data) != len(expected_records): # TEST_ISSUE_1
+                    # TEST_ISSUE_1 | Log the time diffs for record created, updated, third sync ran
+                    LOGGER.warning(
+                        'Third sync missed %s records that were just created and updated.\n' +
+                        'Time between record create and: \n\tsync start = %s\tsync end: %s\n' +
+                        'Time between record update and: \n\tsync start = %s\tsync end: %s',
+                        stream,
+                        third_sync_time_start - customers_create_time, third_sync_time_end - customers_create_time,
+                        third_sync_time_start - customers_update_time, third_sync_time_end - customers_update_time,
+                    )
+
                 self.assertLessEqual(
                     len(expected_records), len(second_sync_data),
                     msg="Expected number of records are not less than or equal to actual for 2nd sync.\n" +
