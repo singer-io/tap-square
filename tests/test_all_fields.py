@@ -189,4 +189,15 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
-                    self.assertRecordsEqual(stream, expected_record, actual_record)
+
+                    # Test Workaround Start ##############################
+                    # BUG | https://stitchdata.atlassian.net/browse/SRCE-4975
+                    if stream == 'payments':
+
+                        self.assertDictEqualWithOffKeys(
+                            self, expected_record, actual_record, off_keys={'card_details'}
+                        )
+
+                    else:  # Test Workaround End ##############################
+
+                        self.assertRecordsEqual(stream, expected_record, actual_record)
