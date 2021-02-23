@@ -195,7 +195,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                     if stream == 'payments':
 
                         self.assertDictEqualWithOffKeys(
-                            self, expected_record, actual_record, off_keys={'card_details'}
+                            expected_record, actual_record, off_keys={'card_details'}
                         )
 
                     else:  # Test Workaround End ##############################
