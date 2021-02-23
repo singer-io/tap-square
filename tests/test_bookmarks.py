@@ -489,7 +489,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                         # BUG | https://stitchdata.atlassian.net/browse/SRCE-4975
                         if stream == 'payments':
                             self.assertDictEqualWithOffKeys(
-                                created_record, sync_record, off_keys={'card_details'}
+                                updated_record, sync_record, off_keys={'card_details'}
                             )  # Test Workaround End ##############################
                         else:
                             self.assertRecordsEqual(stream, updated_record, sync_record)
