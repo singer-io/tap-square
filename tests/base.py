@@ -699,6 +699,6 @@ class TestSquareBaseParent:
             # Square api workflow updates these values so they're a few seconds different between
             # the time the record is created and the tap syncs, but other fields are the same
             for off_key in off_keys:
-                self.assertGreaterEqual(sync_record_copy.pop(off_key),
-                                        expected_record_copy.pop(off_key))
+                sync_record_copy.pop(off_key)
+                expected_record_copy.pop(off_key)
             self.assertDictEqual(expected_record_copy, sync_record_copy)
