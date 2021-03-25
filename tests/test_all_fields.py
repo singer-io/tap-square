@@ -152,6 +152,30 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             self.assertGreater(count, 0, msg="failed to replicate any data for: {}".format(stream))
         print("total replicated row count: {}".format(replicated_row_count))
 
+        MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
+            'modifier_lists': {'absent_at_location_ids'},
+            'items': {'present_at_location_ids', 'absent_at_location_ids'},
+            'categories': {'absent_at_location_ids'},
+            'orders': {
+                'amount_money', 'item_data', 'delayed_until', 'order_id', 'reason', 'processing_fee',
+                'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
+                'receipt_number','receipt_url','card_details','delay_action','type','category_data',
+                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
+            },
+            'discounts': {'absent_at_location_ids'},
+            'taxes': {'absent_at_location_ids'},
+            'customers': {'birthday'},
+            'payments': {'customer_id', 'reference_id'},
+            'locations': {'facebook_url'},
+            'employees': {'is_owner'},
+        }
+
+        # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
+        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
+
+        # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
@@ -160,26 +184,6 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 expected_keys = set()
                 for record in expected_records.get(stream):
                     expected_keys.update(record.keys())
-
-                MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
-                    'modifier_lists': {'absent_at_location_ids'},
-                    'items': {'present_at_location_ids', 'absent_at_location_ids'},
-                    'categories': {'absent_at_location_ids'},
-                    'orders': {
-                        'amount_money', 'item_data', 'delayed_until', 'order_id', 'reason', 'processing_fee',
-                        'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
-                        'receipt_number','receipt_url','card_details','delay_action','type','category_data',
-                        'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
-                    },
-                    'discounts': {'absent_at_location_ids'},
-                    'taxes': {'absent_at_location_ids'},
-                    'customers': {'birthday'},
-                    'payments': {'customer_id', 'reference_id'},
-                    'locations': {'facebook_url'},
-                    'employees': {'is_owner'},
-                }
-                # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-                MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
 
                 # Verify schema matches expectations
                 schema_keys = set(self.expected_schema_keys(stream))
@@ -206,13 +210,15 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
 
                     # Test Workaround Start ##############################
-                    # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
                     if stream == 'payments':
-                        # NB | In order to compare
-                        PARENT_FIELD_MISSING_SUBFIELDS = {'card_details'} # BUG_1
-                        PARENT_FIELD_MISSING_SUBFIELDS.update(MISSING_FROM_SCHEMA[stream]) # BUG_2
+
+                        off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
+                        self.assertParentKeysEqualWithOffKeys(
+                            expected_record, actual_record, off_keys
+                        )
+                        off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
                         self.assertDictEqualWithOffKeys(
-                            expected_record, actual_record, PARENT_FIELD_MISSING_SUBFIELDS
+                            expected_record, actual_record, off_keys
                         )
 
                     else:  # Test Workaround End ##############################

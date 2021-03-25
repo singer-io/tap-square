@@ -323,6 +323,14 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
         second_sync_state = menagerie.get_state(conn_id)
 
+
+        # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
+        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
+
+        # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+
+
         # Loop first_sync_records and compare against second_sync_records
         for stream in testable_streams:
             with self.subTest(stream=stream):
@@ -464,11 +472,17 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                      msg="A duplicate record was found in the sync for {}\nRECORD: {}.".format(stream, sync_records))
                     sync_record = sync_records[0]
                     # Test Workaround Start ##############################
-                    # BUG | https://stitchdata.atlassian.net/browse/SRCE-4975
                     if stream == 'payments':
+
+                        off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
+                        self.assertParentKeysEqualWithOffKeys(
+                            expected_record, actual_record, off_keys
+                        )
+                        off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
                         self.assertDictEqualWithOffKeys(
-                            created_record, sync_record, {'card_details',}
+                            updated_record, sync_record, off_keys
                         )  # Test Workaround End ##############################
+
                     else:
                         self.assertRecordsEqual(stream, created_record, sync_record)
 
@@ -486,18 +500,16 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                         sync_record = sync_records[0]
 
-                        # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-                        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
-
                         # Test Workaround Start ##############################
-                        # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
                         if stream == 'payments':
 
-                            PARENT_FIELD_MISSING_SUBFIELDS = {'card_details'} # BUG_1
-                            PARENT_FIELD_MISSING_SUBFIELDS.update(MISSING_FROM_SCHEMA[stream]) # BUG_2
-
+                            off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
+                            self.assertParentKeysEqualWithOffKeys(
+                                expected_record, actual_record, off_keys
+                            )
+                            off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
                             self.assertDictEqualWithOffKeys(
-                                updated_record, sync_record, PARENT_FIELD_MISSING_SUBFIELDS
+                                updated_record, sync_record, off_keys
                             )  # Test Workaround End ##############################
 
                         else:
