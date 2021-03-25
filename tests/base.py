@@ -693,7 +693,7 @@ class TestSquareBaseParent:
 
         def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=frozenset()):
             """
-            This method is currenlty being used to enable us to compare records for streams which 
+            This method is currenlty being used to enable us to compare records for streams which
             have known discrepancies.
 
             Currently those known discrepancies include:
