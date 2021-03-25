@@ -692,13 +692,15 @@ class TestSquareBaseParent:
                 self.assertDictEqual(expected_record, sync_record)
 
         def assertDictEqualWithOffKeys(self, expected_record, sync_record, off_keys=frozenset()):
-            self.assertParentKeysEqual(expected_record, sync_record)
+            # self.assertParentKeysEqual(expected_record, sync_record)
             expected_record_copy = deepcopy(expected_record)
             sync_record_copy = deepcopy(sync_record)
 
             # Square api workflow updates these values so they're a few seconds different between
             # the time the record is created and the tap syncs, but other fields are the same
             for off_key in off_keys:
-                sync_record_copy.pop(off_key)
-                expected_record_copy.pop(off_key)
+                if sync_record_copy.get(off_key):
+                    sync_record_copy.pop(off_key)
+                if expected_record_copy.get(off_key):
+                    expected_record_copy.pop(off_key)
             self.assertDictEqual(expected_record_copy, sync_record_copy)

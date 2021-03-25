@@ -485,11 +485,20 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                                              msg="A duplicate record was found in the sync for {}\nRECORDS: {}.".format(stream, sync_records))
 
                         sync_record = sync_records[0]
+
+                        # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
+                        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+
                         # Test Workaround Start ##############################
-                        # BUG | https://stitchdata.atlassian.net/browse/SRCE-4975
+                        # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
                         if stream == 'payments':
+
+                            PARENT_FIELD_MISSING_SUBFIELDS = {'card_details'} # BUG_1
+                            PARENT_FIELD_MISSING_SUBFIELDS.update(MISSING_FROM_SCHEMA[stream]) # BUG_2
+
                             self.assertDictEqualWithOffKeys(
-                                updated_record, sync_record, {'card_details',}
+                                updated_record, sync_record, PARENT_FIELD_MISSING_SUBFIELDS
                             )  # Test Workaround End ##############################
+
                         else:
                             self.assertRecordsEqual(stream, updated_record, sync_record)
