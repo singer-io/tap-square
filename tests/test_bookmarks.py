@@ -476,11 +476,11 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                         off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
                         self.assertParentKeysEqualWithOffKeys(
-                            expected_record, actual_record, off_keys
+                            created_record, sync_record, off_keys
                         )
                         off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
                         self.assertDictEqualWithOffKeys(
-                            updated_record, sync_record, off_keys
+                            created_record, sync_record, off_keys
                         )  # Test Workaround End ##############################
 
                     else:
@@ -505,7 +505,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                             off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
                             self.assertParentKeysEqualWithOffKeys(
-                                expected_record, actual_record, off_keys
+                                updated_record, sync_record, off_keys
                             )
                             off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
                             self.assertDictEqualWithOffKeys(
