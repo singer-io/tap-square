@@ -152,6 +152,30 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             self.assertGreater(count, 0, msg="failed to replicate any data for: {}".format(stream))
         print("total replicated row count: {}".format(replicated_row_count))
 
+        MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
+            'modifier_lists': {'absent_at_location_ids'},
+            'items': {'present_at_location_ids', 'absent_at_location_ids'},
+            'categories': {'absent_at_location_ids'},
+            'orders': {
+                'amount_money', 'item_data', 'delayed_until', 'order_id', 'reason', 'processing_fee',
+                'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
+                'receipt_number','receipt_url','card_details','delay_action','type','category_data',
+                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
+            },
+            'discounts': {'absent_at_location_ids'},
+            'taxes': {'absent_at_location_ids'},
+            'customers': {'birthday'},
+            'payments': {'customer_id', 'reference_id'},
+            'locations': {'facebook_url'},
+            'employees': {'is_owner'},
+        }
+
+        # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
+        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
+
+        # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
@@ -161,16 +185,11 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 for record in expected_records.get(stream):
                     expected_keys.update(record.keys())
 
-                # Verify schema covers all fields
+                # Verify schema matches expectations
                 schema_keys = set(self.expected_schema_keys(stream))
-                self.assertEqual(
-                    set(), expected_keys.difference(schema_keys),
-                    msg="\nFields missing from schema: {}\n".format(expected_keys.difference(schema_keys))
-                )
-
-                # not a test, just logging the fields that are included in the schema but not in the expectations
-                if schema_keys.difference(expected_keys):
-                    print("WARNING Fields missing from expectations: {}".format(schema_keys.difference(expected_keys)))
+                schema_keys.update(MISSING_FROM_SCHEMA.get(stream, set()))  # REMOVE W/ BUG_2 FIX
+                expected_keys.update(MISSING_FROM_EXPECTATIONS.get(stream, set()))
+                self.assertSetEqual(expected_keys, schema_keys)
 
                 # Verify that all fields sent to the target fall into the expected schema
                 for actual_keys in record_messages_keys:
@@ -189,4 +208,19 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
-                    self.assertRecordsEqual(stream, expected_record, actual_record)
+
+                    # Test Workaround Start ##############################
+                    if stream == 'payments':
+
+                        off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
+                        self.assertParentKeysEqualWithOffKeys(
+                            expected_record, actual_record, off_keys
+                        )
+                        off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
+                        self.assertDictEqualWithOffKeys(
+                            expected_record, actual_record, off_keys
+                        )
+
+                    else:  # Test Workaround End ##############################
+
+                        self.assertRecordsEqual(stream, expected_record, actual_record)
