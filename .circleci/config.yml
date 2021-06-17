@@ -1,4 +1,6 @@
 version: 2
+orbs:
+  slack: circleci/slack@4.4.2
 
 jobs:
   queue:
@@ -252,6 +254,11 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_bookmarks_cursor.py
+      - slack/notify-on-failure:
+          channel: stitch-tap-tester-tests
+          event: always
+
+
 workflows:
   version: 2
   commit:
