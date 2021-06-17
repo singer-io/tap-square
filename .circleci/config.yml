@@ -255,7 +255,7 @@ jobs:
                      --client-id=50 \
                      tests/test_bookmarks_cursor.py
       - slack/notify:
-          channel: stitch-tap-tester-tests
+          channel: '#stitch-tap-tester-tests'
           event: always
 
 
