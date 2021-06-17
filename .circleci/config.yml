@@ -264,29 +264,43 @@ workflows:
   commit:
     jobs:
       - queue:
-          context: circleci-user
+          context:
+            - circleci-user
+            - tap-tester-user
       - pylint-and-json-validator:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
       - all-integ-tests-running-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
       - discovery-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
       - sync-canary-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
       - default-start-date-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
       - non-parallizable-tests:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
           requires:
             - queue
   build_daily:
@@ -299,14 +313,26 @@ workflows:
                 - master
     jobs:
       - pylint-and-json-validator:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
       - all-integ-tests-running-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
       - discovery-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
       - sync-canary-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
       - default-start-date-test:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
       - non-parallizable-tests:
-          context: circleci-user
+          context:
+            -circleci-user
+            -tap-tester-user
