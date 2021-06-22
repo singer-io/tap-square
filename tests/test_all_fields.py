@@ -157,7 +157,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'items': {'present_at_location_ids', 'absent_at_location_ids'},
             'categories': {'absent_at_location_ids'},
             'orders': {
-                'amount_money', 'item_data', 'delayed_until', 'order_id', 'reason', 'processing_fee',
+                'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
                 'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
