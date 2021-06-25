@@ -84,9 +84,6 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_discovery.py
-      - slack/notify-on-failure:
-          channel: '#stitch-tap-tester-tests'
-          only_for_branches: qa/fix-orders-expectations
 
   sync-canary-test:
     docker:
@@ -117,6 +114,10 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
+
+      - slack/notify:
+          event: fail
+          channel: '#stitch-tap-tester-tests'
 
   default-start-date-test:
     docker:
