@@ -254,10 +254,9 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_bookmarks_cursor.py
-      - slack/notify:
+      - slack/notify-on-failure:
           channel: '#stitch-tap-tester-tests'
-          event: always
-
+          only_for_branches: qa/fix-orders-expectations
 
 workflows:
   version: 2

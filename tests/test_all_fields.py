@@ -171,7 +171,8 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
-        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
+        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
+                                          'orders': {'line_items'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
@@ -210,7 +211,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
 
                     # Test Workaround Start ##############################
-                    if stream == 'payments':
+                    if stream in PARENT_FIELD_MISSING_SUBFIELDS.keys():
 
                         off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
                         self.assertParentKeysEqualWithOffKeys(
