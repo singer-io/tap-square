@@ -108,9 +108,13 @@ jobs:
                      --password=$SANDBOX_PASSWORD \
                      --client-id=50 \
                      tests/test_sync_canary.py
-
-      - slack/notify-on-failure:
-          only_for_branches: qa/fix-orders-expectations
+      - slack/status:
+          channel: 'stitch-tap-tester-tests'
+          mentions: "${CIRCLE_USERNAME}"
+          fail_only: true
+          only_for_branches: master
+          failure_message: |
+            :face_vomiting: ${CIRCLE_JOB} failed!
 
   default-start-date-test:
     docker:
