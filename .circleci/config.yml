@@ -8,16 +8,6 @@ jobs:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:0.latest
     steps:
       - run: deployment_utils queue
-  tap_tester_env:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:0.latest
-        user: root
-    steps:
-      - run: aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /tmp/circleci_workspace/dev_env.sh
-      - persist_to_workspace:
-          root: /tmp/circleci_workspace
-          paths:
-            - dev_env.sh
 
   pylint-and-json-validator:
     docker:
@@ -52,7 +42,8 @@ jobs:
       - run:
           name: 'All Tests Running'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             python tests/test_config.py
 
@@ -72,7 +63,8 @@ jobs:
       - run:
           name: 'Test Discovery'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_discovery.py
 
@@ -92,7 +84,8 @@ jobs:
       - run:
           name: 'Testing Sync Canary'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_sync_canary.py
       - slack/status:
@@ -119,7 +112,8 @@ jobs:
       - run:
           name: 'Testing Default Start Date'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_default_start_date.py
 
@@ -141,49 +135,56 @@ jobs:
           when: always
           name: 'Testing Automatic Fields'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_automatic_fields.py
       - run:
           when: always
           name: 'Testing Schema and All Fields'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_all_fields.py
       - run:
           when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks.py
       - run:
           when: always
           name: 'Testing Bookmarks for Static Data Streams'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_static.py
       - run:
           when: always
           name: 'Testing Start Date'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_start_date.py
       - run:
           when: always
           name: 'Testing Pagination'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_pagination.py
       - run:
           when: always
           name: 'Testing Cursor Bookmark'
           command: |
-            source /tmp/circleci_workspace/dev_env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_cursor.py
 
@@ -195,48 +196,42 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
-      - tap_tester_env:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
       - pylint-and-json-validator:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
       - all-integ-tests-running-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
       - discovery-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
       - sync-canary-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
       - default-start-date-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
       - non-parallizable-tests:
           context:
             - circleci-user
             - tap-tester-user
           requires:
-            - tap_tester_env
+            - queue
   build_daily:
     triggers:
       - schedule:
