@@ -195,42 +195,54 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
+      - tap_tester_env:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
       - pylint-and-json-validator:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
       - all-integ-tests-running-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
       - discovery-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
       - sync-canary-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
       - default-start-date-test:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
       - non-parallizable-tests:
           context:
             - circleci-user
             - tap-tester-user
           requires:
             - queue
+            - tap_tester_env
   build_daily:
     triggers:
       - schedule:
