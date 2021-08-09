@@ -138,6 +138,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_automatic_fields.py
       - run:
           when: always
@@ -146,6 +147,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_all_fields.py
       - run:
           when: always
@@ -154,6 +156,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks.py
       - run:
           when: always
@@ -162,6 +165,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks_static.py
       - run:
           when: always
@@ -170,6 +174,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_start_date.py
       - run:
           when: always
@@ -178,6 +183,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_pagination.py
       - run:
           when: always
@@ -186,6 +192,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks_cursor.py
 
 workflows:
