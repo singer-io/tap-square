@@ -60,13 +60,13 @@ jobs:
             source /usr/local/share/virtualenvs/tap-square/bin/activate
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
-            pip install 'squareup==5.3.0.20200528'
       - run:
           name: 'Test Discovery'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_discovery.py
 
   sync-canary-test:
@@ -111,13 +111,13 @@ jobs:
             source /usr/local/share/virtualenvs/tap-square/bin/activate
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
-            pip install 'squareup==5.3.0.20200528'
       - run:
           name: 'Testing Default Start Date'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_default_start_date.py
 
   non-parallizable-tests:
@@ -133,7 +133,6 @@ jobs:
             source /usr/local/share/virtualenvs/tap-square/bin/activate
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
-            pip install 'squareup==5.3.0.20200528'
       - run:
           when: always
           name: 'Testing Automatic Fields'
