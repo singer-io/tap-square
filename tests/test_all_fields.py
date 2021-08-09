@@ -172,10 +172,11 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
-                                          'orders': {'line_items'}}
+                                          'orders': {'line_items', 'returns'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
+                               'orders': {'line_items',}}
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
