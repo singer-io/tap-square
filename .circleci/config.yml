@@ -63,7 +63,7 @@ jobs:
       - run:
           name: 'Test Discovery'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_discovery.py
@@ -84,7 +84,7 @@ jobs:
       - run:
           name: 'Testing Sync Canary'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_sync_canary.py
@@ -112,7 +112,7 @@ jobs:
       - run:
           name: 'Testing Default Start Date'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_default_start_date.py
@@ -135,7 +135,7 @@ jobs:
           when: always
           name: 'Testing Automatic Fields'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_automatic_fields.py
@@ -143,7 +143,7 @@ jobs:
           when: always
           name: 'Testing Schema and All Fields'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_all_fields.py
@@ -151,7 +151,7 @@ jobs:
           when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks.py
@@ -159,7 +159,7 @@ jobs:
           when: always
           name: 'Testing Bookmarks for Static Data Streams'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_static.py
@@ -167,7 +167,7 @@ jobs:
           when: always
           name: 'Testing Start Date'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_start_date.py
@@ -175,7 +175,7 @@ jobs:
           when: always
           name: 'Testing Pagination'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_pagination.py
@@ -183,7 +183,7 @@ jobs:
           when: always
           name: 'Testing Cursor Bookmark'
           command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sa\ndbox dev__env.sh
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev__env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_cursor.py
