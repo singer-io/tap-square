@@ -8,6 +8,17 @@ jobs:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/deployment-utils:0.latest
     steps:
       - run: deployment_utils queue
+  tap_tester_env:
+    docker:
+      - image: cibuilds/aws:2.0.38@sha256:a1614fdbb8675806ccace08ce98b732178c5cbe05f38b2554d5ed3ce7853c0cf
+        user: root
+    steps:
+      - run: aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox /tmp/circleci_workspace/dev_env.sh
+      - persist_to_workspace:
+          root: /tmp/circleci_workspace
+          paths:
+            - dev_env.sh
+
   pylint-and-json-validator:
     docker:
       - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
@@ -34,24 +45,20 @@ jobs:
 
   all-integ-tests-running-test:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - add_ssh_keys
       - run:
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
           name: 'All Tests Running'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             python tests/test_config.py
 
   discovery-test:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - add_ssh_keys
@@ -63,19 +70,15 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
           name: 'Test Discovery'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_discovery.py
 
   sync-canary-test:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - add_ssh_keys
@@ -87,13 +90,9 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
           name: 'Testing Sync Canary'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_sync_canary.py
       - slack/status:
@@ -106,7 +105,7 @@ jobs:
 
   default-start-date-test:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - add_ssh_keys
@@ -118,19 +117,15 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
           name: 'Testing Default Start Date'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_default_start_date.py
 
   non-parallizable-tests:
     docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:tap-tester-v4
+      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
     steps:
       - checkout
       - add_ssh_keys
@@ -144,56 +139,51 @@ jobs:
             pip install 'squareup==5.3.0.20200528'
       - run:
           when: always
-          name: 'Integration Tests Setup'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      - run:
-          when: always
           name: 'Testing Automatic Fields'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_automatic_fields.py
       - run:
           when: always
           name: 'Testing Schema and All Fields'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_all_fields.py
       - run:
           when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks.py
       - run:
           when: always
           name: 'Testing Bookmarks for Static Data Streams'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_static.py
       - run:
           when: always
           name: 'Testing Start Date'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_start_date.py
       - run:
           when: always
           name: 'Testing Pagination'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_pagination.py
       - run:
           when: always
           name: 'Testing Cursor Bookmark'
           command: |
-            source dev_env.sh
+            source /tmp/circleci_workspace/dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             run-test --tap=tap-square tests/test_bookmarks_cursor.py
 
