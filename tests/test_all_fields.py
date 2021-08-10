@@ -157,7 +157,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'items': {'present_at_location_ids', 'absent_at_location_ids'},
             'categories': {'absent_at_location_ids'},
             'orders': {
-                'amount_money', 'item_data', 'delayed_until', 'order_id', 'reason', 'processing_fee',
+                'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
                 'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
@@ -171,10 +171,12 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
-        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
+        PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
+                                          'orders': {'line_items', 'returns'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
+                               'orders': {'line_items',}}
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
@@ -210,7 +212,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
 
                     # Test Workaround Start ##############################
-                    if stream == 'payments':
+                    if stream in PARENT_FIELD_MISSING_SUBFIELDS.keys():
 
                         off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
                         self.assertParentKeysEqualWithOffKeys(
