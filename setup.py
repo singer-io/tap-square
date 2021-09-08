@@ -16,9 +16,11 @@ setup(name='tap-square',
           'methodtools==0.4.2',
       ],
       extras_require={
-          'dev': [
-              'ipdb==0.11',
+          'test': [
               'pylint==2.5.3',
+          ],
+          'dev': [
+              'ipdb',
           ]
       },
       entry_points='''
