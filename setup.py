@@ -10,7 +10,7 @@ setup(name='tap-square',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_square'],
       install_requires=[
-          'singer-python==5.9.0',
+          'singer-python==5.12.1',
           'squareup==5.3.0.20200528',
           'backoff==1.8.0',
           'methodtools==0.4.2',

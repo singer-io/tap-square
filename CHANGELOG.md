@@ -5,6 +5,12 @@
 
 * Removes `item_data` object from orders.json [#100](https://github.com/singer-io/tap-square/pull/100)
 
+## [v1.3.1](https://github.com/singer-io/tap-square/tree/v1.3.1) (2021-03-23)
+
+* Bumped singer-python to version 5.12.1 [\#103](https://github.com/singer-io/tap-square/pull/103) ([zachharris1](https://github.com/zachharris1))
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v1.3.0...v1.3.1)
+
 ## [v1.3.0](https://github.com/singer-io/tap-square/tree/v1.w.0) (2021-01-21)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v1.2.0...v1.3.0)
