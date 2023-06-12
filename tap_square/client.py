@@ -69,6 +69,8 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
+            print("-------------------")
+            print("result.status_code--", result.status_code)
             raise RuntimeError(error_message)
 
         return result.body['access_token']
@@ -77,7 +79,7 @@ class SquareClient():
     @backoff.on_exception(
         backoff.expo,
         RetryableError,
-        max_time=180, # seconds
+        max_time=600, # seconds
         giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
@@ -87,7 +89,8 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429:
+            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429 \
+            or 'access token creation quota exceeded for merchant, please retry later' in error_message:
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
