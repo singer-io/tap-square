@@ -170,6 +170,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_automatic_fields.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Schema and All Fields'
@@ -179,6 +181,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_all_fields.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
@@ -188,6 +192,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Bookmarks for Static Data Streams'
@@ -197,6 +203,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks_static.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Start Date'
@@ -206,6 +214,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_start_date.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Pagination'
@@ -215,6 +225,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_pagination.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Cursor Bookmark'
