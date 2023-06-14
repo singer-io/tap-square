@@ -52,6 +52,84 @@
         "string"
       ]
     },
+    "discounts": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "properties": {
+          "uid": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "amount_money": {
+            "properties": {
+              "currency": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "amount": {
+                "type": [
+                  "null",
+                  "integer"
+                ]
+              }
+            },
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "applied_money": {
+              "properties": {
+                "currency": {
+                  "type": [
+                    "null",
+                    "string"
+                  ]
+                },
+                "amount": {
+                  "type": [
+                    "null",
+                    "integer"
+                  ]
+                }
+              },
+              "type": [
+                "null",
+                "object"
+              ]
+            },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "type": [
+          "null",
+          "object"
+        ]
+      }
+    },
     "return_amounts": {
       "properties": {
         "tip_money": {

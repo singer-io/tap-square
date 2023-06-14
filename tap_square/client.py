@@ -54,6 +54,14 @@ class SquareClient():
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
+    @backoff.on_exception(
+        backoff.expo,
+        RetryableError,
+        max_time=600, # seconds
+        giveup=should_not_retry,
+        on_backoff=log_backoff,
+        jitter=backoff.full_jitter,
+    )
     def _get_access_token(self):
         body = {
             'client_id': self._client_id,
@@ -69,7 +77,19 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            raise RuntimeError(error_message)
+            print("-------------------")
+            print("result.status_code--", result.status_code, result, result.headers)
+            print("0000000000 error_message:",error_message["message"])
+            print("0000000000 error_message.message----:",error_message["message"])
+            if 'access token creation quota exceeded for merchant, please retry later' in error_message["message"]:
+                print("1111111111111111111")
+                raise RetryableError(error_message)
+            else:
+                print("2222222222")
+                raise RuntimeError(error_message)
+            # print("-------------------")
+            # print("result.status_code--", result.status_code, result, result.headers)
+            # raise RuntimeError(error_message)
 
         return result.body['access_token']
 
@@ -77,7 +97,7 @@ class SquareClient():
     @backoff.on_exception(
         backoff.expo,
         RetryableError,
-        max_time=180, # seconds
+        max_time=600, # seconds
         giveup=should_not_retry,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
@@ -87,7 +107,8 @@ class SquareClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429:
+            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429 \
+            or 'access token creation quota exceeded for merchant, please retry later' in error_message:
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)

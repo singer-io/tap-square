@@ -61,92 +61,92 @@ jobs:
           failure_message: |
             :face_vomiting: ${CIRCLE_JOB} failed!
 
-  discovery-test:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
-    steps:
-      - checkout
-      - add_ssh_keys
-      - run:
-          name: 'Setup virtual env'
-          command: |
-            python3 -m venv /usr/local/share/virtualenvs/tap-square
-            source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
-            pip install .[dev]
-      - run:
-          name: 'Test Discovery'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
-            run-test --tap=tap-square tests/test_discovery.py
-      - slack/status:
-          channel: 'stitch-tap-tester-tests'
-          mentions: "${CIRCLE_USERNAME}"
-          fail_only: true
-          only_for_branches: master
-          failure_message: |
-            :face_vomiting: ${CIRCLE_JOB} failed!
+  # discovery-test:
+  #   docker:
+  #     - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+  #   steps:
+  #     - checkout
+  #     - add_ssh_keys
+  #     - run:
+  #         name: 'Setup virtual env'
+  #         command: |
+  #           python3 -m venv /usr/local/share/virtualenvs/tap-square
+  #           source /usr/local/share/virtualenvs/tap-square/bin/activate
+  #           pip install -U 'pip<19.2' 'setuptools<51.0.0'
+  #           pip install .[dev]
+  #     - run:
+  #         name: 'Test Discovery'
+  #         command: |
+  #           aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+  #           source dev_env.sh
+  #           source /usr/local/share/virtualenvs/tap-tester/bin/activate
+  #           pip install 'squareup==5.3.0.20200528'
+  #           run-test --tap=tap-square tests/test_discovery.py
+  #     - slack/status:
+  #         channel: 'stitch-tap-tester-tests'
+  #         mentions: "${CIRCLE_USERNAME}"
+  #         fail_only: true
+  #         only_for_branches: master
+  #         failure_message: |
+  #           :face_vomiting: ${CIRCLE_JOB} failed!
 
-  sync-canary-test:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
-    steps:
-      - checkout
-      - add_ssh_keys
-      - run:
-          name: 'Setup virtual env'
-          command: |
-            python3 -m venv /usr/local/share/virtualenvs/tap-square
-            source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
-            pip install .[dev]
-      - run:
-          name: 'Testing Sync Canary'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
-            run-test --tap=tap-square tests/test_sync_canary.py
-      - slack/status:
-          channel: 'stitch-tap-tester-tests'
-          mentions: "${CIRCLE_USERNAME}"
-          fail_only: true
-          only_for_branches: master
-          failure_message: |
-            :face_vomiting: ${CIRCLE_JOB} failed!
+  # sync-canary-test:
+  #   docker:
+  #     - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+  #   steps:
+  #     - checkout
+  #     - add_ssh_keys
+  #     - run:
+  #         name: 'Setup virtual env'
+  #         command: |
+  #           python3 -m venv /usr/local/share/virtualenvs/tap-square
+  #           source /usr/local/share/virtualenvs/tap-square/bin/activate
+  #           pip install -U 'pip<19.2' 'setuptools<51.0.0'
+  #           pip install .[dev]
+  #     - run:
+  #         name: 'Testing Sync Canary'
+  #         command: |
+  #           aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+  #           source dev_env.sh
+  #           source /usr/local/share/virtualenvs/tap-tester/bin/activate
+  #           pip install 'squareup==5.3.0.20200528'
+  #           run-test --tap=tap-square tests/test_sync_canary.py
+  #     - slack/status:
+  #         channel: 'stitch-tap-tester-tests'
+  #         mentions: "${CIRCLE_USERNAME}"
+  #         fail_only: true
+  #         only_for_branches: master
+  #         failure_message: |
+  #           :face_vomiting: ${CIRCLE_JOB} failed!
 
-  default-start-date-test:
-    docker:
-      - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
-    steps:
-      - checkout
-      - add_ssh_keys
-      - run:
-          name: 'Setup virtual env'
-          command: |
-            python3 -m venv /usr/local/share/virtualenvs/tap-square
-            source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
-            pip install .[dev]
-      - run:
-          name: 'Testing Default Start Date'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
-            run-test --tap=tap-square tests/test_default_start_date.py
-      - slack/status:
-          channel: 'stitch-tap-tester-tests'
-          mentions: "${CIRCLE_USERNAME}"
-          fail_only: true
-          only_for_branches: master
-          failure_message: |
-            :face_vomiting: ${CIRCLE_JOB} failed!
+  # default-start-date-test:
+  #   docker:
+  #     - image: 218546966473.dkr.ecr.us-east-1.amazonaws.com/circle-ci:stitch-tap-tester
+  #   steps:
+  #     - checkout
+  #     - add_ssh_keys
+  #     - run:
+  #         name: 'Setup virtual env'
+  #         command: |
+  #           python3 -m venv /usr/local/share/virtualenvs/tap-square
+  #           source /usr/local/share/virtualenvs/tap-square/bin/activate
+  #           pip install -U 'pip<19.2' 'setuptools<51.0.0'
+  #           pip install .[dev]
+  #     - run:
+  #         name: 'Testing Default Start Date'
+  #         command: |
+  #           aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+  #           source dev_env.sh
+  #           source /usr/local/share/virtualenvs/tap-tester/bin/activate
+  #           pip install 'squareup==5.3.0.20200528'
+  #           run-test --tap=tap-square tests/test_default_start_date.py
+  #     - slack/status:
+  #         channel: 'stitch-tap-tester-tests'
+  #         mentions: "${CIRCLE_USERNAME}"
+  #         fail_only: true
+  #         only_for_branches: master
+  #         failure_message: |
+  #           :face_vomiting: ${CIRCLE_JOB} failed!
 
   non-parallizable-tests:
     docker:
@@ -170,6 +170,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_automatic_fields.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Schema and All Fields'
@@ -179,6 +181,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_all_fields.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Bookmarks for Dynamic Data Streams'
@@ -188,6 +192,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Bookmarks for Static Data Streams'
@@ -197,6 +203,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_bookmarks_static.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Start Date'
@@ -206,6 +214,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_start_date.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Pagination'
@@ -215,6 +225,8 @@ jobs:
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==5.3.0.20200528'
             run-test --tap=tap-square tests/test_pagination.py
+      - run: 
+          sleep 600
       - run:
           when: always
           name: 'Testing Cursor Bookmark'
@@ -246,30 +258,30 @@ workflows:
             - tap-tester-user
           requires:
             - queue
-      - all-integ-tests-running-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
-      - discovery-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
-      - sync-canary-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
-      - default-start-date-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
+      # - all-integ-tests-running-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      #     requires:
+      #       - queue
+      # - discovery-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      #     requires:
+      #       - queue
+      # - sync-canary-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      #     requires:
+      #       - queue
+      # - default-start-date-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      #     requires:
+      #       - queue
       - non-parallizable-tests:
           context:
             - circleci-user
@@ -289,22 +301,22 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
-      - all-integ-tests-running-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-      - discovery-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-      - sync-canary-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-      - default-start-date-test:
-          context:
-            - circleci-user
-            - tap-tester-user
+      # - all-integ-tests-running-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      # - discovery-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      # - sync-canary-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
+      # - default-start-date-test:
+      #     context:
+      #       - circleci-user
+      #       - tap-tester-user
       - non-parallizable-tests:
           context:
             - circleci-user
