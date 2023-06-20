@@ -331,8 +331,8 @@ class CashDrawerShifts(FullTableStream):
             yield from self.client.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor)
 
 
-class Settlements(FullTableStream):
-    tap_stream_id = 'settlements'
+class Payouts(FullTableStream):
+    tap_stream_id = 'payouts'
     key_properties = ['id']
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
@@ -341,7 +341,7 @@ class Settlements(FullTableStream):
     def get_pages(self, bookmarked_cursor, start_time):
         for location_id in Locations.get_all_location_ids(self.client):
             # Settlements requests can only take up to 1 location_id at a time
-            yield from self.client.get_settlements(location_id, start_time, bookmarked_cursor)
+            yield from self.client.get_payouts(location_id, start_time, bookmarked_cursor)
 
 class TeamMembers(Stream):
     tap_stream_id = 'team_members'
@@ -399,13 +399,13 @@ STREAMS = {
     'bank_accounts': BankAccounts,
     'refunds': Refunds,
     'payments': Payments,
+    'payouts': Payouts,
     'modifier_lists': ModifierLists,
     'inventories': Inventories,
     'orders': Orders,
     'roles': Roles,
     'shifts': Shifts,
     'cash_drawer_shifts': CashDrawerShifts,
-    'settlements': Settlements,
     'team_members': TeamMembers,
     'customers': Customers
 }
