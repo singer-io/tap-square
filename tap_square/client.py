@@ -346,33 +346,31 @@ class SquareClient():
             bookmarked_cursor,
         )
 
-    def get_settlements(self, location_id, start_time, bookmarked_cursor):
-        url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
+    def get_payouts(self, location_id, start_time, bookmarked_cursor):
+        if bookmarked_cursor:
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
 
-        now = utils.now()
-        start_time_dt = utils.strptime_to_utc(start_time)
-        end_time_dt = now
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                # initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
 
-        # Parameter `begin_time` cannot be before 1 Jan 2013 00:00:00Z
-        # Doc: https://developer.squareup.com/reference/square/settlements-api/v1-list-settlements
-        if start_time_dt < utils.strptime_to_utc("2013-01-01T00:00:00Z"):
-            raise Exception("Start Date for Settlements stream cannot come before `2013-01-01T00:00:00Z`, current start_date: {}".format(start_time))
+            with singer.http_request_timer('GET payouts details'):
+                result = self._retryable_v2_method(
+                    lambda bdy: self._client.payouts.list_payouts(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=100,
+                    ),
+                    None,
+                )
 
-        while start_time_dt < now:
-            params = {
-                'limit': 200,
-                'begin_time': utils.strftime(start_time_dt),
-            }
-            # If query range is over a year, shorten to a year
-            if now - start_time_dt > timedelta(weeks=52):
-                end_time_dt = start_time_dt + timedelta(weeks=52)
-                params['end_time'] = utils.strftime(end_time_dt)
-            yield from self._get_v1_objects(
-                url,
-                params,
-                'settlements',
-                bookmarked_cursor,
-            )
-            # Attempt again to sync til "now"
-            start_time_dt = end_time_dt
-            end_time_dt = now
+            yield (result.body.get('items', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')

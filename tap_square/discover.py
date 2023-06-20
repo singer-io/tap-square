@@ -8,7 +8,7 @@ def get_abs_path(path):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
 
 # NB: These streams cannot be queried using Sandbox OAuth credentials
-PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
+PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts'}
 
 def get_schemas(sandbox):
 
