@@ -56,11 +56,11 @@ class TestSquareBaseParent:
             'roles': 100,
             'refunds': 100,
             'payments': 100,
+            'payouts': 100,
             'customers': 100,
             'modifier_lists': DEFAULT_BATCH_LIMIT,
             'orders': 500,
             'shifts': 200,
-            'settlements': 200,
         }
 
         def setUp(self):
@@ -186,6 +186,10 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                 },
+                "payouts": {
+                    self.PRIMARY_KEYS: {'id'},
+                    self.REPLICATION_METHOD: self.FULL,
+                },
                 "refunds": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
@@ -194,10 +198,6 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                     self.START_DATE_KEY: 'updated_at'
-                },
-                "settlements": {
-                    self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
                 },
                 "shifts": {
                     self.PRIMARY_KEYS: {'id'},
@@ -229,7 +229,6 @@ class TestSquareBaseParent:
                 'employees',
                 'roles',
                 'bank_accounts',
-                'settlements',
             }
 
         def sandbox_streams(self):
@@ -252,7 +251,7 @@ class TestSquareBaseParent:
             return {
                 'bank_accounts',  # No endpoints for CREATE or UPDATE
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
-                'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
+                # 'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
             }
 
         def dynamic_data_streams(self):
