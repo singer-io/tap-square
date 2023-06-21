@@ -140,7 +140,7 @@
         "null",
         "string"
       ],
-      "format": "date"
+      "format": "date-time"
     },
     "end_to_end_id": {
       "type": [

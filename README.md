@@ -17,13 +17,13 @@ This tap:
     * BankAccounts
     * Refunds
     * Payments
+    * Payouts    
     * ModifierLists
     * Inventories
     * Orders
     * Roles
     * Shifts
     * CashDrawerShifts
-    * Settlements
     * Customers
 
 * Includes a schema for each resource reflecting most recent tested data retrieved using the api. See [the schema folder](https://github.com/singer-io/tap-square/tree/master/tap_square/schemas) for details.
