@@ -249,7 +249,7 @@ class TestSquareBaseParent:
             return {
                 'bank_accounts',  # No endpoints for CREATE or UPDATE
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
-                # 'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
+                'payouts',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
             }
 
         def dynamic_data_streams(self):
