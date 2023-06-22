@@ -370,7 +370,7 @@ class Payouts(FullTableStream):
 
     def get_pages(self, bookmarked_cursor, start_time):
         for location_id in Locations.get_all_location_ids(self.client):
-            # Settlements requests can only take up to 1 location_id at a time
+            # payouts requests can only take up to 1 location_id at a time
             yield from self.client.get_payouts(location_id, start_time, bookmarked_cursor)
 
 

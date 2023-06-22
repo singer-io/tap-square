@@ -41,7 +41,7 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
-        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
+        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'payouts'}
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
