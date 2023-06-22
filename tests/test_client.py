@@ -415,19 +415,6 @@ class TestClient():
             bookmarked_cursor,
         )
 
-    def get_settlements(self, location_id, start_time, bookmarked_cursor):
-        url = 'https://connect.squareup.com/v1/{}/settlements'.format(location_id)
-        params = {
-            'limit': 200,
-            'begin_time': start_time,
-        }
-        yield from self._get_v1_objects(
-            url,
-            params,
-            'roles',
-            bookmarked_cursor,
-        )
-
     def get_all_location_ids(self):
         all_location_ids = list()
         for page, _ in self.get_locations():
@@ -453,13 +440,6 @@ class TestClient():
             # Cash Drawer Shifts requests can only take up to 1 location_id at a time
             for page, cursor in self.get_cash_drawer_shifts(location_id, start_time, bookmarked_cursor):
                 yield page, cursor
-
-    def get_settlements_pages(self, start_time, bookmarked_cursor): #pylint: disable=unused-argument
-        # refactored from settlements.sync
-        for location_id in self.get_all_location_ids():
-            # Settlements requests can only take up to 1 location_id at a time
-            for page, batch_token in self.get_settlements(location_id, start_time, bookmarked_cursor):
-                yield page, batch_token
 
     def get_all(self, stream, start_date): # pylint: disable=too-many-return-statements
         if stream == 'items':
@@ -490,8 +470,6 @@ class TestClient():
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
-        elif stream == 'settlements':
-            return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
         elif stream == 'cash_drawer_shifts':
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         elif stream == 'customers':
