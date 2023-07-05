@@ -46,6 +46,12 @@
             "string"
           ]
         },
+        "address_line_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "postal_code": {
           "type": [
             "null",
@@ -87,29 +93,6 @@
         }
       }
     },
-    "nickname": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
-    "birthday": {
-      "anyOf": [
-        {
-          "type": [
-            "null",
-            "string"
-          ],
-          "format": "date-time"
-        },
-        {
-          "type": [
-            "null",
-            "string"
-          ]
-        }
-      ]
-    },
     "email_address": {
       "type": [
         "null",
@@ -140,6 +123,36 @@
         "null",
         "string"
       ]
+    },
+    "reference_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "group_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
+    },
+    "segment_ids": {
+      "type": [
+        "null",
+        "array"
+      ],
+      "items": {
+        "type": [
+          "null",
+          "string"
+        ]
+      }
     }
   }
 }
