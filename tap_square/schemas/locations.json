@@ -302,38 +302,6 @@
         "null",
         "string"
       ]
-    },
-    "tax_ids": {
-      "type": [
-        "null",
-        "object"
-      ],
-      "properties": {
-        "eu_vat": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "fr_siret": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "fr_naf": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "es_nif": {
-          "type": [
-            "null",
-            "string"
-          ]
-        }
-      }
     }
   }
 }
