@@ -356,29 +356,35 @@
             "array"
           ],
           "items": {
-            "category": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "code": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "detail": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "field": {
-              "type": [
-                "null",
-                "string"
-              ]
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "category": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "code": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "detail": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "field": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
             }
           }
         },
@@ -541,32 +547,38 @@
             "array"
           ],
           "items": {
-            "category": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "code": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "detail": {
-              "type": [
-                "null",
-                "string"
-              ]
-            },
-            "field": {
-              "type": [
-                "null",
-                "string"
-              ]
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "category": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "code": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "detail": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              },
+              "field": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
             }
           }
-        }        
+        }
       }
     },
     "external_details": {
@@ -929,7 +941,7 @@
       "type": [
         "null",
         "string"
-      ]     
+      ]
     },
     "capabilities": {
       "type": [
