@@ -28,7 +28,37 @@
             "string"
           ]
         },
+        "sublocality": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "sublocality_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "sublocality_3": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "administrative_district_level_1": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "administrative_district_level_2": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "administrative_district_level_3": {
           "type": [
             "null",
             "string"
@@ -52,7 +82,25 @@
             "string"
           ]
         },
+        "address_line_3": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "postal_code": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "first_name": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
+        "last_name": {
           "type": [
             "null",
             "string"
@@ -93,6 +141,29 @@
         }
       }
     },
+    "nickname": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "birthday": {
+      "anyOf": [
+        {
+          "type": [
+            "null",
+            "string"
+          ],
+          "format": "date-time"
+        },
+        {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      ]
+    },
     "email_address": {
       "type": [
         "null",
@@ -129,6 +200,26 @@
         "null",
         "string"
       ]
+    },
+    "version": {
+      "type": [
+        "null",
+        "integer"
+      ]
+    },
+    "tax_ids": {
+      "type": [
+        "null",
+        "object"
+      ],
+      "properties": {
+        "eu_vat": {
+          "type": [
+            "null",
+            "string"
+          ]
+        }
+      }
     },
     "group_ids": {
       "type": [
