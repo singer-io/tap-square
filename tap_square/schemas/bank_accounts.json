@@ -46,6 +46,24 @@
         "string"
       ]
     },
+    "secondary_bank_identification_number": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "debit_mandate_reference_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "reference_id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
     "location_id": {
       "type": [
         "null",
