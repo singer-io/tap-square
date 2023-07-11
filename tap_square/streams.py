@@ -359,11 +359,9 @@ class TeamMembers(Stream):
         for page, _ in self.client.get_team_members(all_location_ids):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                singer.write_record(
-                    self.tap_stream_id,
-                    transformed_record,
-                )
+
                 if record[self.replication_key] > max_record_value:
+                    singer.write_record(self.tap_stream_id, transformed_record,)
                     max_record_value = transformed_record[self.replication_key]
 
             state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
