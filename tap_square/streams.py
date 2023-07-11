@@ -356,7 +356,7 @@ class TeamMembers(Stream):
         max_record_value = start_time
         all_location_ids = Locations.get_all_location_ids(self.client)
 
-        for page, _ in self.client.get_team_members(all_location_ids, start_time):
+        for page, _ in self.client.get_team_members(all_location_ids):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(

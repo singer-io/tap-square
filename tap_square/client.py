@@ -188,7 +188,7 @@ class SquareClient():
             body,
             'orders')
 
-    def get_team_members(self, location_ids, start_time):
+    def get_team_members(self, location_ids):
         body = {
             "query": {
                 "filter": {
