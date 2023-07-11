@@ -56,7 +56,6 @@ class TestClient():
 
     """
     Client used to perfrom GET, CREATE and UPDATE on streams.
-        NOTE: employees stream uses deprecated endpoints for CREATE and UPDATE
     """
     stream_to_data_schema = {
         'items': {'type': 'ITEM',
@@ -195,20 +194,6 @@ class TestClient():
             lambda bdy: self._client.catalog.search_catalog_objects(body=bdy),
             body,
             'objects')
-
-    def get_employees(self, bookmarked_cursor):
-        body = {
-            'limit': 50,
-        }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-
-        yield from self._get_v2_objects(
-            'employees',
-            lambda bdy: self._client.employees.list_employees(**bdy),
-            body,
-            'employees')
 
     def get_locations(self):
         body = {}
@@ -485,9 +470,6 @@ class TestClient():
             return [obj for page, _ in self.get_catalog('DISCOUNT', start_date, None) for obj in page]
         elif stream == 'taxes':
             return [obj for page, _ in self.get_catalog('TAX', start_date, None) for obj in page]
-        elif stream == 'employees':
-            return [obj for page, _ in self.get_employees(None) for obj in page
-                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'locations':
             return [obj for page, _ in self.get_locations() for obj in page]
         elif stream == 'bank_accounts':
@@ -524,13 +506,6 @@ class TestClient():
             return next(self.get_inventories(start_date, None))
         elif stream == 'payments':
             return next(self.get_payments(start_date, None))
-        elif stream == 'employees':
-            employees, cursor = next(self.get_roles(None))
-            employees_after_start_date = [
-                role for role in employees
-                if not start_date or role['updated_at'] >= start_date
-            ]
-            return employees_after_start_date, cursor
         elif stream == 'roles':
             roles, cursor = next(self.get_roles(None))
             roles_after_start_date = [
@@ -667,8 +642,6 @@ class TestClient():
             return self.create_taxes(num_records).body.get('objects')
         elif stream == 'modifier_lists':
             return self.create_modifier_list(num_records).body.get('objects')
-        elif stream == 'employees':
-            return self.create_employees_v1(num_records)
         elif stream == 'roles':
             return self.create_roles_v1(num_records)
         elif stream == 'inventories':
@@ -1155,32 +1128,6 @@ class TestClient():
         assert len(location_matching_ids) == 1
         return location_matching_ids[0]
 
-    def create_employees_v1(self, num_records):
-        if self.env_is_sandbox():
-            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
-
-        base_v1 = "https://connect.squareup.com/v1/me/"
-        endpoint = "employees"
-        full_url = base_v1 + endpoint
-
-        employees = []
-        for _ in range(num_records):
-            employee_id = self.make_id('employee').split('employee')[-1]
-            last_name = 'songerwriter' + employee_id
-            data = {
-                'first_name': 'singer',
-                'last_name': last_name,
-                'email': employee_id + '@sttichdata.com',
-                'authorized_location_ids': [],
-                'role_ids': [],  # This is needed for v1 upsert, but does not exist in v2
-            }
-
-            resp = self._retryable_request_method(lambda: requests.post(url=full_url, headers=self.get_headers(), json=data))
-
-            response = resp.json() # account for v1 to v2 changes
-            employees.append(self.convert_employees_v1_to_v2(response))
-        return employees
-
     def create_roles_v1(self, num_records):
         if self.env_is_sandbox():
             raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
@@ -1308,8 +1255,6 @@ class TestClient():
             return self.update_discounts(obj, version).body.get('objects')
         elif stream == 'taxes':
             return self.update_taxes(obj, version).body.get('objects')
-        elif stream == 'employees':
-            return [self.update_employees_v1(obj)]
         elif stream == 'roles':
             return [self.update_roles_v1(obj)]
         elif stream == 'modifier_lists':
@@ -1415,22 +1360,6 @@ class TestClient():
 
         resp = self._retryable_request_method(lambda: requests.put(url=endpoint, headers=self.get_headers(), json=data))
         return resp.json()
-
-    def update_employees_v1(self, obj):
-        employee_id = obj.get('id')
-        uid = self.make_id('employee')[1:]
-        data = {'first_name': uid,
-                'last_name': obj.get('last_name')}
-
-        response = self._update_object_v1("employees", employee_id, data)
-        return self.convert_employees_v1_to_v2(response)
-
-    @staticmethod
-    def convert_employees_v1_to_v2(employee_v1_response):
-        employee_v1_response['location_ids'] = employee_v1_response.get('authorized_location_ids', [])  # authorized_location_ids -> location_ids
-        del employee_v1_response['authorized_location_ids']
-        del employee_v1_response['role_ids']  # role_ids exists in v1 only
-        return employee_v1_response
 
     def update_roles_v1(self, obj):
         role_id = obj.get('id')

@@ -167,7 +167,6 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'customers': {'birthday'},
             'payments': {'customer_id', 'reference_id'},
             'locations': {'facebook_url'},
-            'employees': {'is_owner'},
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975

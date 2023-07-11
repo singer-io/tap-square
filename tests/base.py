@@ -51,7 +51,6 @@ class TestSquareBaseParent:
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
-            'employees': 50,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
             'roles': 100,
             'refunds': 100,
@@ -153,11 +152,6 @@ class TestSquareBaseParent:
                     self.REPLICATION_METHOD: self.INCREMENTAL,
                     self.REPLICATION_KEYS: {'updated_at'}
                 },
-                "employees": {
-                    self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
-                    self.START_DATE_KEY: 'updated_at'
-                },
                 "inventories": {
                     self.PRIMARY_KEYS: set(),
                     self.REPLICATION_METHOD: self.FULL,
@@ -209,6 +203,11 @@ class TestSquareBaseParent:
                     self.REPLICATION_METHOD: self.INCREMENTAL,
                     self.REPLICATION_KEYS: {'updated_at'}
                 },
+                "team_members": {
+                    self.PRIMARY_KEYS: {'id'},
+                    self.REPLICATION_METHOD: self.INCREMENTAL,
+                    self.REPLICATION_KEYS: {'updated_at'}
+                },
             }
 
             if self.get_environment() == self.SANDBOX:
@@ -226,7 +225,6 @@ class TestSquareBaseParent:
         def production_streams():
             """Some streams can only have data on the production app. We must test these separately"""
             return {
-                'employees',
                 'roles',
                 'bank_accounts',
                 'settlements',
@@ -460,7 +458,6 @@ class TestSquareBaseParent:
 
             # Force modifier_lists to go first and payments to go last
             create_test_data_streams = list(testable_streams)
-            create_test_data_streams = self._shift_to_start_of_list('employees', create_test_data_streams)
             create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
             # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
             create_test_data_streams = self._shift_to_end_of_list('payments', create_test_data_streams)
@@ -669,7 +666,7 @@ class TestSquareBaseParent:
             """
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-            elif stream in {'employees', 'roles'}:
+            elif stream in {'roles'}:
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
             elif stream == 'inventories':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})

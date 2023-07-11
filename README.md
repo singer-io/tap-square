@@ -12,7 +12,7 @@ This tap:
     * Categories
     * Discounts
     * Taxes
-    * Employees
+    * TeamMembers
     * Locations
     * BankAccounts
     * Refunds

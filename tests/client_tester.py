@@ -33,7 +33,6 @@ if __name__ == "__main__":
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
-        # 'employees',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -
