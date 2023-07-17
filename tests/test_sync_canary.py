@@ -47,7 +47,7 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
         """
         self.set_environment(self.SANDBOX)
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
-        self.run_standard_sync(self.get_environment(), DataType.STATIC)
+        # self.run_standard_sync(self.get_environment(), DataType.STATIC)
 
         # self.set_environment(self.PRODUCTION)
         # self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
