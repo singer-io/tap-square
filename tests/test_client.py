@@ -100,23 +100,17 @@ class TestClient():
 
         self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
 
-        # self._access_token = self._get_access_token()
-        self._access_token = self.access_token = self._get_access_token()
+        self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
-        if self.access_token:
-            return self.access_token
         body = {
             'client_id': self._client_id,
             'client_secret': self._client_secret,
             'grant_type': 'refresh_token',
             'refresh_token': self._refresh_token,
-            # 'access_token': None
         }
-        # if body['access_token'] is not None:
-        #     return body['access_token']
-        # else :
+
         client = Client(environment=self._environment)
 
         with singer.http_request_timer('GET access token'):
