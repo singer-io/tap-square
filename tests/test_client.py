@@ -104,6 +104,10 @@ class TestClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
+        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
+            LOGGER.info("Using access token from environment, not creating the new")
+            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+
         body = {
             'client_id': self._client_id,
             'client_secret': self._client_secret,
@@ -119,7 +123,8 @@ class TestClient():
         if result.is_error():
             error_message = result.errors if result.errors else result.body
             raise RuntimeError(error_message)
-        body['access_token'] = result.body['access_token']
+        LOGGER.info("Setting the access token in environment....")
+        os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
         return result.body['access_token']
 
     ##########################################################################
