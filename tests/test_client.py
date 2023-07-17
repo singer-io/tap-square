@@ -122,6 +122,7 @@ class TestClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
+            LOGGER.info("error_message :-----------: %s",error_message)
             raise RuntimeError(error_message)
         LOGGER.info("Setting the access token in environment....")
         os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
