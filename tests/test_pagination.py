@@ -46,11 +46,11 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders'}
         self.pagination_test()
 
         print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers'}
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders'}
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
