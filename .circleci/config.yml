@@ -41,7 +41,7 @@ jobs:
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==28.0.0.20230608'
-            run-test --tap=tap-square tests/test_sync_canary.py
+            run-test --tap=tap-square tests/test_automatic_fields.py
 
 
 workflows:
