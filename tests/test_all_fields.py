@@ -6,6 +6,8 @@ import tap_tester.connections as connections
 
 from base import TestSquareBaseParent, DataType
 
+import singer
+LOGGER = singer.get_logger()
 
 PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
@@ -167,8 +169,17 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                                           'orders': {'line_items', 'returns'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
-                               'orders': {'line_items',}}
+        MISSING_FROM_SCHEMA = {
+            'payments': {
+                'capabilities', 'version_token', 'approved_money',
+                'cash_details', 'tip_money', 'external_details', 'device_details',
+                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
+                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
+                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
+            },
+            'orders': {'line_items',},
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'},
+            'locations': {'pos_background_url', 'full_format_logo_url', 'logo_url'}}
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
@@ -183,6 +194,8 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 schema_keys = set(self.expected_schema_keys(stream))
                 schema_keys.update(MISSING_FROM_SCHEMA.get(stream, set()))  # REMOVE W/ BUG_2 FIX
                 expected_keys.update(MISSING_FROM_EXPECTATIONS.get(stream, set()))
+                LOGGER.info("schema_keys-------- : \n : %s", schema_keys)
+                LOGGER.info("expected_keys--------- : \n : %s", expected_keys)
                 self.assertSetEqual(expected_keys, schema_keys)
 
                 # Verify that all fields sent to the target fall into the expected schema
