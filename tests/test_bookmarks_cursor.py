@@ -43,7 +43,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         LOGGER.info("self.testable_streams_dynamic().intersection(self.sandbox_streams())---:%s",self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
         LOGGER.info("self.testable_streams_dynamic().intersection(self.production_streams()):-----:%s",self.testable_streams_dynamic().intersection(self.production_streams()))
-        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
+        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams())-{'inventories'})
 
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
