@@ -194,6 +194,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 schema_keys = set(self.expected_schema_keys(stream))
                 schema_keys.update(MISSING_FROM_SCHEMA.get(stream, set()))  # REMOVE W/ BUG_2 FIX
                 expected_keys.update(MISSING_FROM_EXPECTATIONS.get(stream, set()))
+                LOGGER.info("stream name +++++++++++: %s", stream)
                 LOGGER.info("schema_keys-------- : \n : %s", schema_keys)
                 LOGGER.info("expected_keys--------- : \n : %s", expected_keys)
                 self.assertSetEqual(expected_keys, schema_keys)
