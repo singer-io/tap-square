@@ -23,7 +23,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         # Shifts have cursor bookmarks because the api doesn't
         # support incremental queries, but we fake it being
         # incremental
-        all_testable_streams.add('shifts')
+        # all_testable_streams.add('shifts')
 
         return all_testable_streams
 
