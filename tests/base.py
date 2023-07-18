@@ -248,7 +248,8 @@ class TestSquareBaseParent:
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
                 'item',
                 'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
-                'employees'
+                'employees',     # Deprecated stream
+                'shifts'
             }
 
         def dynamic_data_streams(self):
