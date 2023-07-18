@@ -543,6 +543,8 @@ class TestSquareBaseParent:
 
             found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
             diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
+            LOGGER.info("found_catalog_names:***************: %s",found_catalog_names)
+            LOGGER.info("expected_check_streams:***************: %s",self.expected_check_streams)
             self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
             print("discovered schemas are OK")
 
