@@ -161,7 +161,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'taxes': {'absent_at_location_ids', 'created_at'},
             'customers': {'birthday'},
             'payments': {'customer_id', 'reference_id'},
-            'locations': {'facebook_url'},
+            'locations': {'facebook_url', 'pos_background_url', 'full_format_logo_url', 'logo_url'},
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
@@ -178,8 +178,9 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
             },
             'orders': {'line_items',},
-            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'},
-            'locations': {'pos_background_url', 'full_format_logo_url', 'logo_url'}}
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}}
+            # 'locations': {'pos_background_url', 'full_format_logo_url', 'logo_url'}
+            # }
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
