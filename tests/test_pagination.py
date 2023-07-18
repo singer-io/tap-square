@@ -44,30 +44,29 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
 
-        # self.set_environment(self.PRODUCTION)
-        # print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # self.START_DATE = self.get_properties().get('start_date')
-        # self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
-        # self.pagination_test()
-
-        # print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
-        # self.assertEqual(set(), self.TESTABLE_STREAMS,
-        #                  msg="Testable streams exist for this category.")
-        # print("\tThere are no testable streams.")
-
-        self.set_environment(self.SANDBOX)
-
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams()) - {'inventories'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories'}
         self.pagination_test()
 
         print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams()) - {'inventories'}
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories'}
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
+
+        # self.set_environment(self.PRODUCTION)
+
+        # print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # self.START_DATE = self.get_properties().get('start_date')
+        # self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams()) - {'inventories'}
+        # self.pagination_test()
+
+        # print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams()) - {'inventories'}
+        # self.assertEqual(set(), self.TESTABLE_STREAMS,
+        #                  msg="Testable streams exist for this category.")
+        # print("\tThere are no testable streams.")
 
     def pagination_test(self):
         """
