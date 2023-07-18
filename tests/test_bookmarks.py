@@ -65,6 +65,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()) - {'customers', 'inventories', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists'})
 
         # self.set_environment(self.PRODUCTION)
+        # 
         # production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
         # 
         # if production_testable_streams:
