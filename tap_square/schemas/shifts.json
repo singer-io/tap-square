@@ -23,12 +23,6 @@
         "string"
       ]
     },
-    "employee_id": {
-      "type": [
-        "null",
-        "string"
-      ]
-    },
     "version": {
       "type": [
         "null",
@@ -140,6 +134,12 @@
             }
           }
         },
+        "job_id": {
+          "type": [
+            "null",
+            "string"
+          ]
+        },
         "title": {
           "type": [
             "null",
@@ -155,6 +155,12 @@
       ]
     },
     "id": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "team_member_id": {
       "type": [
         "null",
         "string"

@@ -140,18 +140,6 @@
             "string"
           ]
         },
-        "locality": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
-        "organization": {
-          "type": [
-            "null",
-            "string"
-          ]
-        },
         "sublocality": {
           "type": [
             "null",
@@ -296,6 +284,24 @@
         "string"
       ],
       "format": "date-time"
+    },
+    "logo_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "pos_background_url": {
+      "type": [
+        "null",
+        "string"
+      ]
+    },
+    "full_format_logo_url": {
+      "type": [
+        "null",
+        "string"
+      ]
     }
   }
 }
