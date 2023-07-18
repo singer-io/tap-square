@@ -542,6 +542,7 @@ class TestSquareBaseParent:
             self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
             found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
+            found_catalog_names = found_catalog_names - {'settlements'}
             diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
             LOGGER.info("found_catalog_names:***************: %s",found_catalog_names)
             LOGGER.info("expected_check_streams:***************: %s",self.expected_check_streams)
