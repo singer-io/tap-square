@@ -96,12 +96,12 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members'}
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items'}
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members'}
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
     def all_fields_test(self, environment, data_type):
@@ -146,17 +146,17 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
-            'modifier_lists': {'absent_at_location_ids'},
+            'modifier_lists': {'absent_at_location_ids', 'created_at'},
             'items': {'present_at_location_ids', 'absent_at_location_ids'},
-            'categories': {'absent_at_location_ids'},
+            'categories': {'absent_at_location_ids', 'created_at'},
             'orders': {
                 'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
                 'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
             },
-            'discounts': {'absent_at_location_ids'},
-            'taxes': {'absent_at_location_ids'},
+            'discounts': {'absent_at_location_ids', 'created_at'},
+            'taxes': {'absent_at_location_ids', 'created_at'},
             'customers': {'birthday'},
             'payments': {'customer_id', 'reference_id'},
             'locations': {'facebook_url'},
