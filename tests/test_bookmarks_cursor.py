@@ -60,7 +60,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         For EACH stream that is interruptable with a bookmark cursor and not another one is replicated there are more than 1 page of data
         """
         print("\n\nRUNNING {}\n\n".format(self.name()))
-
+        LOGGER.info("////////testable_streams:%s",testable_streams)
         # Ensure tested streams have existing records
         stream_to_expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
 
