@@ -148,20 +148,27 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         print("total replicated row count: {}".format(replicated_row_count))
 
         MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
-            'modifier_lists': {'absent_at_location_ids', 'created_at'},
+            'modifier_lists': {'absent_at_location_ids'},
             'items': {'present_at_location_ids', 'absent_at_location_ids'},
-            'categories': {'absent_at_location_ids', 'created_at'},
+            'categories': {'absent_at_location_ids'},
             'orders': {
                 'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
                 'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
             },
-            'discounts': {'absent_at_location_ids', 'created_at'},
-            'taxes': {'absent_at_location_ids', 'created_at'},
+            'discounts': {'absent_at_location_ids'},
+            'taxes': {'absent_at_location_ids'},
             'customers': {'birthday'},
-            'payments': {'customer_id', 'reference_id'},
+            'payments': {
+                'customer_id', 'reference_id',
+                'cash_details', 'tip_money', 'external_details', 'device_details',
+                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
+                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
+                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
+            },
             'locations': {'facebook_url', 'pos_background_url', 'full_format_logo_url', 'logo_url'},
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
@@ -170,17 +177,13 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {
-            'payments': {
-                'capabilities', 'version_token', 'approved_money',
-                'cash_details', 'tip_money', 'external_details', 'device_details',
-                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
-                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
-                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
-            },
+            'payments': {'capabilities', 'version_token', 'approved_money',},
             'orders': {'line_items',},
-            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}}
-            # 'locations': {'pos_background_url', 'full_format_logo_url', 'logo_url'}
-            # }
+            'discounts': {'created_at'},
+            'modifier_lists': {'created_at'},
+            'categories': {'created_at'},
+            'taxes': {'created_at'}
+        }
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
