@@ -42,9 +42,10 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         self.START_DATE = self.get_properties().get('start_date')
 
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
-
+        LOGGER.info("self.testable_streams_dynamic().intersection(self.sandbox_streams())---:%s",self.testable_streams_dynamic().intersection(self.sandbox_streams()))
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
+        LOGGER.info("self.testable_streams_dynamic().intersection(self.production_streams()):-----:%s",self.testable_streams_dynamic().intersection(self.production_streams()))
         if production_testable_streams:
             self.bookmarks_test(production_testable_streams)
 

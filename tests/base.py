@@ -457,6 +457,7 @@ class TestSquareBaseParent:
 
             # Force modifier_lists to go first and payments to go last
             create_test_data_streams = list(testable_streams)
+            LOGGER.info("------------testable_streams: %s",testable_streams)
             create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
             # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
             create_test_data_streams = self._shift_to_end_of_list('payments', create_test_data_streams)
