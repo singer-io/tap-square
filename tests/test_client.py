@@ -496,12 +496,14 @@ class TestClient():
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
-        elif stream == 'settlements':
-            return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
+        # elif stream == 'settlements':
+        #     return [obj for page, _ in self.get_settlements_pages(start_date, None) for obj in page]
         elif stream == 'cash_drawer_shifts':
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         elif stream == 'customers':
             return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
+        # elif stream in ['settlements','employees']:
+        #     return []
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
