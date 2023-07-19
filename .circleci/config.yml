@@ -41,7 +41,7 @@ jobs:
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{bookmarks}*")
+            selected_tests=$(circleci tests glob "tests/*{discovery,bookmarks,all}*")
             echo -e "Tests running in this batch:\n$selected_tests\n"
             echo $selected_tests > ./tests-to-run
             if [ -s ./tests-to-run ]; then
@@ -54,9 +54,25 @@ jobs:
               exit 5
             fi
       - run: 
-          name : 'sleeping for 10 mins'
+          name : 'slepping for 9 mins 1'
           command: |
             sleep 540
+      - run: 
+          name : 'slepping for 9 mins 2'
+          command: |
+            sleep 540
+      - run: 
+          name : 'slepping for 9 mins 3'
+          command: |
+            sleep 540
+      - run: 
+          name : 'slepping for 9 mins 4'
+          command: |
+            sleep 540
+      - run: 
+          name : 'slepping for 5 mins'
+          command: |
+            sleep 300
       - run:
           name: 'Integration Tests part 2'
           command: |
@@ -64,7 +80,7 @@ jobs:
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{all}*")
+            selected_tests=$(circleci tests glob "tests/*{automatic,start_date,pagination,canary}*")
             echo -e "Tests running in this batch:\n$selected_tests\n"
             echo $selected_tests > ./tests-to-run
             if [ -s ./tests-to-run ]; then
@@ -76,121 +92,7 @@ jobs:
               echo "ERROR - File not found or file is empty!" >&2
               exit 5
             fi
-      - run: 
-          name : 'sleeping for 10 mins'
-          command: |
-            sleep 540
-      - run:
-          name: 'Integration Tests part 3'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{automatic}*")
-            echo -e "Tests running in this batch:\n$selected_tests\n"
-            echo $selected_tests > ./tests-to-run
-            if [ -s ./tests-to-run ]; then
-              for test_file in $(cat ./tests-to-run)
-              do
-                run-test --tap=tap-square $test_file
-              done
-            else
-              echo "ERROR - File not found or file is empty!" >&2
-              exit 5
-            fi
-      - run: 
-          name : 'sleeping for 10 mins'
-          command: |
-            sleep 540
-      - run:
-          name: 'Integration Tests part 4'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{start_date}*")
-            echo -e "Tests running in this batch:\n$selected_tests\n"
-            echo $selected_tests > ./tests-to-run
-            if [ -s ./tests-to-run ]; then
-              for test_file in $(cat ./tests-to-run)
-              do
-                run-test --tap=tap-square $test_file
-              done
-            else
-              echo "ERROR - File not found or file is empty!" >&2
-              exit 5
-            fi
-      - run: 
-          name : 'sleeping for 10 mins'
-          command: |
-            sleep 540
-      - run:
-          name: 'Integration Tests part 5'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{discovery}*")
-            echo -e "Tests running in this batch:\n$selected_tests\n"
-            echo $selected_tests > ./tests-to-run
-            if [ -s ./tests-to-run ]; then
-              for test_file in $(cat ./tests-to-run)
-              do
-                run-test --tap=tap-square $test_file
-              done
-            else
-              echo "ERROR - File not found or file is empty!" >&2
-              exit 5
-            fi  
-      - run: 
-          name : 'sleeping for 10 mins'
-          command: |
-            sleep 540
-      - run:
-          name: 'Integration Tests part 6'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{pagination}*")
-            echo -e "Tests running in this batch:\n$selected_tests\n"
-            echo $selected_tests > ./tests-to-run
-            if [ -s ./tests-to-run ]; then
-              for test_file in $(cat ./tests-to-run)
-              do
-                run-test --tap=tap-square $test_file
-              done
-            else
-              echo "ERROR - File not found or file is empty!" >&2
-              exit 5
-            fi
-      - run: 
-          name : 'sleeping for 10 mins'
-          command: |
-            sleep 540
-      - run:
-          name: 'Integration Tests part 7'
-          command: |
-            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
-            source dev_env.sh
-            source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==28.0.0.20230608'
-            selected_tests=$(circleci tests glob "tests/*{canary}*")
-            echo -e "Tests running in this batch:\n$selected_tests\n"
-            echo $selected_tests > ./tests-to-run
-            if [ -s ./tests-to-run ]; then
-              for test_file in $(cat ./tests-to-run)
-              do
-                run-test --tap=tap-square $test_file
-              done
-            else
-              echo "ERROR - File not found or file is empty!" >&2
-              exit 5
-            fi
+
 
 workflows:
   version: 2
