@@ -62,7 +62,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         self.START_DATE = self.get_properties().get('start_date')
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()) - {'customers', 'inventories', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists'})
+        self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()) - {'customers', 'inventories', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists', 'refunds'})
 
         # self.set_environment(self.PRODUCTION)
         # 

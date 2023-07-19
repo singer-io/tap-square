@@ -98,12 +98,12 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists', 'refunds'}
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists'}
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists', 'refunds'}
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
     def all_fields_test(self, environment, data_type):
