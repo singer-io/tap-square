@@ -35,13 +35,47 @@ jobs:
       - store_artifacts:
           path: htmlcov
       - run:
-          name: 'Integration Tests'
+          name: 'Integration Tests part 1'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
             pip install 'squareup==28.0.0.20230608'
-            run-test --tap=tap-square tests
+            selected_tests=$(circleci tests glob "tests/*{discovery,bookmarks,all}*")
+            echo -e "Tests running in this batch:\n$selected_tests\n"
+            echo $selected_tests > ./tests-to-run
+            if [ -s ./tests-to-run ]; then
+              for test_file in $(cat ./tests-to-run)
+              do
+                run-test --tap=tap-square $test_file
+              done
+            else
+              echo "ERROR - File not found or file is empty!" >&2
+              exit 5
+            fi
+      - run: 
+          name : 'slepping for 45 mins'
+          command: |
+            sleep 2700
+      - run:
+          name: 'Integration Tests part 2'
+          command: |
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+            source dev_env.sh
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            pip install 'squareup==28.0.0.20230608'
+            selected_tests=$(circleci tests glob "tests/*{automatic,start_date,pagination,canary}*")
+            echo -e "Tests running in this batch:\n$selected_tests\n"
+            echo $selected_tests > ./tests-to-run
+            if [ -s ./tests-to-run ]; then
+              for test_file in $(cat ./tests-to-run)
+              do
+                run-test --tap=tap-square $test_file
+              done
+            else
+              echo "ERROR - File not found or file is empty!" >&2
+              exit 5
+            fi
 
 
 workflows:
