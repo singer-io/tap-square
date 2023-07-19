@@ -173,11 +173,11 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
                 actual_automatic_fields = {item.get("breadcrumb", ["properties", None])[1]
                                            for item in metadata
                                            if item.get("metadata").get("inclusion") == "automatic"}
-                # self.assertEqual(expected_automatic_fields,
-                #                  actual_automatic_fields,
-                #                  msg="expected {} automatic fields but got {}".format(
-                #                      expected_automatic_fields,
-                #                      actual_automatic_fields))
+                self.assertEqual(expected_automatic_fields,
+                                 actual_automatic_fields,
+                                 msg="expected {} automatic fields but got {}".format(
+                                     expected_automatic_fields,
+                                     actual_automatic_fields))
 
                 # verify that all other fields have inclusion of available
                 # This assumes there are no unsupported fields for SaaS sources
