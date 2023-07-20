@@ -46,7 +46,7 @@ jobs:
               do
                 run-test --tap=tap-square $test_file
                 echo Sleeping for 10 mins before next test starts
-                sleep 600
+                sleep 580
               done
 
 workflows:
