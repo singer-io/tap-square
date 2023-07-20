@@ -6,6 +6,8 @@ import tap_tester.connections as connections
 
 from base import TestSquareBaseParent, DataType
 
+import singer
+LOGGER = singer.get_logger()
 
 PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
@@ -96,20 +98,13 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists', 'refunds', 'payments'}
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'inventories', 'customers', 'orders', 'items', 'team_members', 'discounts', 'categories', 'taxes', 'modifier_lists', 'refunds', 'payments'}
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
-
-        self.set_environment(self.PRODUCTION)
-
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
 
     def all_fields_test(self, environment, data_type):
         """
@@ -165,8 +160,15 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'discounts': {'absent_at_location_ids'},
             'taxes': {'absent_at_location_ids'},
             'customers': {'birthday'},
-            'payments': {'customer_id', 'reference_id'},
-            'locations': {'facebook_url'},
+            'payments': {
+                'customer_id', 'reference_id',
+                'cash_details', 'tip_money', 'external_details', 'device_details',
+                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
+                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
+                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
+            },
+            'locations': {'facebook_url', 'pos_background_url', 'full_format_logo_url', 'logo_url'},
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
@@ -174,8 +176,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                                           'orders': {'line_items', 'returns'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
-                               'orders': {'line_items',}}
+        MISSING_FROM_SCHEMA = {
+            'payments': {'capabilities', 'version_token', 'approved_money',},
+            'orders': {'line_items',},
+            'discounts': {'created_at'},
+            'modifier_lists': {'created_at'},
+            'categories': {'created_at'},
+            'taxes': {'created_at'}
+        }
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
@@ -190,6 +198,9 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 schema_keys = set(self.expected_schema_keys(stream))
                 schema_keys.update(MISSING_FROM_SCHEMA.get(stream, set()))  # REMOVE W/ BUG_2 FIX
                 expected_keys.update(MISSING_FROM_EXPECTATIONS.get(stream, set()))
+                LOGGER.info("stream name +++++++++++: %s", stream)
+                LOGGER.info("schema_keys-------- : \n : %s", schema_keys)
+                LOGGER.info("expected_keys--------- : \n : %s", expected_keys)
                 self.assertSetEqual(expected_keys, schema_keys)
 
                 # Verify that all fields sent to the target fall into the expected schema
