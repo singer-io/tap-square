@@ -70,6 +70,10 @@ jobs:
           command: |
             sleep 540
       - run: 
+          name : 'slepping for 9 mins 5'
+          command: |
+            sleep 540
+      - run: 
           name : 'slepping for 5 mins'
           command: |
             sleep 300
