@@ -3,8 +3,8 @@ import json
 
 import singer
 from singer.catalog import write_catalog
-from .discover import discover
-from .sync import sync
+from tap_square.discover import discover
+from tap_square.sync import sync
 
 LOGGER = singer.get_logger()
 

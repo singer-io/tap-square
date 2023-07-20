@@ -126,36 +126,6 @@ class Taxes(CatalogStream):
     object_type = 'TAX'
 
 
-class Employees(FullTableStream):
-    tap_stream_id = 'employees'
-    key_properties = ['id']
-    replication_method = 'FULL_TABLE'
-    valid_replication_keys = []
-    replication_key = None
-
-    def get_pages(self, bookmarked_cursor, start_time):
-        yield from self.client.get_employees(bookmarked_cursor)
-
-    def sync(self, state, stream_schema, stream_metadata, config, transformer):
-        start_time = config['start_date']
-        bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
-            for record in page:
-                if record['updated_at'] >= start_time:
-                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
-                    singer.write_record(
-                        self.tap_stream_id,
-                        transformed_record,
-                    )
-            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
-
-        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
-        singer.write_state(state)
-        return state
-
-
 class ModifierLists(CatalogStream):
     tap_stream_id = 'modifier_lists'
     key_properties = ['id']
@@ -373,6 +343,30 @@ class Settlements(FullTableStream):
             # Settlements requests can only take up to 1 location_id at a time
             yield from self.client.get_settlements(location_id, start_time, bookmarked_cursor)
 
+class TeamMembers(Stream):
+    tap_stream_id = 'team_members'
+    key_properties = ['id']
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    object_type = 'team_members'
+
+    def sync(self, state, stream_schema, stream_metadata, config, transformer):
+        start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        max_record_value = start_time
+        all_location_ids = Locations.get_all_location_ids(self.client)
+
+        for page, _ in self.client.get_team_members(all_location_ids):
+            for record in page:
+                transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+
+                if record[self.replication_key] > max_record_value:
+                    singer.write_record(self.tap_stream_id, transformed_record,)
+                    max_record_value = transformed_record[self.replication_key]
+
+            state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
+            singer.write_state(state)
+        return state
 
 class Customers(Stream):
     tap_stream_id = 'customers'
@@ -401,7 +395,6 @@ STREAMS = {
     'categories': Categories,
     'discounts': Discounts,
     'taxes': Taxes,
-    'employees': Employees,
     'locations': Locations,
     'bank_accounts': BankAccounts,
     'refunds': Refunds,
@@ -413,5 +406,6 @@ STREAMS = {
     'shifts': Shifts,
     'cash_drawer_shifts': CashDrawerShifts,
     'settlements': Settlements,
+    'team_members': TeamMembers,
     'customers': Customers
 }

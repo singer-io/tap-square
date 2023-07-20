@@ -127,20 +127,6 @@ class SquareClient():
             body,
             'objects')
 
-    def get_employees(self, bookmarked_cursor):
-        body = {
-            'limit': 50,
-        }
-
-        if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
-
-        yield from self._get_v2_objects(
-            'employees',
-            lambda bdy: self._client.employees.list_employees(**bdy),
-            body,
-            'employees')
-
     def get_locations(self):
         body = {}
 
@@ -201,6 +187,22 @@ class SquareClient():
             lambda bdy: self._client.orders.search_orders(body=bdy),
             body,
             'orders')
+
+    def get_team_members(self, location_ids):
+        body = {
+            "query": {
+                "filter": {
+                    "location_ids": location_ids,
+                    "status": "ACTIVE"
+                }
+            },
+            "limit": 200
+        }
+        yield from self._get_v2_objects(
+            'team_members',
+            lambda bdy: self._client.team.search_team_members(body=bdy),
+            body,
+            'team_members')
 
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
