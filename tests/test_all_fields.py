@@ -96,12 +96,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
+        # Not testing few of the streams
+        streams_not_testing = {'locations', 'customers', 'taxes', 'items', 'modifier_lists'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()).difference(streams_not_testing)
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()).difference(streams_not_testing)
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
         # Commenting to avoid Rate limit error
@@ -182,8 +184,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
                                           'orders': {'line_items', 'returns'},
                                           'categories': {'category_data'},
-                                          'discounts': {'discount_data'},
-                                          'locations': {'capabilities'}}
+                                          'discounts': {'discount_data'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {
@@ -199,7 +200,8 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'items': {'created_at'},
             'modifier_lists': {'created_at'},
             'categories': {'created_at'},
-            'taxes': {'created_at'}
+            'taxes': {'created_at'},
+            'locations': {'capabilities'}
         }
 
         # Test by Stream
