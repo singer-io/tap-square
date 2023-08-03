@@ -182,7 +182,8 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
                                           'orders': {'line_items', 'returns'},
                                           'categories': {'category_data'},
-                                          'discounts': {'discount_data'}}
+                                          'discounts': {'discount_data'},
+                                          'locations': {'capabilities'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {
@@ -195,6 +196,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details',
                 'is_deleted', 'reason'},
             'discounts': {'created_at'},
+            'items': {'created_at'},
             'modifier_lists': {'created_at'},
             'categories': {'created_at'},
             'taxes': {'created_at'}
