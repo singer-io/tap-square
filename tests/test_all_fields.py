@@ -161,11 +161,12 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
-                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
+                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money',
+                'discounts', 'reference_id', 'taxes', 'pricing_options', 'service_charges'
             },
             'discounts': {'absent_at_location_ids'},
             'taxes': {'absent_at_location_ids'},
-            'customers': {'birthday'},
+            'customers': {'birthday', 'tax_ids', 'group_ids', 'reference_id', 'version', 'segment_ids'},
             'payments': {
                 'customer_id', 'reference_id',
                 'cash_details', 'tip_money', 'external_details', 'device_details',
@@ -179,12 +180,20 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
-                                          'orders': {'line_items', 'returns'}}
+                                          'orders': {'line_items', 'returns'},
+                                          'categories': {'category_data'},
+                                          'discounts': {'discount_data'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {
             'payments': {'capabilities', 'version_token', 'approved_money',},
-            'orders': {'line_items',},
+            'orders': {
+                'line_items',
+                'category_data', 'amount_money', 'processing_fee', 'refund_ids', 'delayed_until',
+                'delay_duration', 'delay_action', 'note', 'status', 'order_id', 'type',
+                'source_type', 'payment_id', 'tax_data', 'receipt_number', 'receipt_url',
+                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details',
+                'is_deleted', 'reason'},
             'discounts': {'created_at'},
             'modifier_lists': {'created_at'},
             'categories': {'created_at'},
