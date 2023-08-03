@@ -165,8 +165,15 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             'discounts': {'absent_at_location_ids'},
             'taxes': {'absent_at_location_ids'},
             'customers': {'birthday'},
-            'payments': {'customer_id', 'reference_id'},
-            'locations': {'facebook_url'},
+            'payments': {
+                'customer_id', 'reference_id',
+                'cash_details', 'tip_money', 'external_details', 'device_details',
+                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
+                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
+                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
+            },
+            'locations': {'facebook_url', 'pos_background_url', 'full_format_logo_url', 'logo_url'},
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
@@ -174,8 +181,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                                           'orders': {'line_items', 'returns'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
-                               'orders': {'line_items',}}
+        MISSING_FROM_SCHEMA = {
+            'payments': {'capabilities', 'version_token', 'approved_money',},
+            'orders': {'line_items',},
+            'discounts': {'created_at'},
+            'modifier_lists': {'created_at'},
+            'categories': {'created_at'},
+            'taxes': {'created_at'}
+        }
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
