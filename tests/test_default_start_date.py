@@ -56,9 +56,10 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         self.set_environment(self.SANDBOX)
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.sandbox_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.sandbox_streams()))
-        self.set_environment(self.PRODUCTION)
-        self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
-        self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
+        # Commenting to avoid Rate limit error
+        # self.set_environment(self.PRODUCTION)
+        # self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
+        # self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
 
     def default_start_date_test(self, data_type, testable_streams):
         streams_without_data = self.untestable_streams()

@@ -252,7 +252,8 @@ class TestSquareBaseParent:
                 'payouts',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
                 'employees',     # Deprecated stream
                 'item',
-                'shifts'
+                'shifts',
+                'team_members'  # Only 1 record present
             }
 
         def dynamic_data_streams(self):
