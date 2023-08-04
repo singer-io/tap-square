@@ -447,7 +447,31 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
-      - non-parallizable-tests:
+      - automatic-fields-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - all-fields-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - bookmarks-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - static-bookmarks-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - start-date-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - pagination-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - bookmarks-cursor-test:
           context:
             - circleci-user
             - tap-tester-user
