@@ -179,7 +179,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing automatic fields'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -208,7 +208,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing all fields'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -237,7 +237,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing bookmarks'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -266,7 +266,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing static bookmarks'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -295,7 +295,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing Start Date'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -324,7 +324,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing pagination'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
@@ -353,7 +353,7 @@ jobs:
             pip install -U 'pip<19.2' 'setuptools<51.0.0'
             pip install .[dev]
       - run:
-          name: 'Testing Default Start Date'
+          name: 'Testing bookmarks cursor'
           command: |
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
