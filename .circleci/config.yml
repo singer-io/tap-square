@@ -412,7 +412,43 @@ workflows:
             - tap-tester-user
           requires:
             - queue
-      - non-parallizable-tests:
+      - automatic-fields-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - all-fields-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - bookmarks-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - static-bookmarks-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - start-date-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - pagination-test:
+          context:
+            - circleci-user
+            - tap-tester-user
+          requires:
+            - queue
+      - bookmarks-cursor-test:
           context:
             - circleci-user
             - tap-tester-user
