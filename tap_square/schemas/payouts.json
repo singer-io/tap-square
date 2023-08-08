@@ -48,7 +48,7 @@
             "integer"
           ]
         },
-        "currency_code": {
+        "currency": {
           "type": [
             "null",
             "string"
@@ -124,7 +124,7 @@
                   "integer"
                 ]
               },
-              "currency_code": {
+              "currency": {
                 "type": [
                   "null",
                   "string"
