@@ -4,7 +4,7 @@
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.0.0...v2.1.0)
 
-* Removes `settlements` stream as it is deprecated and replaced it with the `payouts` stream [#109](https://github.com/singer-io/tap-square/pull/109)
+* Replaces the deprecated `settlements` stream with the `payouts` stream [#109](https://github.com/singer-io/tap-square/pull/109)
 
 ## [v2.0.0](https://github.com/singer-io/tap-square/tree/v1.w.0) (2023-06-08)
 
