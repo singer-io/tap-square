@@ -104,6 +104,10 @@ class TestClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
+        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
+            LOGGER.info("Using access token from environment, not creating the new")
+            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+
         body = {
             'client_id': self._client_id,
             'client_secret': self._client_secret,
@@ -118,8 +122,11 @@ class TestClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
+            LOGGER.info("error_message :-----------: %s",error_message)
             raise RuntimeError(error_message)
 
+        LOGGER.info("Setting the access token in environment....")
+        os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
         return result.body['access_token']
 
     ##########################################################################
@@ -242,6 +249,22 @@ class TestClient():
             lambda bdy: self._client.orders.search_orders(body=bdy),
             body,
             'orders')
+
+    def get_team_members(self, location_ids):
+        body = {
+            "query": {
+                "filter": {
+                    "location_ids": location_ids,
+                    "status": "ACTIVE"
+                }
+            },
+            "limit": 200
+        }
+        yield from self._get_v2_objects(
+            'team_members',
+            lambda bdy: self._client.team.search_team_members(body=bdy),
+            body,
+            'team_members')
 
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
@@ -434,6 +457,13 @@ class TestClient():
             for page, cursor in self.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
                 yield page, cursor
 
+    def get_team_members_pages(self, start_time, bookmarked_cursor):
+        # refactored from team_members.sync
+        all_location_ids = self.get_all_location_ids()
+
+        for page, cursor in self.get_team_members(all_location_ids):
+            yield page, cursor
+
     def get_cds_pages(self, start_time, bookmarked_cursor):
         # refactored from cash_drawer_shifts.sync
         for location_id in self.get_all_location_ids():
@@ -474,6 +504,8 @@ class TestClient():
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         elif stream == 'customers':
             return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
+        elif stream == 'team_members':
+            return [obj for page, _ in self.get_team_members_pages(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
