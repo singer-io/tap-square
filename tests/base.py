@@ -41,7 +41,7 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
-        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'settlements'}
+        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'payouts'}
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
@@ -55,11 +55,11 @@ class TestSquareBaseParent:
             'roles': 100,
             'refunds': 100,
             'payments': 100,
+            'payouts': 100,
             'customers': 100,
             'modifier_lists': DEFAULT_BATCH_LIMIT,
             'orders': 500,
             'shifts': 200,
-            'settlements': 200,
         }
 
         def setUp(self):
@@ -180,6 +180,10 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                 },
+                "payouts": {
+                    self.PRIMARY_KEYS: {'id'},
+                    self.REPLICATION_METHOD: self.FULL,
+                },
                 "refunds": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
@@ -188,10 +192,6 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                     self.START_DATE_KEY: 'updated_at'
-                },
-                "settlements": {
-                    self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
                 },
                 "shifts": {
                     self.PRIMARY_KEYS: {'id'},
@@ -227,7 +227,6 @@ class TestSquareBaseParent:
             return {
                 'roles',
                 'bank_accounts',
-                'settlements',
             }
 
         def sandbox_streams(self):
@@ -250,7 +249,7 @@ class TestSquareBaseParent:
             return {
                 'bank_accounts',  # No endpoints for CREATE or UPDATE
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
-                'settlements',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
+                'payouts',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
             }
 
         def dynamic_data_streams(self):
