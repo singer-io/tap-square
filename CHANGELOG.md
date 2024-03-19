@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.1.1] (2023-06-08)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.0...v2.1.1)
+
+* Bugfix to replicate `payouts` stream records [#117](https://github.com/singer-io/tap-square/pull/117)
+
 ## [v2.1.0] (2023-06-08)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.0.0...v2.1.0)

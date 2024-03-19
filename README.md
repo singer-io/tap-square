@@ -17,7 +17,7 @@ This tap:
     * BankAccounts
     * Refunds
     * Payments
-    * Payouts    
+    * Payouts
     * ModifierLists
     * Inventories
     * Orders
