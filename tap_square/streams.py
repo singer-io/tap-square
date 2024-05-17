@@ -189,7 +189,9 @@ class Payments(FullTableStream):
     object_type = 'PAYMENT'
 
     def get_pages(self, bookmarked_cursor, start_time):
-        yield from self.client.get_payments(start_time, bookmarked_cursor)
+        for location_id in Locations.get_all_location_ids(self.client):
+            # Payments requests can only take up to 1 location_id at a time
+            yield from self.client.get_payments(location_id, start_time, bookmarked_cursor)
 
 
 class Orders(Stream):

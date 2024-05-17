@@ -253,23 +253,34 @@ class SquareClient():
             body,
             'refunds')
 
-    def get_payments(self, start_time, bookmarked_cursor):
-        start_time = utils.strptime_to_utc(start_time)
-        start_time = start_time - timedelta(milliseconds=1)
-        start_time = utils.strftime(start_time)
-
-        body = {
-        }
-        body['begin_time'] = start_time
-
+    def get_payments(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
 
-        yield from self._get_v2_objects(
-            'payments',
-            lambda bdy: self._client.payments.list_payments(**bdy),
-            body,
-            'payments')
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                # initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
+
+            with singer.http_request_timer('GET payments'):
+                result = self._retryable_v2_method(
+                    lambda bdy: self._client.payments.list_payments(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=1000,
+                    ),
+                    None,
+                )
+
+            yield (result.body.get('payments', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
 
     def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
