@@ -82,8 +82,6 @@ class FullTableStream(Stream):
                     self.tap_stream_id,
                     transformed_record,
                 )
-            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
 
         state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         singer.write_state(state)
