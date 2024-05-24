@@ -82,8 +82,6 @@ class FullTableStream(Stream):
                     self.tap_stream_id,
                     transformed_record,
                 )
-            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
 
         state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         singer.write_state(state)
@@ -189,7 +187,9 @@ class Payments(FullTableStream):
     object_type = 'PAYMENT'
 
     def get_pages(self, bookmarked_cursor, start_time):
-        yield from self.client.get_payments(start_time, bookmarked_cursor)
+        for location_id in Locations.get_all_location_ids(self.client):
+            # Payments requests can only take up to 1 location_id at a time
+            yield from self.client.get_payments(location_id, start_time, bookmarked_cursor)
 
 
 class Orders(Stream):
