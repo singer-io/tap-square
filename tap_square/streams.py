@@ -178,18 +178,37 @@ class Refunds(FullTableStream):
         yield from self.client.get_refunds(start_time, bookmarked_cursor)
 
 
-class Payments(FullTableStream):
+class Payments(Stream):
     tap_stream_id = 'payments'
     key_properties = ['id']
-    replication_method = 'FULL_TABLE'
-    valid_replication_keys = []
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
     replication_key = None
     object_type = 'PAYMENT'
 
-    def get_pages(self, bookmarked_cursor, start_time):
-        for location_id in Locations.get_all_location_ids(self.client):
-            # Payments requests can only take up to 1 location_id at a time
-            yield from self.client.get_payments(location_id, start_time, bookmarked_cursor)
+    # def get_pages(self, bookmarked_cursor, start_time):
+    #     for location_id in Locations.get_all_location_ids(self.client):
+    #         # Payments requests can only take up to 1 location_id at a time
+    #         yield from self.client.get_payments(location_id, start_time, bookmarked_cursor)
+
+    def sync(self, state, stream_schema, stream_metadata, config, transformer):
+        bookmarked_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        start_time = config.get('start_date')
+        max_record_value = bookmarked_time
+        all_location_ids = Locations.get_all_location_ids(self.client)
+
+        for location_id in all_location_ids:
+            for page, _ in self.client.get_payments(location_id, start_time):
+                for record in page:
+                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+
+                    if record[self.replication_key] > max_record_value:
+                        singer.write_record(self.tap_stream_id, transformed_record,)
+                        max_record_value = transformed_record[self.replication_key]
+
+                state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
+                singer.write_state(state)
+        return state
 
 
 class Orders(Stream):
