@@ -183,13 +183,9 @@ class Payments(Stream):
     key_properties = ['id']
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
-    replication_key = None
+    replication_key = 'updated_at'
     object_type = 'PAYMENT'
 
-    # def get_pages(self, bookmarked_cursor, start_time):
-    #     for location_id in Locations.get_all_location_ids(self.client):
-    #         # Payments requests can only take up to 1 location_id at a time
-    #         yield from self.client.get_payments(location_id, start_time, bookmarked_cursor)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         bookmarked_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -198,16 +194,16 @@ class Payments(Stream):
         all_location_ids = Locations.get_all_location_ids(self.client)
 
         for location_id in all_location_ids:
-            for page, _ in self.client.get_payments(location_id, start_time):
+            for page, _ in self.client.get_payments(location_id, start_time, bookmarked_cursor = None):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
 
-                    if record[self.replication_key] > max_record_value:
+                    if record[self.replication_key] >= bookmarked_time:
                         singer.write_record(self.tap_stream_id, transformed_record,)
-                        max_record_value = transformed_record[self.replication_key]
+                        max_record_value = max(transformed_record[self.replication_key], max_record_value)
 
-                state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
-                singer.write_state(state)
+        state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
+        singer.write_state(state)
         return state
 
 

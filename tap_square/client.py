@@ -272,9 +272,8 @@ class SquareClient():
                         location_id=location_id,
                         begin_time=start_time,
                         end_time=end_time,
-                        sort_order = 'ASC',
                         cursor=cursor,
-                        limit=1000,
+                        limit=100,
                     ),
                     None,
                 )
