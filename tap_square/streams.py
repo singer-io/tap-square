@@ -184,6 +184,8 @@ class Payments(Stream):
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
+    # If the records are not updated at all since the creation time and it has missing the updated_at field
+    second_replication_key = 'created_at'
     object_type = 'PAYMENT'
 
 
@@ -198,9 +200,9 @@ class Payments(Stream):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
 
-                    if record[self.replication_key] >= bookmarked_time:
+                    if record.get(self.replication_key, self.second_replication_key) >= bookmarked_time:
                         singer.write_record(self.tap_stream_id, transformed_record,)
-                        max_record_value = max(transformed_record[self.replication_key], max_record_value)
+                        max_record_value = max(transformed_record.get(self.replication_key, self.second_replication_key), max_record_value)
 
         state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
         singer.write_state(state)
