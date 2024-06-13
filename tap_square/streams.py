@@ -184,7 +184,7 @@ class Payments(Stream):
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
-    # If the records are not updated at all since the creation time and it has missing the updated_at field
+    # If the records are not updated at all since those are created and if it has missing the updated_at field
     second_replication_key = 'created_at'
     object_type = 'PAYMENT'
 
