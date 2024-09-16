@@ -373,6 +373,6 @@ class SquareClient():
                     None,
                 )
 
-            yield (result.body.get('items', []), result.body.get('cursor'))
+            yield (result.body.get('payouts', []), result.body.get('cursor'))
 
             cursor = result.body.get('cursor')
