@@ -202,7 +202,9 @@ class Payments(Stream):
 
                     if record.get(self.replication_key, self.second_replication_key) >= bookmarked_time:
                         singer.write_record(self.tap_stream_id, transformed_record,)
-                        max_record_value = max(transformed_record.get(self.replication_key, self.second_replication_key), max_record_value)
+                        max_record_value = max(transformed_record.get(self.replication_key) or \
+                                               transformed_record.get(self.second_replication_key), \
+                                                max_record_value)
 
         state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_record_value)
         singer.write_state(state)
