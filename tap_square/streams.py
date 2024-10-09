@@ -191,12 +191,11 @@ class Payments(Stream):
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         bookmarked_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
-        start_time = config.get('start_date')
         max_record_value = bookmarked_time
         all_location_ids = Locations.get_all_location_ids(self.client)
 
         for location_id in all_location_ids:
-            for page, _ in self.client.get_payments(location_id, start_time, bookmarked_cursor = None):
+            for page, _ in self.client.get_payments(location_id, bookmarked_time, bookmarked_cursor = None):
                 for record in page:
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
 
