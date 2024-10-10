@@ -90,6 +90,7 @@ class SquareClient():
             if 'Service Unavailable' in error_message \
                 or 'upstream connect error or disconnect/reset before headers' in error_message \
                 or '<span class="cf-error-code">1101</span>' in error_message \
+                or error_message.startswith('<!DOCTYPE html>') \
                 or result.status_code == 429 or result.status_code >= 500:
                 raise RetryableError(error_message)
             else:
