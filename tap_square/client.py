@@ -86,6 +86,7 @@ class SquareClient():
         result = request_method(body, **kwargs)
 
         if result.is_error():
+            LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
             if 'Service Unavailable' in error_message \
                 or 'upstream connect error or disconnect/reset before headers' in error_message \
