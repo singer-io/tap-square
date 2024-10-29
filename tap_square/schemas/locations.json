@@ -33,14 +33,14 @@
             "null",
             "string"
           ],
-          "format": "singer-decimal"
+          "format": "singer.decimal"
         },
         "longitude": {
           "type": [
             "null",
             "string"
           ],
-          "format": "singer-decimal"
+          "format": "singer.decimal"
         }
       }
     },
