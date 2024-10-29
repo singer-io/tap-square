@@ -89,7 +89,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
+            pip install -U pip setuptools
             pip install .[dev]
       - run:
           name: 'Test Discovery'
@@ -97,7 +97,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_discovery.py
       - slack/status:
           channel: 'stitch-tap-tester-tests'
@@ -118,6 +118,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
+            pip install -U pip setuptools
             pip install .[dev]
       - run:
           name: 'Testing Sync Canary'
@@ -125,7 +126,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_sync_canary.py
       - slack/status:
           channel: 'stitch-tap-tester-tests'
@@ -146,7 +147,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
+            pip install -U pip setuptools
             pip install .[dev]
       - run:
           name: 'Testing Default Start Date'
@@ -154,7 +155,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_default_start_date.py
       - slack/status:
           channel: 'stitch-tap-tester-tests'
@@ -175,7 +176,7 @@ jobs:
           command: |
             python3 -m venv /usr/local/share/virtualenvs/tap-square
             source /usr/local/share/virtualenvs/tap-square/bin/activate
-            pip install -U 'pip<19.2' 'setuptools<51.0.0'
+            pip install -U pip setuptools
             pip install .[dev]
       - run:
           when: always
@@ -184,7 +185,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_automatic_fields.py
       - run:
           when: always
@@ -193,7 +194,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_all_fields.py
       - run:
           when: always
@@ -202,7 +203,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_bookmarks.py
       - run:
           when: always
@@ -211,7 +212,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_bookmarks_static.py
       - run:
           when: always
@@ -220,7 +221,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_start_date.py
       - run:
           when: always
@@ -229,7 +230,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_pagination.py
       - run:
           when: always
@@ -238,7 +239,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            pip install 'squareup==5.3.0.20200528'
+            pip install 'squareup==28.0.0.20230608'
             run-test --tap=tap-square tests/test_bookmarks_cursor.py
       - slack/status:
           channel: 'stitch-tap-tester-tests'
