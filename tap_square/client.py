@@ -2,7 +2,6 @@ from datetime import timedelta
 import urllib.parse
 
 from square.client import Client
-from square.exceptions.api_exception import APIException
 from singer import utils
 import singer
 import requests
@@ -55,14 +54,6 @@ class SquareClient():
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-    @backoff.on_exception(
-        backoff.expo,
-        (RetryableError, APIException),
-        max_time=180, # seconds
-        giveup=should_not_retry,
-        on_backoff=log_backoff,
-        jitter=backoff.full_jitter,
-    )
     def _get_access_token(self):
         body = {
             'client_id': self._client_id,

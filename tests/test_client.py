@@ -8,7 +8,7 @@ import requests
 import backoff
 import singer
 from square.client import Client
-from square.exceptions.api_exception import APIException
+
 
 LOGGER = singer.get_logger()
 
@@ -103,13 +103,6 @@ class TestClient():
         self._access_token = self._get_access_token()
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-    @backoff.on_exception(
-        backoff.expo,
-        (RetryableError, APIException),
-        max_time=180,
-        on_backoff=log_backoff,
-        jitter=backoff.full_jitter,
-    )
     def _get_access_token(self):
         body = {
             'client_id': self._client_id,
@@ -125,10 +118,7 @@ class TestClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429:
-                raise RetryableError(error_message)
-            else:
-                raise RuntimeError(error_message)
+            raise RuntimeError(error_message)
 
         return result.body['access_token']
 
