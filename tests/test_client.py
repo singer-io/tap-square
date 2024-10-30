@@ -8,7 +8,7 @@ import requests
 import backoff
 import singer
 from square.client import Client
-
+from square.exceptions.api_exception import APIException
 
 LOGGER = singer.get_logger()
 
@@ -105,7 +105,7 @@ class TestClient():
 
     @backoff.on_exception(
         backoff.expo,
-        RetryableError,
+        (RetryableError, APIException),
         max_time=180,
         on_backoff=log_backoff,
         jitter=backoff.full_jitter,
