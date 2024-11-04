@@ -1,10 +1,10 @@
 # Changelog
 
-## [v3.0.0] (2024-10-29)
+## [v2.1.1] (2024-11-04)
 
-[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.0...v3.0.0)
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.0...v2.1.1)
 
-* Updates `latitude` and `longitude` in the `coordinates` field from the `locations` stream to the `singer.decimal` format, which may result in number values instead of a string  [#120](https://github.com/singer-io/tap-square/pull/120)
+* Removes the invalid `singer-decimal` format from `latitude` and `longitude` in the `coordinates` field from the `locations` stream [#120](https://github.com/singer-io/tap-square/pull/120)
 
 ## [v2.1.0] (2023-06-08)
 
