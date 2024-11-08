@@ -176,15 +176,6 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            elif stream == 'roles':  # Use the first available role that has limited permissions (where is_owner = False)
-                for message in first_sync_records.get(stream).get('messages'):
-                    data = message.get('data')
-                    if not data['is_owner'] and 'role' in data['name']:
-                        first_rec = message.get('data')
-                        break
-
-                if not first_rec:
-                    raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
             else: # By default we want the last created record
                 last_message = first_sync_records.get(stream).get('messages')[-1]
                 if last_message.get('data') and not last_message.get('data').get('is_deleted'):

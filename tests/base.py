@@ -41,7 +41,7 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
-        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'payouts'}
+        PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
@@ -52,7 +52,6 @@ class TestSquareBaseParent:
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-            'roles': 100,
             'refunds': 100,
             'payments': 100,
             'payouts': 100,
@@ -188,11 +187,6 @@ class TestSquareBaseParent:
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
                 },
-                "roles": {
-                    self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
-                    self.START_DATE_KEY: 'updated_at'
-                },
                 "shifts": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.INCREMENTAL,
@@ -225,7 +219,6 @@ class TestSquareBaseParent:
         def production_streams():
             """Some streams can only have data on the production app. We must test these separately"""
             return {
-                'roles',
                 'bank_accounts',
             }
 
@@ -665,8 +658,6 @@ class TestSquareBaseParent:
             """
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-            elif stream in {'roles'}:
-                self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
             elif stream == 'inventories':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
             elif stream == 'items':

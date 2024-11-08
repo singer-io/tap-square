@@ -340,13 +340,6 @@ class SquareClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
-        yield from self._get_v1_objects(
-            'https://connect.squareup.com/v1/me/roles',
-            dict(),
-            'roles',
-            bookmarked_cursor,
-        )
 
     def get_payouts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:

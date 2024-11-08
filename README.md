@@ -21,7 +21,6 @@ This tap:
     * ModifierLists
     * Inventories
     * Orders
-    * Roles
     * Shifts
     * CashDrawerShifts
     * Customers

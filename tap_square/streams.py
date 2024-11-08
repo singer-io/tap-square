@@ -286,36 +286,6 @@ class Shifts(FullTableStream):
         singer.write_state(state)
         return state
 
-class Roles(FullTableStream):
-    # Square Docs: you must use Connect V1 to manage employees and employee roles.
-    tap_stream_id = 'roles'
-    key_properties = ['id']
-    replication_method = 'FULL_TABLE'
-    valid_replication_keys = []
-    replication_key = None
-
-    def get_pages(self, bookmarked_cursor, start_time):
-        yield from self.client.get_roles(bookmarked_cursor)
-
-    def sync(self, state, stream_schema, stream_metadata, config, transformer):
-        start_time = config['start_date']
-        bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
-            for record in page:
-                if record['updated_at'] >= start_time:
-                    transformed_record = transformer.transform(
-                        record, stream_schema, stream_metadata,
-                    )
-                    singer.write_record(
-                        self.tap_stream_id,
-                        transformed_record,
-                    )
-            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
-
-        state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
-        singer.write_state(state)
-        return state
 
 
 class CashDrawerShifts(FullTableStream):
@@ -403,7 +373,6 @@ STREAMS = {
     'modifier_lists': ModifierLists,
     'inventories': Inventories,
     'orders': Orders,
-    'roles': Roles,
     'shifts': Shifts,
     'cash_drawer_shifts': CashDrawerShifts,
     'team_members': TeamMembers,

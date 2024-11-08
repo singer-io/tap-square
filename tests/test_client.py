@@ -407,13 +407,6 @@ class TestClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
-        yield from self._get_v1_objects(
-            'https://connect.squareup.com/v1/me/roles',
-            dict(),
-            'roles',
-            bookmarked_cursor,
-        )
 
     def get_all_location_ids(self):
         all_location_ids = list()
@@ -464,9 +457,6 @@ class TestClient():
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
             return [obj for page, _ in self.get_orders_pages(start_date, None) for obj in page]
-        elif stream == 'roles':
-            return [obj for page, _ in self.get_roles(None) for obj in page
-                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
@@ -484,13 +474,6 @@ class TestClient():
             return next(self.get_inventories(start_date, None))
         elif stream == 'payments':
             return next(self.get_payments(start_date, None))
-        elif stream == 'roles':
-            roles, cursor = next(self.get_roles(None))
-            roles_after_start_date = [
-                role for role in roles
-                if not start_date or role['updated_at'] >= start_date
-            ]
-            return roles_after_start_date, cursor
         elif stream == 'shifts':
             shifts, cursor = next(self.get_shifts(None))
             shifts_after_start_date = [
@@ -620,8 +603,6 @@ class TestClient():
             return self.create_taxes(num_records).body.get('objects')
         elif stream == 'modifier_lists':
             return self.create_modifier_list(num_records).body.get('objects')
-        elif stream == 'roles':
-            return self.create_roles_v1(num_records)
         elif stream == 'inventories':
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
@@ -1106,32 +1087,6 @@ class TestClient():
         assert len(location_matching_ids) == 1
         return location_matching_ids[0]
 
-    def create_roles_v1(self, num_records):
-        if self.env_is_sandbox():
-            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
-
-        base_v1 = "https://connect.squareup.com/v1/me/"
-        endpoint = "roles"
-        full_url = base_v1 + endpoint
-        permissions = ['REGISTER_ACCESS_SALES_HISTORY',
-                       'REGISTER_APPLY_RESTRICTED_DISCOUNTS',
-                       'REGISTER_CHANGE_SETTINGS',
-                       'REGISTER_EDIT_ITEM',
-                       'REGISTER_ISSUE_REFUNDS',
-                       'REGISTER_OPEN_CASH_DRAWER_OUTSIDE_SALE',
-                       'REGISTER_VIEW_SUMMARY_REPORTS']
-
-        roles = []
-        for _ in range(num_records):
-            role_id = self.make_id(endpoint)
-            data = {
-                'name': role_id[1:],
-                'permissions': random.choice(permissions),
-                'is_owner': False,
-            }
-            resp = self._retryable_request_method(lambda: requests.post(url=full_url, headers=self.get_headers(), json=data))
-            roles.append(resp.json())
-        return roles
 
     def _create_orders(self, num_records, start_date):
         # location id in body is merchant location id, one in create_order call is bussiness location id
@@ -1233,8 +1188,6 @@ class TestClient():
             return self.update_discounts(obj, version).body.get('objects')
         elif stream == 'taxes':
             return self.update_taxes(obj, version).body.get('objects')
-        elif stream == 'roles':
-            return [self.update_roles_v1(obj)]
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
@@ -1339,13 +1292,6 @@ class TestClient():
         resp = self._retryable_request_method(lambda: requests.put(url=endpoint, headers=self.get_headers(), json=data))
         return resp.json()
 
-    def update_roles_v1(self, obj):
-        role_id = obj.get('id')
-        uid = self.make_id('role')[1:]
-        data = {
-            'name': 'updated_' + uid,
-        }
-        return self._update_object_v1("roles", role_id, data)
 
     def update_modifier_list(self, obj, version):
         obj_id = obj.get('id')
