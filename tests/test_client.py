@@ -118,8 +118,11 @@ class TestClient():
 
         if result.is_error():
             error_message = result.errors if result.errors else result.body
+            LOGGER.info("error_message :-----------: %s",error_message)
             raise RuntimeError(error_message)
 
+        LOGGER.info("Setting the access token in environment....")
+        os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
         return result.body['access_token']
 
     ##########################################################################
@@ -243,6 +246,22 @@ class TestClient():
             body,
             'orders')
 
+    def get_team_members(self, location_ids):
+        body = {
+            "query": {
+                "filter": {
+                    "location_ids": location_ids,
+                    "status": "ACTIVE"
+                }
+            },
+            "limit": 200
+        }
+        yield from self._get_v2_objects(
+            'team_members',
+            lambda bdy: self._client.team.search_team_members(body=bdy),
+            body,
+            'team_members')
+
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
 
@@ -325,10 +344,6 @@ class TestClient():
                         "updated_at": {
                             "start_at": start_time
                         }
-                    },
-                    "sort": {
-                        "sort_field": "UPDATED_AT",
-                        "sort_order": "ASC"
                     }
                 }
             }
@@ -427,6 +442,13 @@ class TestClient():
             for page, cursor in self.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
                 yield page, cursor
 
+    def get_team_members_pages(self, start_time, bookmarked_cursor):
+        # refactored from team_members.sync
+        all_location_ids = self.get_all_location_ids()
+
+        for page, cursor in self.get_team_members(all_location_ids):
+            yield page, cursor
+
     def get_cds_pages(self, start_time, bookmarked_cursor):
         # refactored from cash_drawer_shifts.sync
         for location_id in self.get_all_location_ids():
@@ -457,6 +479,9 @@ class TestClient():
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
             return [obj for page, _ in self.get_orders_pages(start_date, None) for obj in page]
+        elif stream == 'roles':
+            return [obj for page, _ in self.get_roles(None) for obj in page
+                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
@@ -464,6 +489,8 @@ class TestClient():
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         elif stream == 'customers':
             return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
+        elif stream == 'team_members':
+            return [obj for page, _ in self.get_team_members_pages(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
@@ -575,7 +602,7 @@ class TestClient():
         self.delete_catalog(catalog_ids)
         raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
-    def _post_order(self, body, business_location_id):
+    def _post_order(self, body):
         """
         body: {
           "order": {
@@ -584,7 +611,7 @@ class TestClient():
           "idempotency_key": str(uuid.uuid4())
         }
         """
-        resp = self._client.orders.create_order(location_id=business_location_id, body=body)
+        resp = self._client.orders.create_order(body=body)
 
         if resp.is_error():
             stream_name = 'orders'
@@ -837,7 +864,6 @@ class TestClient():
         Generate a customer object
         """
         body = {
-            'id': self.make_id('customer'),
             'idempotency_key': str(uuid.uuid4()),
             'given_name': 'given',
             'family_name': 'family',
@@ -853,7 +879,6 @@ class TestClient():
                 'first_name': 'a',
                 'last_name': 'b'
             },
-            'phone_number': '9999999999',
             'note': self.make_id('customer'),
         }
         response = self._client.customers.create_customer(body)
@@ -919,7 +944,19 @@ class TestClient():
                                   'modifier_list_info': [{
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
-                                  }]}} for item_id in item_ids]
+                                  }],
+                                    'variations': [{
+                                        'id': self.make_id('variation'),
+                                        'type': 'ITEM_VARIATION',
+                                        'item_variation_data': {
+                                            'name': 'Default Variation',
+                                            'pricing_type': 'FIXED_PRICING',
+                                            'price_money': {
+                                                'amount': 1000,  # Price in cents (e.g., 1000 = $10.00)
+                                                'currency': 'USD'
+                                            }
+                                        }
+                                    }]}} for item_id in item_ids]
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
@@ -1111,7 +1148,7 @@ class TestClient():
                 },
                 'state': 'PROPOSED'
             }]
-            created_orders.append(self._post_order(body, location_id).body.get('order'))
+            created_orders.append(self._post_order(body).body.get('order'))
 
         return created_orders
 
@@ -1385,7 +1422,7 @@ class TestClient():
         obj_id = obj.get('id')
         version = obj.get('version')
 
-        body = {'order': {'version': version},
+        body = {'order': {'version': version, 'location_id': location_id},
                 'idempotency_key': str(uuid.uuid4())}
 
         # Change fulfillments status if current status is 'proposed' and update the order note
@@ -1397,7 +1434,7 @@ class TestClient():
         else: # if there is no fulfillment record, just update the order note
             body['order']['note'] = "Updated Order " + self.make_id('orders')
 
-        resp = self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
+        resp = self._client.orders.update_order(order_id=obj_id, body=body)
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp

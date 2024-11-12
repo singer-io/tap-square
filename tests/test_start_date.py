@@ -55,14 +55,15 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
 
-        self.set_environment(self.PRODUCTION)
+        # Commenting to avoid Rate limit error
+        # self.set_environment(self.PRODUCTION)
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
-        self.START_DATE = self.get_properties().get('start_date')
-        self.START_DATE_1 = self.START_DATE
-        self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        self.start_date_test(self.get_environment(), DataType.DYNAMIC)
+        # print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        # self.START_DATE = self.get_properties().get('start_date')
+        # self.START_DATE_1 = self.START_DATE
+        # self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
+        # self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
+        # self.start_date_test(self.get_environment(), DataType.DYNAMIC)
 
     def start_date_test(self, environment, data_type):
         print("\n\nRUNNING {}".format(self.name()))

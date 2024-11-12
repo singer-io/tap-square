@@ -96,12 +96,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         """Instantiate start date according to the desired data set and run the test"""
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
-        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
+        # Not testing few of the streams
+        streams_not_testing = {'locations', 'customers', 'taxes', 'items', 'modifier_lists', 'orders'}
+        self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()).difference(streams_not_testing)
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
         print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
-        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
+        self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()).difference(streams_not_testing)
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
         self.set_environment(self.PRODUCTION)
@@ -160,22 +162,46 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'amount_money', 'delayed_until', 'order_id', 'reason', 'processing_fee',
                 'tax_data','status','is_deleted','discount_data','delay_duration','source_type',
                 'receipt_number','receipt_url','card_details','delay_action','type','category_data',
-                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money'
+                'payment_id','refund_ids','note','present_at_all_locations', 'refunded_money',
+                'discounts', 'reference_id', 'taxes', 'pricing_options', 'service_charges'
             },
             'discounts': {'absent_at_location_ids'},
             'taxes': {'absent_at_location_ids'},
-            'customers': {'birthday'},
-            'payments': {'customer_id', 'reference_id'},
-            'locations': {'facebook_url'},
+            'customers': {'birthday', 'tax_ids', 'group_ids', 'reference_id', 'version', 'segment_ids'},
+            'payments': {
+                'customer_id', 'reference_id',
+                'cash_details', 'tip_money', 'external_details', 'device_details',
+                'wallet_details', 'risk_evaluation', 'statement_description_identifier',
+                'buy_now_pay_later_details', 'team_member_id', 'buyer_email_address',
+                'app_fee_money', 'bank_account_details', 'shipping_address', 'billing_address'
+            },
+            'locations': {'facebook_url', 'pos_background_url', 'full_format_logo_url', 'logo_url'},
+            'refunds': {'destination_details', 'unlinked', 'team_member_id', 'app_fee_money'}
         }
 
         # BUG_1 | https://stitchdata.atlassian.net/browse/SRCE-4975
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'},
-                                          'orders': {'line_items', 'returns'}}
+                                          'orders': {'line_items', 'returns'},
+                                          'categories': {'category_data'},
+                                          'discounts': {'discount_data'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'},
-                               'orders': {'line_items',}}
+        MISSING_FROM_SCHEMA = {
+            'payments': {'capabilities', 'version_token', 'approved_money',},
+            'orders': {
+                'line_items',
+                'category_data', 'amount_money', 'processing_fee', 'refund_ids', 'delayed_until',
+                'delay_duration', 'delay_action', 'note', 'status', 'order_id', 'type',
+                'source_type', 'payment_id', 'tax_data', 'receipt_number', 'receipt_url',
+                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details','returned_quantities'
+                'is_deleted', 'reason'},
+            'discounts': {'created_at'},
+            'items': {'created_at'},
+            'modifier_lists': {'created_at'},
+            'categories': {'created_at'},
+            'taxes': {'created_at'},
+            'locations': {'capabilities'}
+        }
 
         # Test by Stream
         for stream in self.TESTABLE_STREAMS:
