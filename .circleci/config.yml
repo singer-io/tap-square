@@ -91,20 +91,14 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
-          requires:
-            - queue
       - unit-tests:
           context:
             - circleci-user
             - tap-tester-user
-          requires:
-            - queue
       - all-integ-tests-running-test:
           context:
             - circleci-user
             - tap-tester-user
-          requires:
-            - queue
   build_daily:
     triggers:
       - schedule:
