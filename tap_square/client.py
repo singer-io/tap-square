@@ -1,10 +1,9 @@
 from datetime import timedelta
 import urllib.parse
-
+import os
 from square.client import Client
 from singer import utils
 import singer
-import os
 import requests
 import backoff
 
