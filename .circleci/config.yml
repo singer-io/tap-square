@@ -48,7 +48,7 @@ jobs:
             aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
             source dev_env.sh
             source /usr/local/share/virtualenvs/tap-tester/bin/activate
-            run-test --tap=tap-square test
+            run-test --tap=tap-square tests
       - slack/status:
           channel: 'stitch-tap-tester-tests'
           mentions: "${CIRCLE_USERNAME}"
