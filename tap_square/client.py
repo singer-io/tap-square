@@ -4,6 +4,7 @@ import urllib.parse
 from square.client import Client
 from singer import utils
 import singer
+import os
 import requests
 import backoff
 
@@ -55,6 +56,10 @@ class SquareClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
+        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
+            LOGGER.info("Using access token from environment, not creating the new one")
+            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+
         body = {
             'client_id': self._client_id,
             'client_secret': self._client_secret,
