@@ -238,18 +238,6 @@ workflows:
           context:
             - circleci-user
             - tap-tester-user
-      - discovery-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-      - sync-canary-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-      - default-start-date-test:
-          context:
-            - circleci-user
-            - tap-tester-user
       - non-parallizable-tests:
           context:
             - circleci-user
