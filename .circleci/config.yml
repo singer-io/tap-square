@@ -105,12 +105,6 @@ workflows:
             - tap-tester-user
           requires:
             - queue
-      - non-parallizable-tests:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
   build_daily:
     triggers:
       - schedule:
@@ -121,6 +115,10 @@ workflows:
                 - master
     jobs:
       - pylint-and-json-validator:
+          context:
+            - circleci-user
+            - tap-tester-user
+      - unit-tests:
           context:
             - circleci-user
             - tap-tester-user
