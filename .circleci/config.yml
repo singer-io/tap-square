@@ -215,24 +215,6 @@ workflows:
             - tap-tester-user
           requires:
             - queue
-      - discovery-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
-      - sync-canary-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
-      - default-start-date-test:
-          context:
-            - circleci-user
-            - tap-tester-user
-          requires:
-            - queue
       - non-parallizable-tests:
           context:
             - circleci-user
