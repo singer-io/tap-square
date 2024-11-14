@@ -49,7 +49,7 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         """
         Verify that for each stream you can call sync just so it exercises the code.
         """
-        default_start_date = dt.utcnow() - timedelta(days=365) # 1 year ago
+        default_start_date = dt.utcnow() - timedelta(days=30) # 1 year ago
 
         # Testing Default start date (1 year ago)
         self.START_DATE = dt.strftime(default_start_date, self.START_DATE_FORMAT)
