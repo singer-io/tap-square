@@ -75,15 +75,13 @@ class FullTableStream(Stream):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         bookmarked_cursor = singer.get_bookmark(state, self.tap_stream_id, 'cursor')
 
-        for page, cursor in self.get_pages_safe(state, bookmarked_cursor, start_time):
+        for page, _ in self.get_pages_safe(state, bookmarked_cursor, start_time):
             for record in page:
                 transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                 singer.write_record(
                     self.tap_stream_id,
                     transformed_record,
                 )
-            singer.write_bookmark(state, self.tap_stream_id, 'cursor', cursor)
-            singer.write_state(state)
 
         state = singer.clear_bookmark(state, self.tap_stream_id, 'cursor')
         singer.write_state(state)
@@ -180,16 +178,36 @@ class Refunds(FullTableStream):
         yield from self.client.get_refunds(start_time, bookmarked_cursor)
 
 
-class Payments(FullTableStream):
+class Payments(Stream):
     tap_stream_id = 'payments'
     key_properties = ['id']
-    replication_method = 'FULL_TABLE'
-    valid_replication_keys = []
-    replication_key = None
+    replication_method = 'INCREMENTAL'
+    valid_replication_keys = ['updated_at']
+    replication_key = 'updated_at'
+    # If the records are not updated at all since those are created and if it has missing the updated_at field
+    second_replication_key = 'created_at'
     object_type = 'PAYMENT'
 
-    def get_pages(self, bookmarked_cursor, start_time):
-        yield from self.client.get_payments(start_time, bookmarked_cursor)
+
+    def sync(self, state, stream_schema, stream_metadata, config, transformer):
+        bookmarked_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
+        max_bookmark_value = bookmarked_time
+        all_location_ids = Locations.get_all_location_ids(self.client)
+
+        for location_id in all_location_ids:
+            for page, _ in self.client.get_payments(location_id, bookmarked_time, bookmarked_cursor=None):
+                for record in page:
+                    transformed_record = transformer.transform(record, stream_schema, stream_metadata)
+
+                    if record.get(self.replication_key, self.second_replication_key) >= bookmarked_time:
+                        singer.write_record(self.tap_stream_id, transformed_record,)
+                        max_bookmark_value = max(transformed_record.get(self.replication_key) or \
+                                               transformed_record.get(self.second_replication_key), \
+                                                max_bookmark_value)
+
+        state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, max_bookmark_value)
+        singer.write_state(state)
+        return state
 
 
 class Orders(Stream):
