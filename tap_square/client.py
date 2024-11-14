@@ -96,7 +96,8 @@ class SquareClient():
             is_html_error = error_message.startswith('<!DOCTYPE html>')
             is_status_429_or_500 = result.status_code == 429 or result.status_code >= 500
 
-            if is_service_unavailable or is_upstream_error or is_cf_error_1101 or is_html_error or is_status_429_or_500:
+            retryable_conditions = {is_service_unavailable, is_upstream_error, is_cf_error_1101, is_html_error, is_status_429_or_500}
+            if any(retryable_conditions):
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
