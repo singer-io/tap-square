@@ -88,11 +88,15 @@ class SquareClient():
         if result.is_error():
             LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message \
-                or 'upstream connect error or disconnect/reset before headers' in error_message \
-                or '<span class="cf-error-code">1101</span>' in error_message \
-                or error_message.startswith('<!DOCTYPE html>') \
-                or result.status_code == 429 or result.status_code >= 500:
+
+            # Refactor the conditions into separate variables for readability
+            is_service_unavailable = 'Service Unavailable' in error_message
+            is_upstream_error = 'upstream connect error or disconnect/reset before headers' in error_message
+            is_cf_error_1101 = '<span class="cf-error-code">1101</span>' in error_message
+            is_html_error = error_message.startswith('<!DOCTYPE html>')
+            is_status_429_or_500 = result.status_code == 429 or result.status_code >= 500
+
+            if is_service_unavailable or is_upstream_error or is_cf_error_1101 or is_html_error or is_status_429_or_500:
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
@@ -267,7 +271,7 @@ class SquareClient():
         end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
         while cursor:
             if cursor == '__initial__':
-                # initial text was needed to go into the while loop, but api needs
+                # Initial text was needed to go into the while loop, but api needs
                 # it to be a valid bookmarked cursor or None
                 cursor = bookmarked_cursor
 
