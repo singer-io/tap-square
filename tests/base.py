@@ -89,8 +89,23 @@ class TestSquareBaseParent:
             Requires re-instatiating TestClient and setting env var.
             """
             os.environ['TAP_SQUARE_ENVIRONMENT'] = env
+            self.set_access_token_in_env()
             self.client = TestClient(env=env)
             self.SQUARE_ENVIRONMENT = env
+
+        def set_access_token_in_env(self):
+            """
+            Fetch the access token from the existing connection and set it in the env.
+            This is used to avoid rate limiting issues when running tests.
+            """
+            existing_connections = connections.fetch_existing_connections(self)
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_connections[0]['id'])
+            access_token = conn_with_creds['credentials'].get('access_token')
+            if not access_token:
+                LOGGER.info("No access token found in env")
+            else:
+                LOGGER.info("Found access token in env")
+                os.environ['TAP_SQUARE_ACCESS_TOKEN'] = access_token
 
         @staticmethod
         def get_environment():
@@ -116,11 +131,22 @@ class TestSquareBaseParent:
                     'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                     'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                     'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                    'access_token': os.environ["TAP_SQUARE_ACCESS_TOKEN"]
                 }
             else:
                 raise Exception("Square Environment: {} is not supported.".format(environment))
 
             return creds
+
+        @staticmethod
+        def preserve_access_token(existing_conns, payload):
+            """This method is used get the access token from an existing refresh token"""
+            if not existing_conns:
+                return payload
+            
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
+            payload['properties']['access_token'] = conn_with_creds['credentials'].get('access_token')
+            return payload
 
         def expected_check_streams(self):
             return set(self.expected_metadata().keys()).difference(set())

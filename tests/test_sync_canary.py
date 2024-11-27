@@ -26,7 +26,7 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
         Select all fields or no fields based on the select_all_fields param.
         Run a sync.
         """
-        conn_id = connections.ensure_connection(self)
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 

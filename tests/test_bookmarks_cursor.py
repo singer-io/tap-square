@@ -84,7 +84,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
             ]
 
         # Create connection but do not use default start date
-        conn_id = connections.ensure_connection(self, original_properties=False)
+        conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
 
         # run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)

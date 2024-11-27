@@ -68,7 +68,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         expected_records_first_sync = self.create_test_data(self.testable_streams_static(), self.START_DATE)
 
         # Instantiate connection with default start
-        conn_id = connections.ensure_connection(self)
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
 
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)
