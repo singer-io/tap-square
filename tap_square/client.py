@@ -1,6 +1,7 @@
 from datetime import timedelta
 import urllib.parse
-import os
+import requests
+import json
 from square.client import Client
 from singer import utils
 import singer
@@ -39,43 +40,92 @@ def log_backoff(details):
     LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
+def write_config(config, config_path, data):
+    """
+    Updates the provided filepath with json format of the `data` object
+    """
+    config.update(data)
+    with open(config_path, "w") as tap_config:
+        json.dump(config, tap_config, indent=2)
+    return config
+
+
+def require_new_access_token(access_token, environment):
+    """
+    Checks if the access token needs to be refreshed
+    """
+    # If there is no access token, we need to generate a new one
+    if not access_token:
+        return True
+
+    if environment == "sandbox":
+        url = "https://connect.squareupsandbox.com/v2/locations"
+    else:
+        url = "https://connect.squareup.com/v2/locations"
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    try:
+        response = requests.request("GET", url, headers=headers)
+    except Exception as e:
+        # If there is an error, we should generate a new access token
+        LOGGER.error(f"Error while validating access token: {e}")
+        return True
+    # If the response is a 401, we need to generate a new access token
+    return response.status_code == 401
+
+
 class RetryableError(Exception):
     pass
 
 
 class SquareClient():
-    def __init__(self, config):
+    def __init__(self, config, config_path):
         self._refresh_token = config['refresh_token']
         self._client_id = config['client_id']
         self._client_secret = config['client_secret']
 
         self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
 
-        self._access_token = self._get_access_token()
+        self._access_token = self._get_access_token(config, config_path)
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-    def _get_access_token(self):
-        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
-            LOGGER.info("Using access token from environment, not creating the new one")
-            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+    def _get_access_token(self, config, config_path):
+        """
+        Retrieves the access token from the config file. If the access token is expired, it will refresh it.
+        Otherwise, it will return the cached access token.
+        """
+        access_token = config.get("access_token")
 
-        body = {
-            'client_id': self._client_id,
-            'client_secret': self._client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': self._refresh_token
-        }
+        # Check if the access token needs to be refreshed
+        if require_new_access_token(access_token, self._environment):
+            LOGGER.info("Refreshing access token...")
+            body = {
+                'client_id': self._client_id,
+                'client_secret': self._client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._refresh_token
+            }
 
-        client = Client(environment=self._environment)
+            client = Client(environment=self._environment)
 
-        with singer.http_request_timer('GET access token'):
-            result = client.o_auth.obtain_token(body)
+            with singer.http_request_timer('GET access token'):
+                result = client.o_auth.obtain_token(body)
 
-        if result.is_error():
-            error_message = result.errors if result.errors else result.body
-            raise RuntimeError(error_message)
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                raise RuntimeError(error_message)
 
-        return result.body['access_token']
+            access_token = result.body['access_token']
+            write_config(
+                config,
+                config_path,
+                {
+                    "access_token": access_token,
+                    "refresh_token": result.body["refresh_token"],
+                },
+            )
+
+        return access_token
 
     @staticmethod
     @backoff.on_exception(

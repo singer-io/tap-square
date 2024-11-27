@@ -57,7 +57,7 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
         • verify that all other fields have inclusion of available (metadata and schema)
         """
         conn_id = connections.ensure_connection(self)
-        check_job_name = runner.run_check_mode(self, conn_id)
+        check_job_name = runner.run_check_mode(self, conn_id, payload_hook=self.preserve_access_token)
 
         #verify check exit codes
         exit_status = menagerie.get_exit_status(conn_id, check_job_name)

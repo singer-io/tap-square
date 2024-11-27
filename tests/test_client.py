@@ -38,6 +38,29 @@ def get_batch_token_from_headers(headers):
         return None
 
 
+def require_new_access_token(access_token, environment):
+    """
+    Checks if the access token needs to be refreshed
+    """
+    # If there is no access token, we need to generate a new one
+    if not access_token:
+        return True
+
+    if environment == "sandbox":
+        url = "https://connect.squareupsandbox.com/v2/locations"
+    else:
+        url = "https://connect.squareup.com/v2/locations"
+
+    headers = {"Authorization": f"Bearer {access_token}"}
+    try:
+        response = requests.request("GET", url, headers=headers)
+    except Exception as e:
+        # If there is an error, we should generate a new access token
+        LOGGER.error(f"Error while validating access token: {e}")
+        return True
+    # If the response is a 401, we need to generate a new access token
+    return response.status_code == 401
+
 def log_backoff(details):
     '''
     Logs a backoff retry message
@@ -100,34 +123,39 @@ class TestClient():
 
         self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
 
-        self._access_token = self._get_access_token()
+        self._access_token = self._get_access_token(env)
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-    def _get_access_token(self):
-        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
-            LOGGER.info("Using access token from environment, not creating the new")
-            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+    def _get_access_token(self, env):
+        """
+        Retrieves the access token from the env. If the access token is expired, it will refresh it.
+        Otherwise, it will return the cached access token.
+        """
+        access_token = os.environ.get("TAP_SQUARE_ACCESS_TOKEN")
 
-        body = {
-            'client_id': self._client_id,
-            'client_secret': self._client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': self._refresh_token
-        }
+        # Check if the access token needs to be refreshed
+        if require_new_access_token(access_token, env):
+            body = {
+                'client_id': self._client_id,
+                'client_secret': self._client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._refresh_token
+            }
 
-        client = Client(environment=self._environment)
+            client = Client(environment=self._environment)
 
-        with singer.http_request_timer('GET access token'):
-            result = client.o_auth.obtain_token(body)
+            with singer.http_request_timer('GET access token'):
+                result = client.o_auth.obtain_token(body)
 
-        if result.is_error():
-            error_message = result.errors if result.errors else result.body
-            LOGGER.info("error_message :-----------: %s",error_message)
-            raise RuntimeError(error_message)
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                LOGGER.info("error_message :-----------: %s",error_message)
+                raise RuntimeError(error_message)
 
-        LOGGER.info("Setting the access token in environment....")
-        os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
-        return result.body['access_token']
+            LOGGER.info("Generating new the access token to set in environment....")
+            os.environ["TAP_SQUARE_ACCESS_TOKEN"] = access_token = result.body['access_token']
+
+        return access_token
 
     ##########################################################################
     ### V1 INFO
