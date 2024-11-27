@@ -20,7 +20,7 @@ def main():
     if args.discover:
         write_catalog(catalog)
     else:
-        sync(args.config, args.state, catalog)
+        sync(args.config, args.config_path, args.state, catalog)
 
 if __name__ == '__main__':
     main()
