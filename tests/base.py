@@ -43,22 +43,23 @@ class TestSquareBaseParent:
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
 
-        DEFAULT_BATCH_LIMIT = 10
+        DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
             'items': DEFAULT_BATCH_LIMIT,
-            'inventories': DEFAULT_BATCH_LIMIT,
+            'inventories': 100,
             'categories': DEFAULT_BATCH_LIMIT,
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-            'refunds': DEFAULT_BATCH_LIMIT,
-            'payments': DEFAULT_BATCH_LIMIT,
-            'payouts': DEFAULT_BATCH_LIMIT,
-            'customers': DEFAULT_BATCH_LIMIT,
+            'roles': 100,
+            'refunds': 100,
+            'payments': 100,
+            'payouts': 100,
+            'customers': 100,
             'modifier_lists': DEFAULT_BATCH_LIMIT,
-            'orders': DEFAULT_BATCH_LIMIT,
-            'shifts': DEFAULT_BATCH_LIMIT,
+            'orders': 500,
+            'shifts': 200,
         }
 
         def setUp(self):
