@@ -12,10 +12,6 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     """ Test the tap discovery """
 
     @staticmethod
-    def name():
-        return "tap_tester_square_discovery_new_test"
-
-    @staticmethod
     def testable_streams_dynamic():
         # Unused for discovery testing
         return set()

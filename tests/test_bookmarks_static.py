@@ -8,7 +8,7 @@ import tap_tester.runner      as runner
 from base import TestSquareBaseParent
 
 
-class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
+class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
 
     def testable_streams_static(self):

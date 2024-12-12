@@ -843,6 +843,13 @@ class TestClient():
                 'reason': 'Becuase you are worth it'}
 
         refund = self._client.refunds.refund_payment(body)
+        if refund.is_error() and "Payment could not be refunded" in str(refund.errors):
+            LOGGER.info("Payment could not be refunded, trying to create a new payment to refund")
+            payment_obj = self.create_payment(autocomplete=True, source_key="card")
+            payment_obj = self.get_object_matching_conditions('payments', payment_obj.get('id'),
+                                                          start_date=start_date, status=payment_obj.get('status'))[0]
+            body.update({'payment_id': payment_obj.get('id')})
+            refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
             LOGGER.error("body: %s", body)
             LOGGER.error("response: %s", refund)

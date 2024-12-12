@@ -59,15 +59,16 @@ def require_new_access_token(access_token, client):
 
     authorization = f"Bearer {access_token}"
 
-    with singer.http_request_timer('Check access token expiry'):
+    with singer.http_request_timer("Check access token expiry"):
         response = client.o_auth.retrieve_token_status(authorization)
 
     if response.is_error():
         error_message = response.errors if response.errors else response.body
         LOGGER.error("error_message :-----------: %s", error_message)
+        return True
 
     # Parse the token expiry date
-    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
+    token_expiry_date = singer.utils.strptime_with_tz(response.body["expires_at"])
     now = utils.now()
     return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
 
