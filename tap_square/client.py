@@ -1,6 +1,6 @@
 from datetime import timedelta
 import urllib.parse
-
+import os
 from square.client import Client
 from singer import utils
 import singer
@@ -55,6 +55,10 @@ class SquareClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
+        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
+            LOGGER.info("Using access token from environment, not creating the new one")
+            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+
         body = {
             'client_id': self._client_id,
             'client_secret': self._client_secret,
@@ -361,13 +365,6 @@ class SquareClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
-        yield from self._get_v1_objects(
-            'https://connect.squareup.com/v1/me/roles',
-            dict(),
-            'roles',
-            bookmarked_cursor,
-        )
 
     def get_payouts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:

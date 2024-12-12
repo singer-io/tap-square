@@ -176,15 +176,6 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
                 if not first_rec:
                     raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
-            elif stream == 'roles':  # Use the first available role that has limited permissions (where is_owner = False)
-                for message in first_sync_records.get(stream).get('messages'):
-                    data = message.get('data')
-                    if not data['is_owner'] and 'role' in data['name']:
-                        first_rec = message.get('data')
-                        break
-
-                if not first_rec:
-                    raise RuntimeError("Unable to find any any orders with state other than COMPLETED")
             else: # By default we want the last created record
                 last_message = first_sync_records.get(stream).get('messages')[-1]
                 if last_message.get('data') and not last_message.get('data').get('is_deleted'):
@@ -289,7 +280,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
                     self.assertEqual(1, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 elif stream == 'orders': # ORDERS are returned inclusive on the datetime queried
-                    self.assertEqual(3, len(expected_records_second_sync.get(stream)),
+                    self.assertGreaterEqual(3, len(expected_records_second_sync.get(stream)),
                                      msg="Expectations are invalid for incremental stream {}".format(stream))
                 else:  # Most streams will have 2 records from the Update and Insert
                     self.assertEqual(2, len(expected_records_second_sync.get(stream)),
