@@ -59,6 +59,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def start_date_test(self, environment, data_type):
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
