@@ -13,7 +13,7 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
 
     @staticmethod
     def name():
-        return "tap_tester_square_discovery_test"
+        return "tap_tester_square_discovery_new_test"
 
     @staticmethod
     def testable_streams_dynamic():
