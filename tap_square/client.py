@@ -1,11 +1,10 @@
 from datetime import timedelta
 import urllib.parse
-import requests
 import json
+import requests
 from square.client import Client
 from singer import utils
 import singer
-import requests
 import backoff
 
 
@@ -65,7 +64,7 @@ def require_new_access_token(access_token, client):
 
     if response.is_error():
         error_message = response.errors if response.errors else response.body
-        LOGGER.error("error_message :-----------: %s",error_message)
+        LOGGER.error("error_message :-----------: %s", error_message)
 
     # Parse the token expiry date
     token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
