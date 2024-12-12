@@ -9,10 +9,6 @@ from base import TestSquareBaseParent, DataType
 class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
     """Test that with no fields selected for a stream automatic fields are still replicated"""
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_automatic_fields"
-
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams()).difference({
             'inventories', # No PK or rep key so no automatic fields to check
@@ -33,12 +29,14 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'customers', 'team_members'}
         self.auto_fields_test(self.SANDBOX, DataType.STATIC)
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test(self.PRODUCTION, DataType.DYNAMIC)
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def auto_fields_test(self, environment, data_type):
         """

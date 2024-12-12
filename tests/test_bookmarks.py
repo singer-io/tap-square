@@ -13,9 +13,6 @@ LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
@@ -64,12 +61,14 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
 
         if production_testable_streams:
             print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
             self.bookmarks_test(production_testable_streams)
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def bookmarks_test(self, testable_streams):
         """
@@ -319,7 +318,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money', 'refund_ids', 'refunded_money', 'processing_fee'}}
 
 
         # Loop first_sync_records and compare against second_sync_records

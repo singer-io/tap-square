@@ -10,7 +10,7 @@ import backoff
 
 
 LOGGER = singer.get_logger()
-
+REFRESH_TOKEN_BEFORE = 22
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -50,7 +50,7 @@ def write_config(config, config_path, data):
     return config
 
 
-def require_new_access_token(access_token, environment):
+def require_new_access_token(access_token, client):
     """
     Checks if the access token needs to be refreshed
     """
@@ -58,20 +58,19 @@ def require_new_access_token(access_token, environment):
     if not access_token:
         return True
 
-    if environment == "sandbox":
-        url = "https://connect.squareupsandbox.com/v2/locations"
-    else:
-        url = "https://connect.squareup.com/v2/locations"
+    authorization = f"Bearer {access_token}"
 
-    headers = {"Authorization": f"Bearer {access_token}"}
-    try:
-        response = requests.request("GET", url, headers=headers)
-    except Exception as e:
-        # If there is an error, we should generate a new access token
-        LOGGER.error(f"Error while validating access token: {e}")
-        return True
-    # If the response is a 401, we need to generate a new access token
-    return response.status_code == 401
+    with singer.http_request_timer('Check access token expiry'):
+        response = client.o_auth.retrieve_token_status(authorization)
+
+    if response.is_error():
+        error_message = response.errors if response.errors else response.body
+        LOGGER.error("error_message :-----------: %s",error_message)
+
+    # Parse the token expiry date
+    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
+    now = utils.now()
+    return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
 
 
 class RetryableError(Exception):
@@ -95,9 +94,10 @@ class SquareClient():
         Otherwise, it will return the cached access token.
         """
         access_token = config.get("access_token")
+        client = Client(environment=self._environment)
 
         # Check if the access token needs to be refreshed
-        if require_new_access_token(access_token, self._environment):
+        if require_new_access_token(access_token, client):
             LOGGER.info("Refreshing access token...")
             body = {
                 'client_id': self._client_id,
@@ -105,8 +105,6 @@ class SquareClient():
                 'grant_type': 'refresh_token',
                 'refresh_token': self._refresh_token
             }
-
-            client = Client(environment=self._environment)
 
             with singer.http_request_timer('GET access token'):
                 result = client.o_auth.obtain_token(body)

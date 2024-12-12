@@ -14,10 +14,6 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
     """Test that with all fields selected for a stream we replicate data as expected"""
     TESTABLE_STREAMS = set()
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_all_fields"
-
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
@@ -104,12 +100,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def all_fields_test(self, environment, data_type):
         """
@@ -165,7 +163,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
             },
             'discounts': {'absent_at_location_ids'},
             'taxes': {'absent_at_location_ids'},
-            'customers': {'birthday', 'tax_ids', 'group_ids', 'reference_id', 'version', 'segment_ids'},
+            'customers': {'birthday', 'tax_ids', 'group_ids', 'reference_id', 'version', 'segment_ids', 'phone_number'},
             'payments': {
                 'customer_id', 'reference_id',
                 'cash_details', 'tip_money', 'external_details', 'device_details',
@@ -191,7 +189,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'category_data', 'amount_money', 'processing_fee', 'refund_ids', 'delayed_until',
                 'delay_duration', 'delay_action', 'note', 'status', 'order_id', 'type',
                 'source_type', 'payment_id', 'tax_data', 'receipt_number', 'receipt_url',
-                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details','returned_quantities'
+                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details','returned_quantities',
                 'is_deleted', 'reason'},
             'discounts': {'created_at'},
             'items': {'created_at'},

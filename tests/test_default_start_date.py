@@ -11,9 +11,6 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
     Test we can perform a successful sync for all streams with a start date of 1 year ago and older.
     This makes up for the time partions missed by `test_start_date.py`.
     """
-    @staticmethod
-    def name():
-        return "tap_tester_start_date_default"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams()
@@ -56,9 +53,11 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         self.set_environment(self.SANDBOX)
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.sandbox_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.sandbox_streams()))
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def default_start_date_test(self, data_type, testable_streams):
         streams_without_data = self.untestable_streams()

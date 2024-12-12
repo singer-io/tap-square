@@ -5,9 +5,6 @@ from base import TestSquareBaseParent, DataType
 
 class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
     """Test that sync code gets exercised for all streams regardless if we can't create data. Validates scopes, authorizations, sync code that can't yet be tested end-to-end."""
-    @staticmethod
-    def name():
-        return "tap_tester_sync_canary"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams()
@@ -49,6 +46,8 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_standard_sync(self.get_environment(), DataType.STATIC)
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_standard_sync(self.get_environment(), DataType.STATIC)
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name

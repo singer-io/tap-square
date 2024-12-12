@@ -11,10 +11,6 @@ LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase):
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication_cursor"
-
     def testable_streams_dynamic(self):
         all_testable_streams = self.dynamic_data_streams().intersection(
             self.expected_full_table_streams()).difference(
@@ -43,10 +39,13 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
         if production_testable_streams:
             self.bookmarks_test(production_testable_streams)
+
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def bookmarks_test(self, testable_streams):
         """

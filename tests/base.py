@@ -42,6 +42,9 @@ class TestSquareBaseParent:
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
+        sandbox_test_name = "tap_tester_square_sandbox_tests"
+        prod_test_name = "tap_tester_square_prod_tests"
+        test_name = sandbox_test_name
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
@@ -83,6 +86,10 @@ class TestSquareBaseParent:
         def tap_name():
             return "tap-square"
 
+        @staticmethod
+        def name():
+            return TestSquareBaseParent.TestSquareBase.test_name
+
         def set_environment(self, env):
             """
             Change the Square App Environmnet.
@@ -99,12 +106,15 @@ class TestSquareBaseParent:
             This is used to avoid rate limiting issues when running tests.
             """
             existing_connections = connections.fetch_existing_connections(self)
+            if not existing_connections:
+                os.environ.pop('TAP_SQUARE_ACCESS_TOKEN', None)
+                return
+
             conn_with_creds = connections.fetch_existing_connection_with_creds(existing_connections[0]['id'])
             access_token = conn_with_creds['credentials'].get('access_token')
             if not access_token:
-                LOGGER.info("No access token found in env")
+                LOGGER.warning("No access token found in env")
             else:
-                LOGGER.info("Found access token in env")
                 os.environ['TAP_SQUARE_ACCESS_TOKEN'] = access_token
 
         @staticmethod
@@ -688,7 +698,7 @@ class TestSquareBaseParent:
             Certain Square streams cannot be compared directly with assertDictEqual().
             So we handle that logic here.
             """
-            if stream not in ['refunds', 'orders', 'customers']:
+            if stream not in ['refunds', 'orders', 'customers', 'locations']:
                 expected_record.pop('created_at', None)
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})

@@ -11,10 +11,6 @@ from base import TestSquareBaseParent
 class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication"
-
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
 

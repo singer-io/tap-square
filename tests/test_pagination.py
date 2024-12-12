@@ -15,10 +15,6 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
     """Test that we are paginating for streams when exceeding the API record limit of a single query"""
 
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_pagination_test"
-
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
@@ -29,7 +25,7 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.set_environment(cls, cls.SANDBOX)
+        cls.set_environment(cls(), cls.SANDBOX)
         cleanup = {'categories': 10000}
         client = TestClient(env=os.environ['TAP_SQUARE_ENVIRONMENT'])
         for stream, limit in cleanup.items():
@@ -54,18 +50,21 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.pagination_test()
+        TestSquarePagination.test_name = "tap_tester_sandbox_square_pagination_test"
 
         print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
+        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def pagination_test(self):
         """

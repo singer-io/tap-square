@@ -17,10 +17,6 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
     START_DATE_1 = ""
     START_DATE_2 = ""
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_start_date_test"
-
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
 
@@ -55,6 +51,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
                          msg="Testable streams exist for this category.")
         print("\tThere are no testable streams.")
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
         print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -62,10 +59,8 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        self.start_date_test(self.get_environment(), DataType.DYNAMIC)
 
     def start_date_test(self, environment, data_type):
-        print("\n\nRUNNING {}".format(self.name()))
         print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE_1, self.START_DATE_2)
