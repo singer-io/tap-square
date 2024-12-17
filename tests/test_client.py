@@ -705,6 +705,13 @@ class TestClient():
 
         return response.body.get('object')
 
+    def get_customer(self, customer_id):
+        response = self._client.customers.retrieve_customer(customer_id)
+        if response.is_error():
+            raise RuntimeError(response.errors)
+
+        return response.body.get('customer')
+
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create item object(s)
         # This is needed to get an item ID in order to perform an item_variation
@@ -790,14 +797,9 @@ class TestClient():
 
     def create_refunds(self, start_date, num_records, payment_response=None):
         refunds = []
-        if not payment_response:
-            payment_response = self.create_payment(autocomplete=True, source_key="card")
-
-        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
-                                                          start_date=start_date, status=payment_response.get('status'))[0]
 
         for _ in range(num_records):
-            (created_refund, payment_obj) = self.create_refund(start_date, payment_obj)
+            (created_refund, _) = self.create_refund(start_date, payment_response)
             refunds += created_refund
         return refunds
 
@@ -808,7 +810,7 @@ class TestClient():
         jitter=backoff.full_jitter,
         on_backoff=log_backoff,
     )
-    def create_refund(self, start_date, payment_obj=None):
+    def create_refund(self, start_date, payment_response=None):
         """
         Create a refund object. This depends on an exisitng payment record, and will
         act as an UPDATE for a payment record. We can only refund payments whose status is
@@ -819,10 +821,10 @@ class TestClient():
         : param start_date: this is requrired if we have not set state for PAYMENTS prior to the execution of this method
         """
         # SETUP
-        if not payment_obj:
-            payment = self.create_payment(autocomplete=True, source_key="card")
-            payment_obj = self.get_object_matching_conditions('payments', payment.get('id'),
-                                                            start_date=start_date, status=payment.get('status'))[0]
+        if not payment_response:
+            payment_response = self.create_payment(autocomplete=True, source_key="card")
+        payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
+                                                          start_date=start_date, status=payment_response.get('status'))[0]
 
 
         payment_id = payment_obj.get('id')
@@ -843,13 +845,6 @@ class TestClient():
                 'reason': 'Becuase you are worth it'}
 
         refund = self._client.refunds.refund_payment(body)
-        if refund.is_error() and "Payment could not be refunded" in str(refund.errors):
-            LOGGER.info("Payment could not be refunded, trying to create a new payment to refund")
-            payment_obj = self.create_payment(autocomplete=True, source_key="card")
-            payment_obj = self.get_object_matching_conditions('payments', payment_obj.get('id'),
-                                                          start_date=start_date, status=payment_obj.get('status'))[0]
-            body.update({'payment_id': payment_obj.get('id')})
-            refund = self._client.refunds.refund_payment(body)
         if refund.is_error():
             LOGGER.error("body: %s", body)
             LOGGER.error("response: %s", refund)
@@ -857,7 +852,8 @@ class TestClient():
             raise RuntimeError(refund.errors)
 
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
-        return (completed_refund, payment_obj)
+        completed_payment = self.get_object_matching_conditions('payments', payment_obj.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
+        return (completed_refund, completed_payment)
 
     def create_payments(self, num_records):
         payments = []
@@ -930,7 +926,7 @@ class TestClient():
             print("response: {}".format(response))
             raise RuntimeError(response.errors)
 
-        return response.body.get('customer')
+        return self.get_customer(response.body.get('customer')['id'])
 
     def create_modifier_list(self, num_records):
         objects = []

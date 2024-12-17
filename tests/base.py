@@ -526,6 +526,7 @@ class TestSquareBaseParent:
                         else:
                             raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
+                stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
                 print("Adjust expectations for stream: {}".format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
 
