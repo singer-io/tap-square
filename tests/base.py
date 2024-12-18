@@ -681,9 +681,6 @@ class TestSquareBaseParent:
             self.assertTrue(sync_pks_set.issuperset(expected_pks_set))
 
             if assert_pk_count_same:
-                if stream == 'inventories':
-                    LOGGER.info('Records %s in expected ---------------------- %s', len(expected_pks_set), expected_pks_set)
-                    LOGGER.info('Records %s in expected ---------------------- %s', len(sync_pks_set), sync_pks_set)
                 self.assertEqual(expected_pks_set, sync_pks_set)
 
         def assertParentKeysEqual(self, expected_record, sync_record):
