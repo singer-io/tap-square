@@ -6,8 +6,8 @@ from .streams import STREAMS
 
 LOGGER = singer.get_logger()
 
-def sync(config, state, catalog): # pylint: disable=too-many-statements
-    client = SquareClient(config)
+def sync(config, config_path, state, catalog): # pylint: disable=too-many-statements
+    client = SquareClient(config, config_path)
 
     with Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):
