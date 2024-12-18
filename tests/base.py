@@ -49,13 +49,12 @@ class TestSquareBaseParent:
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
             'items': DEFAULT_BATCH_LIMIT,
-            'inventories': 100,
+            'inventories': DEFAULT_BATCH_LIMIT,
             'categories': DEFAULT_BATCH_LIMIT,
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-            'roles': 100,
             'refunds': 100,
             'payments': 100,
             'payouts': 100,
