@@ -347,15 +347,10 @@ class Customers(Stream):
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
-        pks = []
         for window_start, window_end in get_date_windows(start_time):
             LOGGER.info("Searching for customers from %s to %s", window_start, window_end)
             for page, _ in self.client.get_customers(window_start, window_end):
                 for record in page:
-                    if record['id'] not in pks:
-                        pks.append(record['id'])
-                    else:
-                        LOGGER.info("Skipping duplicate record %s", record['id'])
                     transformed_record = transformer.transform(record, stream_schema, stream_metadata)
                     singer.write_record(
                         self.tap_stream_id,
@@ -363,7 +358,6 @@ class Customers(Stream):
                     )
             state = singer.write_bookmark(state, self.tap_stream_id, self.replication_key, window_end)
             singer.write_state(state)
-        LOGGER.info("Found %s unique customers", len(pks))
         return state
 
 STREAMS = {
