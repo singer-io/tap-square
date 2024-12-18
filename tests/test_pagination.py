@@ -29,41 +29,41 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
         cleanup = {'categories': 10000}
         client = TestClient(env=os.environ['TAP_SQUARE_ENVIRONMENT'])
         for stream, limit in cleanup.items():
-            print("Checking if cleanup is required.")
+            LOGGER.info("Checking if cleanup is required.")
             all_records = client.get_all(stream, start_date=cls.STATIC_START_DATE)
             all_ids = [rec.get('id') for rec in all_records if not rec.get('is_deleted')]
             if len(all_ids) > limit / 2:
                 chunk = int(len(all_ids) - (limit / 2))
-                print("Cleaning up {} excess records".format(chunk))
+                LOGGER.info("Cleaning up {} excess records".format(chunk))
                 client.delete_catalog(all_ids[:chunk])
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.pagination_test()
 
-        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
-        print("\tThere are no testable streams.")
+        LOGGER.info("\tThere are no testable streams.")
 
         TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.pagination_test()
         TestSquarePagination.test_name = "tap_tester_sandbox_square_pagination_test"
 
-        print("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.sandbox_streams())
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
-        print("\tThere are no testable streams.")
+        LOGGER.info("\tThere are no testable streams.")
         TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
 
     def pagination_test(self):
@@ -76,15 +76,15 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
         fetch of data.  For instance if you have a limit of 250 records ensure
         that 251 (or more) records have been posted for that stream.
         """
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
+        LOGGER.info("\n\nRUNNING {}_pagination".format(self.name()))
+        LOGGER.info("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         expected_records = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in self.TESTABLE_STREAMS:
             record_count = len(expected_records[stream])
-            print("Verifying data is sufficient for stream {}. ".format(stream) +
+            LOGGER.info("Verifying data is sufficient for stream {}. ".format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +

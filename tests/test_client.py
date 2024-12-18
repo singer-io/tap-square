@@ -8,7 +8,7 @@ import requests
 import backoff
 import singer
 from square.client import Client
-
+LOGGER = singer.get_logger()
 
 LOGGER = singer.get_logger()
 REFRESH_TOKEN_BEFORE = 22
@@ -365,11 +365,19 @@ class TestClient():
         if bookmarked_cursor:
             body = {
                 "cursor": bookmarked_cursor,
+                "sort": {
+                    "field": "CREATED_AT",
+                    "order": "ASC"
+                },
                 'limit': 100,
             }
         else:
             body = {
                 "query": {
+                    "sort": {
+                        "field": "CREATED_AT",
+                        "order": "ASC"
+                    },
                     "filter": {
                         "updated_at": {
                             "start_at": start_time
@@ -852,7 +860,7 @@ class TestClient():
             raise RuntimeError(refund.errors)
 
         completed_refund = self.get_object_matching_conditions('refunds', refund.body.get('refund').get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED')
-        completed_payment = self.get_object_matching_conditions('payments', payment_obj.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
+        completed_payment = self.get_object_matching_conditions('payments', payment_response.get('id'), start_date=start_date, keys_exist={'processing_fee'}, status='COMPLETED', refunded_money=amount_money)[0]
         return (completed_refund, completed_payment)
 
     def create_payments(self, num_records):
@@ -885,8 +893,8 @@ class TestClient():
         }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(new_payment))
+            LOGGER.info("body: {}".format(body))
+            LOGGER.info("response: {}".format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -922,8 +930,8 @@ class TestClient():
         }
         response = self._client.customers.create_customer(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info("body: {}".format(body))
+            LOGGER.info("response: {}".format(response))
             raise RuntimeError(response.errors)
 
         return self.get_customer(response.body.get('customer')['id'])
@@ -1151,8 +1159,8 @@ class TestClient():
         }
         response = self.post_location(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info("body: {}".format(body))
+            LOGGER.info("response: {}".format(response))
             raise RuntimeError(response.errors)
 
         location_id = response.body.get('location')['id']
@@ -1327,7 +1335,7 @@ class TestClient():
         if not action:
             action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
 
-        print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
+        LOGGER.info("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
             if response.is_error():
@@ -1422,7 +1430,7 @@ class TestClient():
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
-            print(response.body.get('errors'))
+            LOGGER.info(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
         all_counts = response.body.get('counts')

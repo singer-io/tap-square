@@ -527,7 +527,7 @@ class TestSquareBaseParent:
                             raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
-                print("Adjust expectations for stream: {}".format(stream))
+                LOGGER.info("Adjust expectations for stream: {}".format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
 
             return stream_to_expected_records
@@ -583,7 +583,7 @@ class TestSquareBaseParent:
             found_catalog_names = found_catalog_names - {'settlements'}
             diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
             self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-            print("discovered schemas are OK")
+            LOGGER.info("discovered schemas are OK")
 
             return found_catalogs
 
@@ -605,7 +605,7 @@ class TestSquareBaseParent:
                 catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
                 # Verify all testable streams are selected
                 selected = catalog_entry.get('annotated-schema').get('selected')
-                print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+                LOGGER.info("Validating selection on {}: {}".format(cat['stream_name'], selected))
                 if cat['stream_name'] not in streams_to_select:
                     self.assertFalse(selected, msg="Stream selected, but not testable.")
                     continue # Skip remaining assertions if we aren't selecting this stream
@@ -615,7 +615,7 @@ class TestSquareBaseParent:
                     # Verify all fields within each selected stream are selected
                     for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                         field_selected = field_props.get('selected')
-                        print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                        LOGGER.info("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
                         self.assertTrue(field_selected, msg="Field not selected.")
                 else:
                     # Verify only automatic fields are selected
@@ -682,6 +682,9 @@ class TestSquareBaseParent:
             self.assertTrue(sync_pks_set.issuperset(expected_pks_set))
 
             if assert_pk_count_same:
+                if stream == 'inventories':
+                    LOGGER.info('Records %s in expected ---------------------- %s', len(expected_pks_set), expected_pks_set)
+                    LOGGER.info('Records %s in expected ---------------------- %s', len(sync_pks_set), sync_pks_set)
                 self.assertEqual(expected_pks_set, sync_pks_set)
 
         def assertParentKeysEqual(self, expected_record, sync_record):

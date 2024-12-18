@@ -1,10 +1,10 @@
 from datetime import datetime as dt
 from datetime import timedelta
-
+import singer
 import tap_tester.connections as connections
 
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
     """
@@ -32,9 +32,9 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
 
         streams_to_select = self.testable_streams(environment, data_type)
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}".format(streams_to_select))
-        print("WITH START DATE: {}\n\n".format(self.START_DATE))
+        LOGGER.info("\n\nRUNNING {}_default_start_date".format(self.name()))
+        LOGGER.info("WITH STREAMS: {}".format(streams_to_select))
+        LOGGER.info("WITH START DATE: {}\n\n".format(self.START_DATE))
 
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields

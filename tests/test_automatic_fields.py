@@ -1,10 +1,10 @@
 import os
-
+import singer
 import tap_tester.connections as connections
 import tap_tester.runner      as runner
 
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
     """Test that with no fields selected for a stream automatic fields are still replicated"""
@@ -19,12 +19,12 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams()) - {'customers', 'team_members'}
         self.auto_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
-        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'customers', 'team_members'}
         self.auto_fields_test(self.SANDBOX, DataType.STATIC)
@@ -32,7 +32,7 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test(self.PRODUCTION, DataType.DYNAMIC)
@@ -44,8 +44,8 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         and only the automatic fields are replicated.
         """
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
+        LOGGER.info("\n\nRUNNING {}_automatic_fields".format(self.name()))
+        LOGGER.info("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # ensure data exists and set expectatinos with automatic fields only
         expected_records_all_fields = self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE)
@@ -80,7 +80,7 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         for stream, count in first_record_count_by_stream.items():
             assert stream in self.expected_streams()
             self.assertGreater(count, 0, msg="failed to replicate any data for: {}".format(stream))
-        print("total replicated row count: {}".format(replicated_row_count))
+        LOGGER.info("total replicated row count: {}".format(replicated_row_count))
 
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):

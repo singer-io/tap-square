@@ -1,12 +1,12 @@
 import os
 import unittest
-
+import singer
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBaseParent
-
+LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
@@ -20,7 +20,7 @@ class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase
 
     @classmethod
     def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info("\n\nTEST TEARDOWN\n\n")
 
     def run_sync(self, conn_id):
         """
@@ -53,9 +53,9 @@ class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
 
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        LOGGER.info("\n\nRUNNING {}_bookmark_static\n\n".format(self.name()))
 
         # Instatiate static start date
         self.START_DATE = self.STATIC_START_DATE

@@ -1,11 +1,11 @@
 import os
 from collections import namedtuple
-
+import singer
 import tap_tester.runner      as runner
 import tap_tester.connections as connections
 
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 PaymentRecordDetails = namedtuple('PaymentRecordDetails', 'source_key, autocomplete, record')
 
@@ -39,7 +39,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
     def create_specific_payments(self):
         """Create a record using each source type, and a record that will autocomplete."""
-        print("Creating a record using each source type, and the autocomplete flag.")
+        LOGGER.info("Creating a record using each source type, and the autocomplete flag.")
         payment_records = []
         descriptions = {
             ("card", False),
@@ -57,7 +57,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
     def update_specific_payments(self, payments_to_update):
         """Perform specifc updates on specific payment records."""
         updated_records = []
-        print("Updating payment records by completing, canceling and refunding them.")
+        LOGGER.info("Updating payment records by completing, canceling and refunding them.")
         # Update a completed payment by making a refund (payments must have a status of 'COMPLETED' to process a refund)
         source_key, autocomplete = ("card", True)
         description = "refund"
@@ -86,16 +86,16 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
     @classmethod
     def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info("\n\nTEST TEARDOWN\n\n")
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.production_streams())
         self.all_fields_test(self.SANDBOX, DataType.DYNAMIC)
 
-        print("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.STATIC_START_DATE
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.all_fields_test(self.SANDBOX, DataType.STATIC)
@@ -103,7 +103,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
         self.set_environment(self.PRODUCTION)
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.all_fields_test(self.PRODUCTION, DataType.DYNAMIC)
@@ -115,8 +115,8 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         and only the automatic fields are replicated.
         """
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
+        LOGGER.info("\n\nRUNNING {}_all_fields".format(self.name()))
+        LOGGER.info("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
 
         # execute specific creates and updates for the payments stream in addition to the standard create
         if 'payments' in self.TESTABLE_STREAMS:
@@ -148,7 +148,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
         for stream, count in first_record_count_by_stream.items():
             assert stream in self.expected_streams()
             self.assertGreater(count, 0, msg="failed to replicate any data for: {}".format(stream))
-        print("total replicated row count: {}".format(replicated_row_count))
+        LOGGER.info("total replicated row count: {}".format(replicated_row_count))
 
         MISSING_FROM_EXPECTATIONS = { # this is acceptable, we can't generate test data for EVERYTHING
             'modifier_lists': {'absent_at_location_ids'},

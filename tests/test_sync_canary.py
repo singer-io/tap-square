@@ -1,7 +1,7 @@
 import tap_tester.connections as connections
-
+import singer
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
     """Test that sync code gets exercised for all streams regardless if we can't create data. Validates scopes, authorizations, sync code that can't yet be tested end-to-end."""
@@ -29,8 +29,8 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
 
         streams_to_select = self.testable_streams(environment, data_type)
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(streams_to_select))
+        LOGGER.info("\n\nRUNNING {}_sync_canary".format(self.name()))
+        LOGGER.info("WITH STREAMS: {}\n\n".format(streams_to_select))
 
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
