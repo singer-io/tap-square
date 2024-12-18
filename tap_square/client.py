@@ -206,7 +206,7 @@ class SquareClient():
                         'end_at': end_time      # Exclusive on end_at
                     }
                 },
-                 "sort": {
+                "sort": {
                     "field": "CREATED_AT",
                     "order": "ASC"
                 }
