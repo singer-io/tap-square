@@ -29,14 +29,14 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams()) - {'customers', 'team_members'}
         self.auto_fields_test(self.SANDBOX, DataType.STATIC)
 
-        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
 
         LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
         self.auto_fields_test(self.PRODUCTION, DataType.DYNAMIC)
-        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def auto_fields_test(self, environment, data_type):
         """

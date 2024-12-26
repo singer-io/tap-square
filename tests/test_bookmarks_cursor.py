@@ -39,13 +39,13 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
-        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
         if production_testable_streams:
             self.bookmarks_test(production_testable_streams)
 
-        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def bookmarks_test(self, testable_streams):
         """

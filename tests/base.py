@@ -42,9 +42,9 @@ class TestSquareBaseParent:
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
-        sandbox_test_name = "tap_tester_square_sandbox_tests"
-        prod_test_name = "tap_tester_square_prod_tests"
-        test_name = sandbox_test_name
+        TEST_NAME_SANDBOX = "tap_tester_square_sandbox_tests"
+        TEST_NAME_PROD = "tap_tester_square_prod_tests"
+        test_name = TEST_NAME_SANDBOX
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {

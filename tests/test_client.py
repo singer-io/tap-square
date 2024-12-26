@@ -54,7 +54,7 @@ def require_new_access_token(access_token, client):
 
     if response.is_error():
         error_message = response.errors if response.errors else response.body
-        LOGGER.error("error_message :-----------: %s",error_message)
+        LOGGER.error(error_message)
 
     token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
     now = singer.utils.now()
@@ -1430,7 +1430,7 @@ class TestClient():
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
-            LOGGER.info(response.body.get('errors'))
+            LOGGER.error(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
         all_counts = response.body.get('counts')

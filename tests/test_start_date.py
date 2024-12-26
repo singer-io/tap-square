@@ -51,7 +51,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
                          msg="Testable streams exist for this category.")
         LOGGER.info("\tThere are no testable streams.")
 
-        TestSquareBaseParent.TestSquareBase.test_name = self.prod_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
 
         LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
@@ -59,7 +59,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
         self.TESTABLE_STREAMS = self.testable_streams_dynamic().difference(self.sandbox_streams())
-        TestSquareBaseParent.TestSquareBase.test_name = self.sandbox_test_name
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def start_date_test(self, environment, data_type):
         LOGGER.info("\n\nRUNNING {}_start_date".format(self.name()))
