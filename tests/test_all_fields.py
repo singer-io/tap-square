@@ -189,7 +189,7 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 'category_data', 'amount_money', 'processing_fee', 'refund_ids', 'delayed_until',
                 'delay_duration', 'delay_action', 'note', 'status', 'order_id', 'type',
                 'source_type', 'payment_id', 'tax_data', 'receipt_number', 'receipt_url',
-                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details','returned_quantities',
+                'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details',
                 'is_deleted', 'reason'},
             'discounts': {'created_at'},
             'items': {'created_at'},
