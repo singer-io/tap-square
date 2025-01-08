@@ -100,10 +100,10 @@ class TestSquareBaseParent:
             self.SQUARE_ENVIRONMENT = env
 
         def set_access_token_in_env(self):
-            """
+            '''
             Fetch the access token from the existing connection and set it in the env.
             This is used to avoid rate limiting issues when running tests.
-            """
+            '''
             existing_connections = connections.fetch_existing_connections(self)
             if not existing_connections:
                 os.environ.pop('TAP_SQUARE_ACCESS_TOKEN', None)
@@ -149,7 +149,7 @@ class TestSquareBaseParent:
 
         @staticmethod
         def preserve_access_token(existing_conns, payload):
-            """This method is used get the access token from an existing refresh token"""
+            '''This method is used get the access token from an existing refresh token'''
             if not existing_conns:
                 return payload
             

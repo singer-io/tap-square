@@ -40,9 +40,9 @@ def log_backoff(details):
 
 
 def write_config(config, config_path, data):
-    """
+    '''
     Updates the provided filepath with json format of the `data` object
-    """
+    '''
     config.update(data)
     with open(config_path, "w") as tap_config:
         json.dump(config, tap_config, indent=2)
@@ -50,9 +50,9 @@ def write_config(config, config_path, data):
 
 
 def require_new_access_token(access_token, client):
-    """
+    '''
     Checks if the access token needs to be refreshed
-    """
+    '''
     # If there is no access token, we need to generate a new one
     if not access_token:
         return True
@@ -89,10 +89,10 @@ class SquareClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self, config, config_path):
-        """
+        '''
         Retrieves the access token from the config file. If the access token is expired, it will refresh it.
         Otherwise, it will return the cached access token.
-        """
+        '''
         access_token = config.get("access_token")
         client = Client(environment=self._environment)
 
