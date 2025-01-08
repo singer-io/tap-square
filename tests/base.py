@@ -42,8 +42,8 @@ class TestSquareBaseParent:
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
-        TEST_NAME_SANDBOX = "tap_tester_square_sandbox_tests"
-        TEST_NAME_PROD = "tap_tester_square_prod_tests"
+        TEST_NAME_SANDBOX = 'tap_tester_square_sandbox_tests'
+        TEST_NAME_PROD = 'tap_tester_square_prod_tests'
         test_name = TEST_NAME_SANDBOX
 
         DEFAULT_BATCH_LIMIT = 1000
@@ -112,7 +112,7 @@ class TestSquareBaseParent:
             conn_with_creds = connections.fetch_existing_connection_with_creds(existing_connections[0]['id'])
             access_token = conn_with_creds['credentials'].get('access_token')
             if not access_token:
-                LOGGER.warning("No access token found in env")
+                LOGGER.warning('No access token found in env')
             else:
                 os.environ['TAP_SQUARE_ACCESS_TOKEN'] = access_token
 
@@ -140,7 +140,7 @@ class TestSquareBaseParent:
                     'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                     'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                     'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
-                    'access_token': os.environ["TAP_SQUARE_ACCESS_TOKEN"]
+                    'access_token': os.environ['TAP_SQUARE_ACCESS_TOKEN']
                 }
             else:
                 raise Exception("Square Environment: {} is not supported.".format(environment))
@@ -526,7 +526,7 @@ class TestSquareBaseParent:
                             raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
                 stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
-                LOGGER.info("Adjust expectations for stream: {}".format(stream))
+                LOGGER.info('Adjust expectations for stream: {}'.format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
 
             return stream_to_expected_records
@@ -604,7 +604,7 @@ class TestSquareBaseParent:
                 catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
                 # Verify all testable streams are selected
                 selected = catalog_entry.get('annotated-schema').get('selected')
-                LOGGER.info("Validating selection on {}: {}".format(cat['stream_name'], selected))
+                LOGGER.info('Validating selection on {}: {}'.format(cat['stream_name'], selected))
                 if cat['stream_name'] not in streams_to_select:
                     self.assertFalse(selected, msg="Stream selected, but not testable.")
                     continue # Skip remaining assertions if we aren't selecting this stream
@@ -614,7 +614,7 @@ class TestSquareBaseParent:
                     # Verify all fields within each selected stream are selected
                     for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                         field_selected = field_props.get('selected')
-                        LOGGER.info("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                        LOGGER.info('\tValidating selection on {}.{}: {}'.format(cat['stream_name'], field, field_selected))
                         self.assertTrue(field_selected, msg="Field not selected.")
                 else:
                     # Verify only automatic fields are selected

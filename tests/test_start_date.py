@@ -37,7 +37,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
 
-        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')  # Initialize start_date state to make assertions
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
@@ -45,16 +45,16 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         self.start_date_test(self.get_environment(), DataType.DYNAMIC)
 
         # Locations does not respect start date and it's the only static data type (see above)
-        LOGGER.info("\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\n-- SKIPPING -- TESTING WITH STATIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.TESTABLE_STREAMS = self.testable_streams_static().difference(self.production_streams())
         self.assertEqual(set(), self.TESTABLE_STREAMS,
                          msg="Testable streams exist for this category.")
-        LOGGER.info("\tThere are no testable streams.")
+        LOGGER.info('\tThere are no testable streams.')
 
         TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
 
-        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.START_DATE = self.get_properties().get('start_date')
         self.START_DATE_1 = self.START_DATE
         self.START_DATE_2 = dt.strftime(dt.utcnow(), self.START_DATE_FORMAT)
@@ -62,8 +62,8 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def start_date_test(self, environment, data_type):
-        LOGGER.info("\n\nRUNNING {}_start_date".format(self.name()))
-        LOGGER.info("WITH STREAMS: {}\n\n".format(self.TESTABLE_STREAMS))
+        LOGGER.info('\n\nRUNNING {}_start_date'.format(self.name()))
+        LOGGER.info('WITH STREAMS: {}\n\n'.format(self.TESTABLE_STREAMS))
 
         self.create_test_data(self.TESTABLE_STREAMS, self.START_DATE_1, self.START_DATE_2)
 
@@ -88,7 +88,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
 
         replicated_row_count_1 = sum(first_record_count_by_stream.values())
         self.assertGreater(replicated_row_count_1, 0, msg="failed to replicate any data: {}".format(first_record_count_by_stream))
-        LOGGER.info("total replicated row count: {}".format(replicated_row_count_1))
+        LOGGER.info('total replicated row count: {}'.format(replicated_row_count_1))
         synced_records_1 = runner.get_records_from_target_output()
 
         ##########################################################################
@@ -96,7 +96,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
         ##########################################################################
 
         self.START_DATE = self.START_DATE_2
-        LOGGER.info("REPLICATION START DATE CHANGE: {} ===>>> {} ".format(self.START_DATE_1, self.START_DATE_2))
+        LOGGER.info('REPLICATION START DATE CHANGE: {} ===>>> {} '.format(self.START_DATE_1, self.START_DATE_2))
 
         ##########################################################################
         ### Second Sync
@@ -119,7 +119,7 @@ class TestSquareStartDate(TestSquareBaseParent.TestSquareBase):
 
         replicated_row_count_2 = sum(record_count_by_stream_2.values())
         self.assertGreater(replicated_row_count_2, 0, msg="failed to replicate any data")
-        LOGGER.info("total replicated row count: {}".format(replicated_row_count_2))
+        LOGGER.info('total replicated row count: {}'.format(replicated_row_count_2))
 
         synced_records_2 = runner.get_records_from_target_output()
 

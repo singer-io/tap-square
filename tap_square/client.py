@@ -59,7 +59,7 @@ def require_new_access_token(access_token, client):
 
     authorization = f"Bearer {access_token}"
 
-    with singer.http_request_timer("Check access token expiry"):
+    with singer.http_request_timer('Check access token expiry'):
         response = client.o_auth.retrieve_token_status(authorization)
 
     if response.is_error():
@@ -68,7 +68,7 @@ def require_new_access_token(access_token, client):
         return True
 
     # Parse the token expiry date
-    token_expiry_date = singer.utils.strptime_with_tz(response.body["expires_at"])
+    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
     now = utils.now()
     return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
 
@@ -98,7 +98,7 @@ class SquareClient():
 
         # Check if the access token needs to be refreshed
         if require_new_access_token(access_token, client):
-            LOGGER.info("Refreshing access token...")
+            LOGGER.info('Refreshing access token...')
             body = {
                 'client_id': self._client_id,
                 'client_secret': self._client_secret,
@@ -118,8 +118,8 @@ class SquareClient():
                 config,
                 config_path,
                 {
-                    "access_token": access_token,
-                    "refresh_token": result.body["refresh_token"],
+                    'access_token': access_token,
+                    'refresh_token': result.body['refresh_token'],
                 },
             )
 
@@ -206,9 +206,9 @@ class SquareClient():
                         'end_at': end_time      # Exclusive on end_at
                     }
                 },
-                "sort": {
-                    "field": "CREATED_AT",
-                    "order": "ASC"
+                'sort': {
+                    'field': 'CREATED_AT',
+                    'order': 'ASC'
                 }
             }
         }

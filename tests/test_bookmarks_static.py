@@ -20,7 +20,7 @@ class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase
 
     @classmethod
     def tearDownClass(cls):
-        LOGGER.info("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def run_sync(self, conn_id):
         """
@@ -53,9 +53,9 @@ class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        LOGGER.info("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
 
-        LOGGER.info("\n\nRUNNING {}_bookmark_static\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark_static\n\n'.format(self.name()))
 
         # Instatiate static start date
         self.START_DATE = self.STATIC_START_DATE

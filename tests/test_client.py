@@ -40,14 +40,14 @@ def get_batch_token_from_headers(headers):
 
 
 def require_new_access_token(access_token, client):
-    """
+    '''
     Checks if the access token needs to be refreshed
-    """
+    '''
     # If there is no access token, we need to generate a new one
     if not access_token:
         return True
 
-    authorization = f"Bearer {access_token}"
+    authorization = f'Bearer {access_token}'
 
     with singer.http_request_timer('Check access token expiry'):
         response = client.o_auth.retrieve_token_status(authorization)
@@ -126,10 +126,10 @@ class TestClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
-        """
+        '''
         Retrieves the access token from the env. If the access token is expired, it will refresh it.
         Otherwise, it will return the cached access token.
-        """
+        '''
         access_token = os.getenv('TAP_SQUARE_ACCESS_TOKEN')
         client = Client(environment=self._environment)
 
@@ -147,10 +147,10 @@ class TestClient():
 
             if result.is_error():
                 error_message = result.errors if result.errors else result.body
-                LOGGER.info("error_message :-----------: %s",error_message)
+                LOGGER.info('error_message :-----------: %s',error_message)
                 raise RuntimeError(error_message)
 
-            LOGGER.info("Generating new the access token to set in environment....")
+            LOGGER.info('Generating new the access token to set in environment....')
             os.environ["TAP_SQUARE_ACCESS_TOKEN"] = access_token = result.body['access_token']
 
         return access_token
@@ -365,18 +365,18 @@ class TestClient():
         if bookmarked_cursor:
             body = {
                 "cursor": bookmarked_cursor,
-                "sort": {
-                    "field": "CREATED_AT",
-                    "order": "ASC"
+                'sort': {
+                    'field': 'CREATED_AT',
+                    'order': 'ASC'
                 },
                 'limit': 100,
             }
         else:
             body = {
                 "query": {
-                    "sort": {
-                        "field": "CREATED_AT",
-                        "order": "ASC"
+                    'sort': {
+                        'field': 'CREATED_AT',
+                        'order': 'ASC'
                     },
                     "filter": {
                         "updated_at": {
@@ -747,7 +747,7 @@ class TestClient():
                 'ignore_unchanged_counts': False,
                 'idempotency_key': str(uuid.uuid4())
             }
-            LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
+            LOGGER.info('About to create %s inventory adjustments', len(change_chunk))
             response = self._client.inventory.batch_change_inventory(body)
             if response.is_error():
                 LOGGER.error("response had error, body was %s", body)
@@ -765,7 +765,7 @@ class TestClient():
             'ignore_unchanged_counts': False,
             'idempotency_key': str(uuid.uuid4())
         }
-        LOGGER.info("About to create %s inventory adjustments", len(change))
+        LOGGER.info('About to create %s inventory adjustments', len(change))
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
             LOGGER.error("response had error, body was %s", body)
@@ -893,8 +893,8 @@ class TestClient():
         }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
-            LOGGER.info("body: {}".format(body))
-            LOGGER.info("response: {}".format(new_payment))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -930,8 +930,8 @@ class TestClient():
         }
         response = self._client.customers.create_customer(body)
         if response.is_error():
-            LOGGER.info("body: {}".format(body))
-            LOGGER.info("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
         return self.get_customer(response.body.get('customer')['id'])
@@ -1159,8 +1159,8 @@ class TestClient():
         }
         response = self.post_location(body)
         if response.is_error():
-            LOGGER.info("body: {}".format(body))
-            LOGGER.info("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
         location_id = response.body.get('location')['id']
@@ -1335,7 +1335,7 @@ class TestClient():
         if not action:
             action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
 
-        LOGGER.info("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
+        LOGGER.info('PAYMENT UPDATE: status for payment {} change to {} '.format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
             if response.is_error():

@@ -31,7 +31,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
     @classmethod
     def tearDownClass(cls):
-        LOGGER.info("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def run_sync(self, conn_id):
         """
@@ -58,7 +58,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
         self.START_DATE = self.get_properties().get('start_date')
 
-        LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
         TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
@@ -66,7 +66,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
 
         if production_testable_streams:
-            LOGGER.info("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+            LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
             self.bookmarks_test(production_testable_streams)
         TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
@@ -83,7 +83,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        LOGGER.info("\n\nRUNNING {}_bookmark\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark\n\n'.format(self.name()))
 
         # Ensure tested streams have existing records
         expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE, force_create_records=True)
@@ -266,9 +266,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),
                                      ("2nd sync expected records", expected_records_second_sync)]:
-            LOGGER.info("Adjusting epxectations for {} records".format(record_desc))
+            LOGGER.info('Adjusting epxectations for {} records'.format(record_desc))
             for stream, expected_records in records.items():
-                LOGGER.info("\tadjusting for stream: {}".format(stream))
+                LOGGER.info('\tadjusting for stream: {}'.format(stream))
                 self.modify_expected_records(expected_records)
 
         # ensure validity of expected_records_second_sync

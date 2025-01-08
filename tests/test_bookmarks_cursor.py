@@ -30,7 +30,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
     @classmethod
     def tearDownClass(cls):
-        LOGGER.info("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -55,7 +55,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         PREREQUISITE
         For EACH stream that is interruptable with a bookmark cursor and not another one is replicated there are more than 1 page of data
         """
-        LOGGER.info("\n\nRUNNING {}_bookmark_cursor\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark_cursor\n\n'.format(self.name()))
 
         # Ensure tested streams have existing records
         stream_to_expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
@@ -64,7 +64,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in testable_streams:
             record_count = len(stream_to_expected_records_before_removing_first_page[stream])
-            LOGGER.info("Verifying data is sufficient for stream {}. ".format(stream) +
+            LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +

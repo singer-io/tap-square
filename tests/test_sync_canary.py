@@ -29,8 +29,8 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
 
         streams_to_select = self.testable_streams(environment, data_type)
 
-        LOGGER.info("\n\nRUNNING {}_sync_canary".format(self.name()))
-        LOGGER.info("WITH STREAMS: {}\n\n".format(streams_to_select))
+        LOGGER.info('\n\nRUNNING {}_sync_canary'.format(self.name()))
+        LOGGER.info('WITH STREAMS: {}\n\n'.format(streams_to_select))
 
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
