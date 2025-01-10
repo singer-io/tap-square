@@ -1,19 +1,16 @@
 from datetime import datetime as dt
 from datetime import timedelta
-
+import singer
 import tap_tester.connections as connections
 
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
     """
     Test we can perform a successful sync for all streams with a start date of 1 year ago and older.
     This makes up for the time partions missed by `test_start_date.py`.
     """
-    @staticmethod
-    def name():
-        return "tap_tester_start_date_default"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams()
@@ -29,15 +26,15 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         Select all fields or no fields based on the select_all_fields param.
         Run a sync.
         """
-        conn_id = connections.ensure_connection(self, original_properties=False)
+        conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         streams_to_select = self.testable_streams(environment, data_type)
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}".format(streams_to_select))
-        print("WITH START DATE: {}\n\n".format(self.START_DATE))
+        LOGGER.info('\n\nRUNNING {}_default_start_date'.format(self.name()))
+        LOGGER.info('WITH STREAMS: {}'.format(streams_to_select))
+        LOGGER.info('WITH START DATE: {}\n\n'.format(self.START_DATE))
 
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
@@ -56,9 +53,11 @@ class TestSquareStartDateDefault(TestSquareBaseParent.TestSquareBase):
         self.set_environment(self.SANDBOX)
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.sandbox_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.sandbox_streams()))
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
         self.default_start_date_test(DataType.DYNAMIC, self.testable_streams_dynamic().intersection(self.production_streams()))
         self.default_start_date_test(DataType.STATIC, self.testable_streams_static().intersection(self.production_streams()))
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def default_start_date_test(self, data_type, testable_streams):
         streams_without_data = self.untestable_streams()

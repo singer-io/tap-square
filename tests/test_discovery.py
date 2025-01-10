@@ -2,18 +2,14 @@
 Test tap discovery
 """
 import re
-
+import singer
 from tap_tester import menagerie, connections, runner
 
 from base import TestSquareBaseParent
-
+LOGGER = singer.get_logger()
 
 class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
     """ Test the tap discovery """
-
-    @staticmethod
-    def name():
-        return "tap_tester_square_discovery_test"
 
     @staticmethod
     def testable_streams_dynamic():
@@ -56,7 +52,8 @@ class DiscoveryTest(TestSquareBaseParent.TestSquareBase):
           are given the inclusion of automatic (metadata and annotated schema).
         • verify that all other fields have inclusion of available (metadata and schema)
         """
-        conn_id = connections.ensure_connection(self)
+        LOGGER.info('\n\nRUNNING {}_discovery'.format(self.name()))
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
         check_job_name = runner.run_check_mode(self, conn_id)
 
         #verify check exit codes

@@ -8,9 +8,10 @@ import requests
 import backoff
 import singer
 from square.client import Client
-
+LOGGER = singer.get_logger()
 
 LOGGER = singer.get_logger()
+REFRESH_TOKEN_BEFORE = 22
 
 typesToKeyMap = {
     'ITEM': 'item_data',
@@ -37,6 +38,27 @@ def get_batch_token_from_headers(headers):
     else:
         return None
 
+
+def require_new_access_token(access_token, client):
+    '''
+    Checks if the access token needs to be refreshed
+    '''
+    # If there is no access token, we need to generate a new one
+    if not access_token:
+        return True
+
+    authorization = f'Bearer {access_token}'
+
+    with singer.http_request_timer('Check access token expiry'):
+        response = client.o_auth.retrieve_token_status(authorization)
+
+    if response.is_error():
+        error_message = response.errors if response.errors else response.body
+        LOGGER.error(error_message)
+
+    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
+    now = singer.utils.now()
+    return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
 
 def log_backoff(details):
     '''
@@ -104,30 +126,34 @@ class TestClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
-        if "TAP_SQUARE_ACCESS_TOKEN" in os.environ.keys():
-            LOGGER.info("Using access token from environment, not creating the new")
-            return os.environ["TAP_SQUARE_ACCESS_TOKEN"]
-
-        body = {
-            'client_id': self._client_id,
-            'client_secret': self._client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': self._refresh_token
-        }
-
+        '''
+        Retrieves the access token from the env. If the access token is expired, it will refresh it.
+        Otherwise, it will return the cached access token.
+        '''
+        access_token = os.getenv('TAP_SQUARE_ACCESS_TOKEN')
         client = Client(environment=self._environment)
 
-        with singer.http_request_timer('GET access token'):
-            result = client.o_auth.obtain_token(body)
+        # Check if the access token needs to be refreshed
+        if require_new_access_token(access_token, client):
+            body = {
+                'client_id': self._client_id,
+                'client_secret': self._client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._refresh_token
+            }
 
-        if result.is_error():
-            error_message = result.errors if result.errors else result.body
-            LOGGER.info("error_message :-----------: %s",error_message)
-            raise RuntimeError(error_message)
+            with singer.http_request_timer('GET access token'):
+                result = client.o_auth.obtain_token(body)
 
-        LOGGER.info("Setting the access token in environment....")
-        os.environ["TAP_SQUARE_ACCESS_TOKEN"] = result.body['access_token']
-        return result.body['access_token']
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                LOGGER.info('error_message :-----------: %s',error_message)
+                raise RuntimeError(error_message)
+
+            LOGGER.info('Generating new the access token to set in environment....')
+            os.environ["TAP_SQUARE_ACCESS_TOKEN"] = access_token = result.body['access_token']
+
+        return access_token
 
     ##########################################################################
     ### V1 INFO
@@ -339,11 +365,19 @@ class TestClient():
         if bookmarked_cursor:
             body = {
                 "cursor": bookmarked_cursor,
+                'sort': {
+                    'field': 'CREATED_AT',
+                    'order': 'ASC'
+                },
                 'limit': 100,
             }
         else:
             body = {
                 "query": {
+                    'sort': {
+                        'field': 'CREATED_AT',
+                        'order': 'ASC'
+                    },
                     "filter": {
                         "updated_at": {
                             "start_at": start_time
@@ -679,6 +713,13 @@ class TestClient():
 
         return response.body.get('object')
 
+    def get_customer(self, customer_id):
+        response = self._client.customers.retrieve_customer(customer_id)
+        if response.is_error():
+            raise RuntimeError(response.errors)
+
+        return response.body.get('customer')
+
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create item object(s)
         # This is needed to get an item ID in order to perform an item_variation
@@ -706,7 +747,7 @@ class TestClient():
                 'ignore_unchanged_counts': False,
                 'idempotency_key': str(uuid.uuid4())
             }
-            LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
+            LOGGER.info('About to create %s inventory adjustments', len(change_chunk))
             response = self._client.inventory.batch_change_inventory(body)
             if response.is_error():
                 LOGGER.error("response had error, body was %s", body)
@@ -724,7 +765,7 @@ class TestClient():
             'ignore_unchanged_counts': False,
             'idempotency_key': str(uuid.uuid4())
         }
-        LOGGER.info("About to create %s inventory adjustments", len(change))
+        LOGGER.info('About to create %s inventory adjustments', len(change))
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
             LOGGER.error("response had error, body was %s", body)
@@ -764,6 +805,7 @@ class TestClient():
 
     def create_refunds(self, start_date, num_records, payment_response=None):
         refunds = []
+
         for _ in range(num_records):
             (created_refund, _) = self.create_refund(start_date, payment_response)
             refunds += created_refund
@@ -791,6 +833,7 @@ class TestClient():
             payment_response = self.create_payment(autocomplete=True, source_key="card")
         payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
                                                           start_date=start_date, status=payment_response.get('status'))[0]
+
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -850,8 +893,8 @@ class TestClient():
         }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(new_payment))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -887,11 +930,11 @@ class TestClient():
         }
         response = self._client.customers.create_customer(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
-        return response.body.get('customer')
+        return self.get_customer(response.body.get('customer')['id'])
 
     def create_modifier_list(self, num_records):
         objects = []
@@ -1116,8 +1159,8 @@ class TestClient():
         }
         response = self.post_location(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
         location_id = response.body.get('location')['id']
@@ -1157,7 +1200,7 @@ class TestClient():
         return created_orders
 
     def create_shift(self, start_date, end_date, num_records):
-        employee_id = self.get_or_create_first_found('employees', None)['id']
+        team_member_id = self.get_or_create_first_found('team_members', None)['id']
 
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
@@ -1175,7 +1218,7 @@ class TestClient():
             body = {
                 'idempotency_key': str(uuid.uuid4()),
                 'shift': {
-                    'employee_id': employee_id,
+                    'team_member_id': team_member_id,
                     'location_id': location_id,
                     'start_at': start_at, # This can probably be derived from the test's start date
                     'end_at': end_at,
@@ -1292,7 +1335,7 @@ class TestClient():
         if not action:
             action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
 
-        print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
+        LOGGER.info('PAYMENT UPDATE: status for payment {} change to {} '.format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
             if response.is_error():
@@ -1387,7 +1430,7 @@ class TestClient():
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
-            print(response.body.get('errors'))
+            LOGGER.error(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
         all_counts = response.body.get('counts')

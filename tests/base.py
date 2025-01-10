@@ -42,17 +42,19 @@ class TestSquareBaseParent:
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
         PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
+        TEST_NAME_SANDBOX = 'tap_tester_square_sandbox_tests'
+        TEST_NAME_PROD = 'tap_tester_square_prod_tests'
+        test_name = TEST_NAME_SANDBOX
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
             'items': DEFAULT_BATCH_LIMIT,
-            'inventories': 100,
+            'inventories': DEFAULT_BATCH_LIMIT,
             'categories': DEFAULT_BATCH_LIMIT,
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-            'roles': 100,
             'refunds': 100,
             'payments': 100,
             'payouts': 100,
@@ -83,14 +85,36 @@ class TestSquareBaseParent:
         def tap_name():
             return "tap-square"
 
+        @staticmethod
+        def name():
+            return TestSquareBaseParent.TestSquareBase.test_name
+
         def set_environment(self, env):
             """
             Change the Square App Environmnet.
             Requires re-instatiating TestClient and setting env var.
             """
             os.environ['TAP_SQUARE_ENVIRONMENT'] = env
+            self.set_access_token_in_env()
             self.client = TestClient(env=env)
             self.SQUARE_ENVIRONMENT = env
+
+        def set_access_token_in_env(self):
+            '''
+            Fetch the access token from the existing connection and set it in the env.
+            This is used to avoid rate limiting issues when running tests.
+            '''
+            existing_connections = connections.fetch_existing_connections(self)
+            if not existing_connections:
+                os.environ.pop('TAP_SQUARE_ACCESS_TOKEN', None)
+                return
+
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_connections[0]['id'])
+            access_token = conn_with_creds['credentials'].get('access_token')
+            if not access_token:
+                LOGGER.warning('No access token found in env')
+            else:
+                os.environ['TAP_SQUARE_ACCESS_TOKEN'] = access_token
 
         @staticmethod
         def get_environment():
@@ -116,11 +140,22 @@ class TestSquareBaseParent:
                     'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                     'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                     'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                    'access_token': os.environ['TAP_SQUARE_ACCESS_TOKEN']
                 }
             else:
                 raise Exception("Square Environment: {} is not supported.".format(environment))
 
             return creds
+
+        @staticmethod
+        def preserve_access_token(existing_conns, payload):
+            '''This method is used get the access token from an existing refresh token'''
+            if not existing_conns:
+                return payload
+            
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
+            payload['properties']['access_token'] = conn_with_creds['credentials'].get('access_token')
+            return payload
 
         def expected_check_streams(self):
             return set(self.expected_metadata().keys()).difference(set())
@@ -490,7 +525,8 @@ class TestSquareBaseParent:
                         else:
                             raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
-                print("Adjust expectations for stream: {}".format(stream))
+                stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
+                LOGGER.info('Adjust expectations for stream: {}'.format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
 
             return stream_to_expected_records
@@ -546,7 +582,7 @@ class TestSquareBaseParent:
             found_catalog_names = found_catalog_names - {'settlements'}
             diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
             self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-            print("discovered schemas are OK")
+            LOGGER.info("discovered schemas are OK")
 
             return found_catalogs
 
@@ -568,7 +604,7 @@ class TestSquareBaseParent:
                 catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
                 # Verify all testable streams are selected
                 selected = catalog_entry.get('annotated-schema').get('selected')
-                print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+                LOGGER.info('Validating selection on {}: {}'.format(cat['stream_name'], selected))
                 if cat['stream_name'] not in streams_to_select:
                     self.assertFalse(selected, msg="Stream selected, but not testable.")
                     continue # Skip remaining assertions if we aren't selecting this stream
@@ -578,7 +614,7 @@ class TestSquareBaseParent:
                     # Verify all fields within each selected stream are selected
                     for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                         field_selected = field_props.get('selected')
-                        print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                        LOGGER.info('\tValidating selection on {}.{}: {}'.format(cat['stream_name'], field, field_selected))
                         self.assertTrue(field_selected, msg="Field not selected.")
                 else:
                     # Verify only automatic fields are selected
@@ -662,7 +698,7 @@ class TestSquareBaseParent:
             Certain Square streams cannot be compared directly with assertDictEqual().
             So we handle that logic here.
             """
-            if stream not in ['refunds', 'orders', 'customers']:
+            if stream not in ['refunds', 'orders', 'customers', 'locations']:
                 expected_record.pop('created_at', None)
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})

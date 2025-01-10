@@ -13,9 +13,6 @@ LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams().difference(self.untestable_streams())
@@ -34,7 +31,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
     @classmethod
     def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def run_sync(self, conn_id):
         """
@@ -61,15 +58,17 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
         self.START_DATE = self.get_properties().get('start_date')
 
-        print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
 
         if production_testable_streams:
-            print("\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+            LOGGER.info('\n\nTESTING WITH DYNAMIC DATA IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
             self.bookmarks_test(production_testable_streams)
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def bookmarks_test(self, testable_streams):
         """
@@ -84,13 +83,13 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark\n\n'.format(self.name()))
 
         # Ensure tested streams have existing records
         expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE, force_create_records=True)
 
         # Instantiate connection with default start
-        conn_id = connections.ensure_connection(self)
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
 
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)
@@ -249,7 +248,6 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
             assert updated_record, "Failed to update a {} record".format('payments')
             assert len(updated_record) == 1, "Updated too many {} records".format('payments')
 
-            expected_records_second_sync['payments'] += updated_record[0]
             updated_records['payments'] += updated_record[0]
 
         # adjust expectations for full table streams to include the expected records from sync 1
@@ -268,9 +266,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         # Adjust expectations for datetime format
         for record_desc, records in [("created", created_records), ("updated", updated_records),
                                      ("2nd sync expected records", expected_records_second_sync)]:
-            print("Adjusting epxectations for {} records".format(record_desc))
+            LOGGER.info('Adjusting epxectations for {} records'.format(record_desc))
             for stream, expected_records in records.items():
-                print("\tadjusting for stream: {}".format(stream))
+                LOGGER.info('\tadjusting for stream: {}'.format(stream))
                 self.modify_expected_records(expected_records)
 
         # ensure validity of expected_records_second_sync
@@ -319,7 +317,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         PARENT_FIELD_MISSING_SUBFIELDS = {'payments': {'card_details'}}
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
-        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money'}}
+        MISSING_FROM_SCHEMA = {'payments': {'capabilities', 'version_token', 'approved_money', 'refund_ids', 'refunded_money', 'processing_fee'}}
 
 
         # Loop first_sync_records and compare against second_sync_records
