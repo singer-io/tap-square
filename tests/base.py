@@ -213,7 +213,8 @@ class TestSquareBaseParent:
                 },
                 "payments": {
                     self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
+                    self.REPLICATION_METHOD: self.INCREMENTAL,
+                    self.REPLICATION_KEYS: {'updated_at'}
                 },
                 "payouts": {
                     self.PRIMARY_KEYS: {'id'},
