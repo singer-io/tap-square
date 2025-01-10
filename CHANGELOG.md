@@ -1,5 +1,14 @@
 # Changelog
 
+## [v2.2.0] (2024-11-14)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.1...v2.2.0)
+
+* Bug fix to replicate the `Payouts` stream records [#122](https://github.com/singer-io/tap-square/pull/120)
+* Fetches `Payments` stream data for all location IDs
+* Updates `Payments` stream implementation to function as a pseudo-incremental stream
+* Adds retry logic for handling 5xx errors
+
 ## [v2.1.1] (2024-11-04)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.0...v2.1.1)

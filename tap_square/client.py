@@ -138,8 +138,18 @@ class SquareClient():
         result = request_method(body, **kwargs)
 
         if result.is_error():
+            LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
-            if 'Service Unavailable' in error_message or 'upstream connect error or disconnect/reset before headers' in error_message or result.status_code == 429:
+
+            # Refactor the conditions into separate variables for readability
+            is_service_unavailable = 'Service Unavailable' in error_message
+            is_upstream_error = 'upstream connect error or disconnect/reset before headers' in error_message
+            is_cf_error_1101 = '<span class="cf-error-code">1101</span>' in error_message
+            is_html_error = error_message.startswith('<!DOCTYPE html>')
+            is_status_429_or_500 = result.status_code == 429 or result.status_code >= 500
+
+            retryable_conditions = {is_service_unavailable, is_upstream_error, is_cf_error_1101, is_html_error, is_status_429_or_500}
+            if any(retryable_conditions):
                 raise RetryableError(error_message)
             else:
                 raise RuntimeError(error_message)
@@ -309,23 +319,34 @@ class SquareClient():
             body,
             'refunds')
 
-    def get_payments(self, start_time, bookmarked_cursor):
-        start_time = utils.strptime_to_utc(start_time)
-        start_time = start_time - timedelta(milliseconds=1)
-        start_time = utils.strftime(start_time)
-
-        body = {
-        }
-        body['begin_time'] = start_time
-
+    def get_payments(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
-            body['cursor'] = bookmarked_cursor
+            cursor = bookmarked_cursor
+        else:
+            cursor = '__initial__' # initial value so while loop is always entered one time
 
-        yield from self._get_v2_objects(
-            'payments',
-            lambda bdy: self._client.payments.list_payments(**bdy),
-            body,
-            'payments')
+        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        while cursor:
+            if cursor == '__initial__':
+                # Initial text was needed to go into the while loop, but api needs
+                # it to be a valid bookmarked cursor or None
+                cursor = bookmarked_cursor
+
+            with singer.http_request_timer('GET payments'):
+                result = self._retryable_v2_method(
+                    lambda bdy: self._client.payments.list_payments(
+                        location_id=location_id,
+                        begin_time=start_time,
+                        end_time=end_time,
+                        cursor=cursor,
+                        limit=100,
+                    ),
+                    None,
+                )
+
+            yield (result.body.get('payments', []), result.body.get('cursor'))
+
+            cursor = result.body.get('cursor')
 
     def get_cash_drawer_shifts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
@@ -422,6 +443,6 @@ class SquareClient():
                     None,
                 )
 
-            yield (result.body.get('items', []), result.body.get('cursor'))
+            yield (result.body.get('payouts', []), result.body.get('cursor'))
 
             cursor = result.body.get('cursor')
