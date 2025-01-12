@@ -726,6 +726,7 @@ class TestSquareBaseParent:
                 expected_record['item_data'].pop('is_taxable', None)
                 expected_record['item_data'].pop('description_html', None)
                 expected_record['item_data'].pop('description_plaintext', None)
+                expected_record['item_data'].pop('is_archived', None)
                 
 
                 self.assertDictEqual(expected_record, sync_record)
