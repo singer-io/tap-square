@@ -2,13 +2,15 @@ import os
 import json
 from datetime import datetime as dt
 from datetime import timedelta
+from tap_tester.jira_client import JiraClient as jira_client
 from abc import ABC, abstractmethod
 from enum import Enum
 from copy import deepcopy
 from unittest import TestCase
 
 import singer
-
+from tap_tester.jira_client import JiraClient as jira_client
+from tap_tester.jira_client import CONFIGURATION_ENVIRONMENT as jira_config
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
 import tap_tester.runner      as runner
@@ -16,6 +18,7 @@ import tap_tester.runner      as runner
 from test_client import TestClient
 
 LOGGER = singer.get_logger()
+JIRA_CLIENT = jira_client({ **jira_config })
 
 
 class DataType(Enum):

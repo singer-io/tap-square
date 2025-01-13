@@ -2,6 +2,7 @@ import os
 from time import perf_counter
 
 import singer
+import base
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
@@ -85,6 +86,11 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         """
         LOGGER.info('\n\nRUNNING {}_bookmark\n\n'.format(self.name()))
 
+        testable_streams = testable_streams - {'payments'}
+        # Fail the test when the JIRA card is done to allow stream to be re-added and tested
+        self.assertNotEqual(base.JIRA_CLIENT.get_status_category('TDL-26905'), 
+                         'done',
+                         msg='JIRA ticket has moved to done, re-add the payments stream to the testable streams')
         # Ensure tested streams have existing records
         expected_records_first_sync = self.create_test_data(testable_streams, self.START_DATE, force_create_records=True)
 
