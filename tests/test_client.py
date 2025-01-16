@@ -517,9 +517,6 @@ class TestClient():
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
             return [obj for page, _ in self.get_orders_pages(start_date, None) for obj in page]
-        elif stream == 'roles':
-            return [obj for page, _ in self.get_roles(None) for obj in page
-                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
