@@ -2,7 +2,6 @@ import os
 import json
 from datetime import datetime as dt
 from datetime import timedelta
-from tap_tester.jira_client import JiraClient as jira_client
 from abc import ABC, abstractmethod
 from enum import Enum
 from copy import deepcopy
@@ -283,7 +282,6 @@ class TestSquareBaseParent:
                 'bank_accounts',  # No endpoints for CREATE or UPDATE
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
                 'payouts',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
-                'employees',     # Deprecated stream
                 'item',
                 'shifts',
                 'team_members'  # Only 1 record present
