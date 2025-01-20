@@ -1,15 +1,15 @@
 from datetime import timedelta
 import urllib.parse
-
+import json
+import requests
 from square.client import Client
 from singer import utils
 import singer
-import requests
 import backoff
 
 
 LOGGER = singer.get_logger()
-
+REFRESH_TOKEN_BEFORE = 22
 
 def get_batch_token_from_headers(headers):
     link = headers.get('link')
@@ -39,39 +39,91 @@ def log_backoff(details):
     LOGGER.warning('Error receiving data from square. Sleeping %.1f seconds before trying again', details['wait'])
 
 
+def write_config(config, config_path, data):
+    '''
+    Updates the provided filepath with json format of the `data` object
+    '''
+    config.update(data)
+    with open(config_path, "w") as tap_config:
+        json.dump(config, tap_config, indent=2)
+    return config
+
+
+def require_new_access_token(access_token, client):
+    '''
+    Checks if the access token needs to be refreshed
+    '''
+    # If there is no access token, we need to generate a new one
+    if not access_token:
+        return True
+
+    authorization = f"Bearer {access_token}"
+
+    with singer.http_request_timer('Check access token expiry'):
+        response = client.o_auth.retrieve_token_status(authorization)
+
+    if response.is_error():
+        error_message = response.errors if response.errors else response.body
+        LOGGER.error(error_message)
+        return True
+
+    # Parse the token expiry date
+    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
+    now = utils.now()
+    return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
+
+
 class RetryableError(Exception):
     pass
 
 
 class SquareClient():
-    def __init__(self, config):
+    def __init__(self, config, config_path):
         self._refresh_token = config['refresh_token']
         self._client_id = config['client_id']
         self._client_secret = config['client_secret']
 
         self._environment = 'sandbox' if config.get('sandbox') == 'true' else 'production'
 
-        self._access_token = self._get_access_token()
+        self._access_token = self._get_access_token(config, config_path)
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
-    def _get_access_token(self):
-        body = {
-            'client_id': self._client_id,
-            'client_secret': self._client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': self._refresh_token
-        }
-
+    def _get_access_token(self, config, config_path):
+        '''
+        Retrieves the access token from the config file. If the access token is expired, it will refresh it.
+        Otherwise, it will return the cached access token.
+        '''
+        access_token = config.get("access_token")
         client = Client(environment=self._environment)
 
-        with singer.http_request_timer('GET access token'):
-            result = client.o_auth.obtain_token(body)
+        # Check if the access token needs to be refreshed
+        if require_new_access_token(access_token, client):
+            LOGGER.info('Refreshing access token...')
+            body = {
+                'client_id': self._client_id,
+                'client_secret': self._client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._refresh_token
+            }
 
-        if result.is_error():
-            error_message = result.errors if result.errors else result.body
-            raise RuntimeError(error_message)
+            with singer.http_request_timer('GET access token'):
+                result = client.o_auth.obtain_token(body)
 
-        return result.body['access_token']
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                raise RuntimeError(error_message)
+
+            access_token = result.body['access_token']
+            write_config(
+                config,
+                config_path,
+                {
+                    'access_token': access_token,
+                    'refresh_token': result.body['refresh_token'],
+                },
+            )
+
+        return access_token
 
     @staticmethod
     @backoff.on_exception(
@@ -164,6 +216,10 @@ class SquareClient():
                         'end_at': end_time      # Exclusive on end_at
                     }
                 },
+                'sort': {
+                    'field': 'CREATED_AT',
+                    'order': 'ASC'
+                }
             }
         }
 
@@ -361,13 +417,6 @@ class SquareClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
-        yield from self._get_v1_objects(
-            'https://connect.squareup.com/v1/me/roles',
-            dict(),
-            'roles',
-            bookmarked_cursor,
-        )
 
     def get_payouts(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:

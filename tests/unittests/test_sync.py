@@ -115,7 +115,7 @@ class TestTeamMembers(unittest.TestCase):
         """
         expected_return_value = expected_return_state
 
-        team_members_obj = TeamMembers(SquareClient(mock_config))
+        team_members_obj = TeamMembers(SquareClient(mock_config, 'config_path'))
         return_value = team_members_obj.sync(
             {"currently_syncing": "team_members"},
             stream_schema,

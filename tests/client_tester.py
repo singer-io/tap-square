@@ -32,7 +32,6 @@ if __name__ == "__main__":
         'categories',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE - DONE
         # 'discounts',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'taxes',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
-        # 'roles',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'locations',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'payments',  # GET - DONE | CREATE - DONE | UPDATE - DONE | DELETE -
         # 'refunds',  # GET - DONE | CREATE - DONE | UPDATE - NA  | DELETE -

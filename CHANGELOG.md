@@ -1,5 +1,11 @@
 # Changelog
 
+## [v2.3.0](2025-01-16)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.2.0...v2.3.0)
+* Remove `roles` stream as it is deprecated. [#121](https://github.com/singer-io/tap-square/pull/121)
+* Implement token chaining - [#123](https://github.com/singer-io/tap-square/pull/123)
+
 ## [v2.2.0] (2024-11-14)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.1.1...v2.2.0)

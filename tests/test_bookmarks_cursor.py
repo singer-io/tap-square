@@ -11,10 +11,6 @@ LOGGER = singer.get_logger()
 
 class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase):
 
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication_cursor"
-
     def testable_streams_dynamic(self):
         all_testable_streams = self.dynamic_data_streams().intersection(
             self.expected_full_table_streams()).difference(
@@ -34,7 +30,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
     @classmethod
     def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def test_run(self):
         """Instantiate start date according to the desired data set and run the test"""
@@ -43,10 +39,13 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         self.bookmarks_test(self.testable_streams_dynamic().intersection(self.sandbox_streams()))
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
         production_testable_streams = self.testable_streams_dynamic().intersection(self.production_streams())
         if production_testable_streams:
             self.bookmarks_test(production_testable_streams)
+
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX
 
     def bookmarks_test(self, testable_streams):
         """
@@ -56,7 +55,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         PREREQUISITE
         For EACH stream that is interruptable with a bookmark cursor and not another one is replicated there are more than 1 page of data
         """
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark_cursor\n\n'.format(self.name()))
 
         # Ensure tested streams have existing records
         stream_to_expected_records_before_removing_first_page = self.create_test_data(testable_streams, self.START_DATE, min_required_num_records_per_stream=self.API_LIMIT)
@@ -65,7 +64,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in testable_streams:
             record_count = len(stream_to_expected_records_before_removing_first_page[stream])
-            print("Verifying data is sufficient for stream {}. ".format(stream) +
+            LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
                   "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
             self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                msg="Pagination not ensured.\n" +
@@ -84,7 +83,7 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
             ]
 
         # Create connection but do not use default start date
-        conn_id = connections.ensure_connection(self, original_properties=False)
+        conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
 
         # run check mode
         found_catalogs = self.run_and_verify_check_mode(conn_id)
