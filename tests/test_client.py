@@ -8,9 +8,10 @@ import requests
 import backoff
 import singer
 from square.client import Client
-
+LOGGER = singer.get_logger()
 
 LOGGER = singer.get_logger()
+REFRESH_TOKEN_BEFORE = 22
 
 typesToKeyMap = {
     'ITEM': 'item_data',
@@ -37,6 +38,27 @@ def get_batch_token_from_headers(headers):
     else:
         return None
 
+
+def require_new_access_token(access_token, client):
+    '''
+    Checks if the access token needs to be refreshed
+    '''
+    # If there is no access token, we need to generate a new one
+    if not access_token:
+        return True
+
+    authorization = f'Bearer {access_token}'
+
+    with singer.http_request_timer('Check access token expiry'):
+        response = client.o_auth.retrieve_token_status(authorization)
+
+    if response.is_error():
+        error_message = response.errors if response.errors else response.body
+        LOGGER.error(error_message)
+
+    token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
+    now = singer.utils.now()
+    return (token_expiry_date - now).days <= REFRESH_TOKEN_BEFORE
 
 def log_backoff(details):
     '''
@@ -104,23 +126,34 @@ class TestClient():
         self._client = Client(access_token=self._access_token, environment=self._environment)
 
     def _get_access_token(self):
-        body = {
-            'client_id': self._client_id,
-            'client_secret': self._client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': self._refresh_token
-        }
-
+        '''
+        Retrieves the access token from the env. If the access token is expired, it will refresh it.
+        Otherwise, it will return the cached access token.
+        '''
+        access_token = os.getenv('TAP_SQUARE_ACCESS_TOKEN')
         client = Client(environment=self._environment)
 
-        with singer.http_request_timer('GET access token'):
-            result = client.o_auth.obtain_token(body)
+        # Check if the access token needs to be refreshed
+        if require_new_access_token(access_token, client):
+            body = {
+                'client_id': self._client_id,
+                'client_secret': self._client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': self._refresh_token
+            }
 
-        if result.is_error():
-            error_message = result.errors if result.errors else result.body
-            raise RuntimeError(error_message)
+            with singer.http_request_timer('GET access token'):
+                result = client.o_auth.obtain_token(body)
 
-        return result.body['access_token']
+            if result.is_error():
+                error_message = result.errors if result.errors else result.body
+                LOGGER.info('error_message :-----------: %s',error_message)
+                raise RuntimeError(error_message)
+
+            LOGGER.info('Generating new the access token to set in environment....')
+            os.environ["TAP_SQUARE_ACCESS_TOKEN"] = access_token = result.body['access_token']
+
+        return access_token
 
     ##########################################################################
     ### V1 INFO
@@ -243,6 +276,22 @@ class TestClient():
             body,
             'orders')
 
+    def get_team_members(self, location_ids):
+        body = {
+            "query": {
+                "filter": {
+                    "location_ids": location_ids,
+                    "status": "ACTIVE"
+                }
+            },
+            "limit": 200
+        }
+        yield from self._get_v2_objects(
+            'team_members',
+            lambda bdy: self._client.team.search_team_members(body=bdy),
+            body,
+            'team_members')
+
     def get_inventories(self, start_time, bookmarked_cursor):
         body = {'updated_after': start_time}
 
@@ -316,19 +365,23 @@ class TestClient():
         if bookmarked_cursor:
             body = {
                 "cursor": bookmarked_cursor,
+                'sort': {
+                    'field': 'CREATED_AT',
+                    'order': 'ASC'
+                },
                 'limit': 100,
             }
         else:
             body = {
                 "query": {
+                    'sort': {
+                        'field': 'CREATED_AT',
+                        'order': 'ASC'
+                    },
                     "filter": {
                         "updated_at": {
                             "start_at": start_time
                         }
-                    },
-                    "sort": {
-                        "sort_field": "UPDATED_AT",
-                        "sort_order": "ASC"
                     }
                 }
             }
@@ -407,13 +460,6 @@ class TestClient():
 
         return result
 
-    def get_roles(self, bookmarked_cursor):
-        yield from self._get_v1_objects(
-            'https://connect.squareup.com/v1/me/roles',
-            dict(),
-            'roles',
-            bookmarked_cursor,
-        )
 
     def get_all_location_ids(self):
         all_location_ids = list()
@@ -433,6 +479,13 @@ class TestClient():
             # orders requests can only take up to 10 location_ids at a time
             for page, cursor in self.get_orders(location_ids_chunk, start_time, bookmarked_cursor):
                 yield page, cursor
+
+    def get_team_members_pages(self, start_time, bookmarked_cursor):
+        # refactored from team_members.sync
+        all_location_ids = self.get_all_location_ids()
+
+        for page, cursor in self.get_team_members(all_location_ids):
+            yield page, cursor
 
     def get_cds_pages(self, start_time, bookmarked_cursor):
         # refactored from cash_drawer_shifts.sync
@@ -464,9 +517,6 @@ class TestClient():
             return [obj for page, _ in self.get_inventories(start_date, None) for obj in page]
         elif stream == 'orders':
             return [obj for page, _ in self.get_orders_pages(start_date, None) for obj in page]
-        elif stream == 'roles':
-            return [obj for page, _ in self.get_roles(None) for obj in page
-                    if not start_date or obj['updated_at'] >= start_date]
         elif stream == 'shifts':
             return [obj for page, _ in self.get_shifts(None) for obj in page
                     if obj['updated_at'] >= start_date]
@@ -474,6 +524,8 @@ class TestClient():
             return [obj for page, _ in self.get_cds_pages(start_date, None) for obj in page]
         elif stream == 'customers':
             return [obj for page, _ in self.get_customers(start_date, None) for obj in page]
+        elif stream == 'team_members':
+            return [obj for page, _ in self.get_team_members_pages(start_date, None) for obj in page]
         else:
             raise NotImplementedError("Not implemented for stream {}".format(stream))
 
@@ -484,13 +536,6 @@ class TestClient():
             return next(self.get_inventories(start_date, None))
         elif stream == 'payments':
             return next(self.get_payments(start_date, None))
-        elif stream == 'roles':
-            roles, cursor = next(self.get_roles(None))
-            roles_after_start_date = [
-                role for role in roles
-                if not start_date or role['updated_at'] >= start_date
-            ]
-            return roles_after_start_date, cursor
         elif stream == 'shifts':
             shifts, cursor = next(self.get_shifts(None))
             shifts_after_start_date = [
@@ -592,7 +637,7 @@ class TestClient():
         self.delete_catalog(catalog_ids)
         raise NotImplementedError('Consider adding {} to the cleanup method in test_pagination.py'.format(stream_name))
 
-    def _post_order(self, body, business_location_id):
+    def _post_order(self, body):
         """
         body: {
           "order": {
@@ -601,7 +646,7 @@ class TestClient():
           "idempotency_key": str(uuid.uuid4())
         }
         """
-        resp = self._client.orders.create_order(location_id=business_location_id, body=body)
+        resp = self._client.orders.create_order(body=body)
 
         if resp.is_error():
             stream_name = 'orders'
@@ -620,8 +665,6 @@ class TestClient():
             return self.create_taxes(num_records).body.get('objects')
         elif stream == 'modifier_lists':
             return self.create_modifier_list(num_records).body.get('objects')
-        elif stream == 'roles':
-            return self.create_roles_v1(num_records)
         elif stream == 'inventories':
             return self._create_batch_inventory_adjustment(start_date=start_date, num_records=num_records)
         elif stream == 'locations':
@@ -667,6 +710,13 @@ class TestClient():
 
         return response.body.get('object')
 
+    def get_customer(self, customer_id):
+        response = self._client.customers.retrieve_customer(customer_id)
+        if response.is_error():
+            raise RuntimeError(response.errors)
+
+        return response.body.get('customer')
+
     def _create_batch_inventory_adjustment(self, start_date, num_records=1):
         # Create item object(s)
         # This is needed to get an item ID in order to perform an item_variation
@@ -694,7 +744,7 @@ class TestClient():
                 'ignore_unchanged_counts': False,
                 'idempotency_key': str(uuid.uuid4())
             }
-            LOGGER.info("About to create %s inventory adjustments", len(change_chunk))
+            LOGGER.info('About to create %s inventory adjustments', len(change_chunk))
             response = self._client.inventory.batch_change_inventory(body)
             if response.is_error():
                 LOGGER.error("response had error, body was %s", body)
@@ -712,7 +762,7 @@ class TestClient():
             'ignore_unchanged_counts': False,
             'idempotency_key': str(uuid.uuid4())
         }
-        LOGGER.info("About to create %s inventory adjustments", len(change))
+        LOGGER.info('About to create %s inventory adjustments', len(change))
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
             LOGGER.error("response had error, body was %s", body)
@@ -752,6 +802,7 @@ class TestClient():
 
     def create_refunds(self, start_date, num_records, payment_response=None):
         refunds = []
+
         for _ in range(num_records):
             (created_refund, _) = self.create_refund(start_date, payment_response)
             refunds += created_refund
@@ -779,6 +830,7 @@ class TestClient():
             payment_response = self.create_payment(autocomplete=True, source_key="card")
         payment_obj = self.get_object_matching_conditions('payments', payment_response.get('id'),
                                                           start_date=start_date, status=payment_response.get('status'))[0]
+
 
         payment_id = payment_obj.get('id')
         payment_amount = payment_obj.get('amount_money').get('amount')
@@ -838,8 +890,8 @@ class TestClient():
         }
         new_payment = self._client.payments.create_payment(body)
         if new_payment.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(new_payment))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(new_payment))
             raise RuntimeError(new_payment.errors)
 
         response = new_payment.body.get('payment')
@@ -856,7 +908,6 @@ class TestClient():
         Generate a customer object
         """
         body = {
-            'id': self.make_id('customer'),
             'idempotency_key': str(uuid.uuid4()),
             'given_name': 'given',
             'family_name': 'family',
@@ -872,16 +923,15 @@ class TestClient():
                 'first_name': 'a',
                 'last_name': 'b'
             },
-            'phone_number': '9999999999',
             'note': self.make_id('customer'),
         }
         response = self._client.customers.create_customer(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
-        return response.body.get('customer')
+        return self.get_customer(response.body.get('customer')['id'])
 
     def create_modifier_list(self, num_records):
         objects = []
@@ -938,7 +988,19 @@ class TestClient():
                                   'modifier_list_info': [{
                                       'modifier_list_id': mod_list_id,
                                       'enabled': True
-                                  }]}} for item_id in item_ids]
+                                  }],
+                                    'variations': [{
+                                        'id': self.make_id('variation'),
+                                        'type': 'ITEM_VARIATION',
+                                        'item_variation_data': {
+                                            'name': 'Default Variation',
+                                            'pricing_type': 'FIXED_PRICING',
+                                            'price_money': {
+                                                'amount': 1000,  # Price in cents (e.g., 1000 = $10.00)
+                                                'currency': 'USD'
+                                            }
+                                        }
+                                    }]}} for item_id in item_ids]
         body = {'batches': [{'objects': object_chunk}
                             for object_chunk in chunks(objects, self.MAX_OBJECTS_PER_BATCH_UPSERT_CATALOG_OBJECTS)],
                 'idempotency_key': str(uuid.uuid4())}
@@ -1094,8 +1156,8 @@ class TestClient():
         }
         response = self.post_location(body)
         if response.is_error():
-            print("body: {}".format(body))
-            print("response: {}".format(response))
+            LOGGER.info('body: {}'.format(body))
+            LOGGER.info('response: {}'.format(response))
             raise RuntimeError(response.errors)
 
         location_id = response.body.get('location')['id']
@@ -1106,32 +1168,6 @@ class TestClient():
         assert len(location_matching_ids) == 1
         return location_matching_ids[0]
 
-    def create_roles_v1(self, num_records):
-        if self.env_is_sandbox():
-            raise RuntimeError("The Square Environment is set to {} but must be production.".format(self._environment))
-
-        base_v1 = "https://connect.squareup.com/v1/me/"
-        endpoint = "roles"
-        full_url = base_v1 + endpoint
-        permissions = ['REGISTER_ACCESS_SALES_HISTORY',
-                       'REGISTER_APPLY_RESTRICTED_DISCOUNTS',
-                       'REGISTER_CHANGE_SETTINGS',
-                       'REGISTER_EDIT_ITEM',
-                       'REGISTER_ISSUE_REFUNDS',
-                       'REGISTER_OPEN_CASH_DRAWER_OUTSIDE_SALE',
-                       'REGISTER_VIEW_SUMMARY_REPORTS']
-
-        roles = []
-        for _ in range(num_records):
-            role_id = self.make_id(endpoint)
-            data = {
-                'name': role_id[1:],
-                'permissions': random.choice(permissions),
-                'is_owner': False,
-            }
-            resp = self._retryable_request_method(lambda: requests.post(url=full_url, headers=self.get_headers(), json=data))
-            roles.append(resp.json())
-        return roles
 
     def _create_orders(self, num_records, start_date):
         # location id in body is merchant location id, one in create_order call is bussiness location id
@@ -1156,12 +1192,12 @@ class TestClient():
                 },
                 'state': 'PROPOSED'
             }]
-            created_orders.append(self._post_order(body, location_id).body.get('order'))
+            created_orders.append(self._post_order(body).body.get('order'))
 
         return created_orders
 
     def create_shift(self, start_date, end_date, num_records):
-        employee_id = self.get_or_create_first_found('employees', None)['id']
+        team_member_id = self.get_or_create_first_found('team_members', None)['id']
 
         all_location_ids = [location['id'] for location in self.get_all('locations', start_date)]
         all_shifts = self.get_all('shifts', start_date)
@@ -1179,7 +1215,7 @@ class TestClient():
             body = {
                 'idempotency_key': str(uuid.uuid4()),
                 'shift': {
-                    'employee_id': employee_id,
+                    'team_member_id': team_member_id,
                     'location_id': location_id,
                     'start_at': start_at, # This can probably be derived from the test's start date
                     'end_at': end_at,
@@ -1233,8 +1269,6 @@ class TestClient():
             return self.update_discounts(obj, version).body.get('objects')
         elif stream == 'taxes':
             return self.update_taxes(obj, version).body.get('objects')
-        elif stream == 'roles':
-            return [self.update_roles_v1(obj)]
         elif stream == 'modifier_lists':
             raise NotImplementedError("{} is not implmented".format(stream))
         elif stream == 'inventories':
@@ -1298,7 +1332,7 @@ class TestClient():
         if not action:
             action = random.choice(list(self.PAYMENT_ACTION_TO_STATUS.keys()))
 
-        print("PAYMENT UPDATE: status for payment {} change to {} ".format(obj_id, action))
+        LOGGER.info('PAYMENT UPDATE: status for payment {} change to {} '.format(obj_id, action))
         if action == 'cancel':
             response = self._client.payments.cancel_payment(obj_id)
             if response.is_error():
@@ -1339,13 +1373,6 @@ class TestClient():
         resp = self._retryable_request_method(lambda: requests.put(url=endpoint, headers=self.get_headers(), json=data))
         return resp.json()
 
-    def update_roles_v1(self, obj):
-        role_id = obj.get('id')
-        uid = self.make_id('role')[1:]
-        data = {
-            'name': 'updated_' + uid,
-        }
-        return self._update_object_v1("roles", role_id, data)
 
     def update_modifier_list(self, obj, version):
         obj_id = obj.get('id')
@@ -1400,7 +1427,7 @@ class TestClient():
         }
         response = self._client.inventory.batch_change_inventory(body)
         if response.is_error():
-            print(response.body.get('errors'))
+            LOGGER.error(response.body.get('errors'))
             raise RuntimeError(response.errors)
 
         all_counts = response.body.get('counts')
@@ -1439,7 +1466,7 @@ class TestClient():
         obj_id = obj.get('id')
         version = obj.get('version')
 
-        body = {'order': {'version': version},
+        body = {'order': {'version': version, 'location_id': location_id},
                 'idempotency_key': str(uuid.uuid4())}
 
         # Change fulfillments status if current status is 'proposed' and update the order note
@@ -1451,7 +1478,7 @@ class TestClient():
         else: # if there is no fulfillment record, just update the order note
             body['order']['note'] = "Updated Order " + self.make_id('orders')
 
-        resp = self._client.orders.update_order(location_id=location_id, order_id=obj_id, body=body)
+        resp = self._client.orders.update_order(order_id=obj_id, body=body)
         if resp.is_error():
             raise RuntimeError(resp.errors)
         return resp

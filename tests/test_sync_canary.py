@@ -1,13 +1,10 @@
 import tap_tester.connections as connections
-
+import singer
 from base import TestSquareBaseParent, DataType
-
+LOGGER = singer.get_logger()
 
 class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
     """Test that sync code gets exercised for all streams regardless if we can't create data. Validates scopes, authorizations, sync code that can't yet be tested end-to-end."""
-    @staticmethod
-    def name():
-        return "tap_tester_sync_canary"
 
     def testable_streams_dynamic(self):
         return self.dynamic_data_streams()
@@ -26,14 +23,14 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
         Select all fields or no fields based on the select_all_fields param.
         Run a sync.
         """
-        conn_id = connections.ensure_connection(self)
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
 
         found_catalogs = self.run_and_verify_check_mode(conn_id)
 
         streams_to_select = self.testable_streams(environment, data_type)
 
-        print("\n\nRUNNING {}".format(self.name()))
-        print("WITH STREAMS: {}\n\n".format(streams_to_select))
+        LOGGER.info('\n\nRUNNING {}_sync_canary'.format(self.name()))
+        LOGGER.info('WITH STREAMS: {}\n\n'.format(streams_to_select))
 
         self.perform_and_verify_table_and_field_selection(
             conn_id, found_catalogs, streams_to_select, select_all_fields=select_all_fields
@@ -49,6 +46,8 @@ class TestSyncCanary(TestSquareBaseParent.TestSquareBase):
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_standard_sync(self.get_environment(), DataType.STATIC)
 
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_PROD
         self.set_environment(self.PRODUCTION)
         self.run_standard_sync(self.get_environment(), DataType.DYNAMIC)
         self.run_standard_sync(self.get_environment(), DataType.STATIC)
+        TestSquareBaseParent.TestSquareBase.test_name = self.TEST_NAME_SANDBOX

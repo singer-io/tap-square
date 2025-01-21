@@ -1,19 +1,15 @@
 import os
 import unittest
-
+import singer
 import tap_tester.connections as connections
 import tap_tester.menagerie   as menagerie
 import tap_tester.runner      as runner
 
 from base import TestSquareBaseParent
+LOGGER = singer.get_logger()
 
-
-class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
+class TestSquareIncrementalReplicationStatic(TestSquareBaseParent.TestSquareBase):
     STATIC_START_DATE = "2020-07-13T00:00:00Z"
-
-    @staticmethod
-    def name():
-        return "tap_tester_square_incremental_replication"
 
     def testable_streams_static(self):
         return self.static_data_streams().difference(self.untestable_streams())
@@ -24,7 +20,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
 
     @classmethod
     def tearDownClass(cls):
-        print("\n\nTEST TEARDOWN\n\n")
+        LOGGER.info('\n\nTEST TEARDOWN\n\n')
 
     def run_sync(self, conn_id):
         """
@@ -57,9 +53,9 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         For EACH stream that is incrementally replicated there are multiple rows of data with
             different values for the replication key
         """
-        print("\n\nTESTING IN SQUARE_ENVIRONMENT: {}".format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
+        LOGGER.info('\n\nTESTING IN SQUARE_ENVIRONMENT: {}'.format(os.getenv('TAP_SQUARE_ENVIRONMENT')))
 
-        print("\n\nRUNNING {}\n\n".format(self.name()))
+        LOGGER.info('\n\nRUNNING {}_bookmark_static\n\n'.format(self.name()))
 
         # Instatiate static start date
         self.START_DATE = self.STATIC_START_DATE
@@ -68,7 +64,7 @@ class TestSquareIncrementalReplication(TestSquareBaseParent.TestSquareBase):
         expected_records_first_sync = self.create_test_data(self.testable_streams_static(), self.START_DATE)
 
         # Instantiate connection with default start
-        conn_id = connections.ensure_connection(self)
+        conn_id = connections.ensure_connection(self, payload_hook=self.preserve_access_token)
 
         # run in check mode
         check_job_name = runner.run_check_mode(self, conn_id)

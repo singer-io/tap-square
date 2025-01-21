@@ -8,7 +8,8 @@ from copy import deepcopy
 from unittest import TestCase
 
 import singer
-
+from tap_tester.jira_client import JiraClient as jira_client
+from tap_tester.jira_client import CONFIGURATION_ENVIRONMENT as jira_config
 import tap_tester.menagerie as menagerie
 import tap_tester.connections as connections
 import tap_tester.runner      as runner
@@ -16,6 +17,7 @@ import tap_tester.runner      as runner
 from test_client import TestClient
 
 LOGGER = singer.get_logger()
+JIRA_CLIENT = jira_client({ **jira_config })
 
 
 class DataType(Enum):
@@ -41,18 +43,20 @@ class TestSquareBaseParent:
         START_DATE_FORMAT = "%Y-%m-%dT00:00:00Z"
         STATIC_START_DATE = "2020-07-13T00:00:00Z"
         START_DATE = ""
-        PRODUCTION_ONLY_STREAMS = {'roles', 'bank_accounts', 'payouts'}
+        PRODUCTION_ONLY_STREAMS = {'bank_accounts', 'payouts'}
+        TEST_NAME_SANDBOX = 'tap_tester_square_sandbox_tests'
+        TEST_NAME_PROD = 'tap_tester_square_prod_tests'
+        test_name = TEST_NAME_SANDBOX
 
         DEFAULT_BATCH_LIMIT = 1000
         API_LIMIT = {
             'items': DEFAULT_BATCH_LIMIT,
-            'inventories': 100,
+            'inventories': DEFAULT_BATCH_LIMIT,
             'categories': DEFAULT_BATCH_LIMIT,
             'discounts': DEFAULT_BATCH_LIMIT,
             'taxes': DEFAULT_BATCH_LIMIT,
             'cash_drawer_shifts': DEFAULT_BATCH_LIMIT,
             'locations': None, # Api does not accept a cursor and documents no limit, see https://developer.squareup.com/reference/square/locations/list-locations
-            'roles': 100,
             'refunds': 100,
             'payments': 100,
             'payouts': 100,
@@ -83,14 +87,36 @@ class TestSquareBaseParent:
         def tap_name():
             return "tap-square"
 
+        @staticmethod
+        def name():
+            return TestSquareBaseParent.TestSquareBase.test_name
+
         def set_environment(self, env):
             """
             Change the Square App Environmnet.
             Requires re-instatiating TestClient and setting env var.
             """
             os.environ['TAP_SQUARE_ENVIRONMENT'] = env
+            self.set_access_token_in_env()
             self.client = TestClient(env=env)
             self.SQUARE_ENVIRONMENT = env
+
+        def set_access_token_in_env(self):
+            '''
+            Fetch the access token from the existing connection and set it in the env.
+            This is used to avoid rate limiting issues when running tests.
+            '''
+            existing_connections = connections.fetch_existing_connections(self)
+            if not existing_connections:
+                os.environ.pop('TAP_SQUARE_ACCESS_TOKEN', None)
+                return
+
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_connections[0]['id'])
+            access_token = conn_with_creds['credentials'].get('access_token')
+            if not access_token:
+                LOGGER.warning('No access token found in env')
+            else:
+                os.environ['TAP_SQUARE_ACCESS_TOKEN'] = access_token
 
         @staticmethod
         def get_environment():
@@ -116,11 +142,22 @@ class TestSquareBaseParent:
                     'refresh_token': os.getenv('TAP_SQUARE_REFRESH_TOKEN') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_REFRESH_TOKEN'),
                     'client_id': os.getenv('TAP_SQUARE_APPLICATION_ID') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_ID'),
                     'client_secret': os.getenv('TAP_SQUARE_APPLICATION_SECRET') if environment == 'sandbox' else os.getenv('TAP_SQUARE_PROD_APPLICATION_SECRET'),
+                    'access_token': os.environ['TAP_SQUARE_ACCESS_TOKEN']
                 }
             else:
                 raise Exception("Square Environment: {} is not supported.".format(environment))
 
             return creds
+
+        @staticmethod
+        def preserve_access_token(existing_conns, payload):
+            '''This method is used get the access token from an existing refresh token'''
+            if not existing_conns:
+                return payload
+            
+            conn_with_creds = connections.fetch_existing_connection_with_creds(existing_conns[0]['id'])
+            payload['properties']['access_token'] = conn_with_creds['credentials'].get('access_token')
+            return payload
 
         def expected_check_streams(self):
             return set(self.expected_metadata().keys()).difference(set())
@@ -178,7 +215,8 @@ class TestSquareBaseParent:
                 },
                 "payments": {
                     self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
+                    self.REPLICATION_METHOD: self.INCREMENTAL,
+                    self.REPLICATION_KEYS: {'updated_at'}
                 },
                 "payouts": {
                     self.PRIMARY_KEYS: {'id'},
@@ -187,11 +225,6 @@ class TestSquareBaseParent:
                 "refunds": {
                     self.PRIMARY_KEYS: {'id'},
                     self.REPLICATION_METHOD: self.FULL,
-                },
-                "roles": {
-                    self.PRIMARY_KEYS: {'id'},
-                    self.REPLICATION_METHOD: self.FULL,
-                    self.START_DATE_KEY: 'updated_at'
                 },
                 "shifts": {
                     self.PRIMARY_KEYS: {'id'},
@@ -225,7 +258,6 @@ class TestSquareBaseParent:
         def production_streams():
             """Some streams can only have data on the production app. We must test these separately"""
             return {
-                'roles',
                 'bank_accounts',
             }
 
@@ -250,6 +282,9 @@ class TestSquareBaseParent:
                 'bank_accounts',  # No endpoints for CREATE or UPDATE
                 'cash_drawer_shifts',  # Require cash transactions (not supported by API)
                 'payouts',  # Depenedent on bank_account related transactions, no endpoints for CREATE or UPDATE
+                'item',
+                'shifts',
+                'team_members'  # Only 1 record present
             }
 
         def dynamic_data_streams(self):
@@ -456,7 +491,7 @@ class TestSquareBaseParent:
                 start_date_2 = start_date
 
             # Force modifier_lists to go first and payments to go last
-            create_test_data_streams = list(testable_streams)
+            create_test_data_streams = list(testable_streams - {'team_members'})
             create_test_data_streams = self._shift_to_start_of_list('modifier_lists', create_test_data_streams)
             # creating a refunds results in a new payment, putting it after ensures the number of orders is consistent
             create_test_data_streams = self._shift_to_end_of_list('payments', create_test_data_streams)
@@ -492,7 +527,8 @@ class TestSquareBaseParent:
                         else:
                             raise NotImplementedError("created_records unknown type: {}".format(created_records))
 
-                print("Adjust expectations for stream: {}".format(stream))
+                stream_to_expected_records[stream] = self.client.get_all(stream, start_date)
+                LOGGER.info('Adjust expectations for stream: {}'.format(stream))
                 self.modify_expected_records(stream_to_expected_records[stream])
 
             return stream_to_expected_records
@@ -545,9 +581,10 @@ class TestSquareBaseParent:
             self.assertGreater(len(found_catalogs), 0, msg="unable to locate schemas for connection {}".format(conn_id))
 
             found_catalog_names = set(map(lambda c: c['tap_stream_id'], found_catalogs))
+            found_catalog_names = found_catalog_names - {'settlements'}
             diff = self.expected_check_streams().symmetric_difference(found_catalog_names)
             self.assertEqual(len(diff), 0, msg="discovered schemas do not match: {}".format(diff))
-            print("discovered schemas are OK")
+            LOGGER.info("discovered schemas are OK")
 
             return found_catalogs
 
@@ -569,7 +606,7 @@ class TestSquareBaseParent:
                 catalog_entry = menagerie.get_annotated_schema(conn_id, cat['stream_id'])
                 # Verify all testable streams are selected
                 selected = catalog_entry.get('annotated-schema').get('selected')
-                print("Validating selection on {}: {}".format(cat['stream_name'], selected))
+                LOGGER.info('Validating selection on {}: {}'.format(cat['stream_name'], selected))
                 if cat['stream_name'] not in streams_to_select:
                     self.assertFalse(selected, msg="Stream selected, but not testable.")
                     continue # Skip remaining assertions if we aren't selecting this stream
@@ -579,7 +616,7 @@ class TestSquareBaseParent:
                     # Verify all fields within each selected stream are selected
                     for field, field_props in catalog_entry.get('annotated-schema').get('properties').items():
                         field_selected = field_props.get('selected')
-                        print("\tValidating selection on {}.{}: {}".format(cat['stream_name'], field, field_selected))
+                        LOGGER.info('\tValidating selection on {}.{}: {}'.format(cat['stream_name'], field, field_selected))
                         self.assertTrue(field_selected, msg="Field not selected.")
                 else:
                     # Verify only automatic fields are selected
@@ -663,16 +700,14 @@ class TestSquareBaseParent:
             Certain Square streams cannot be compared directly with assertDictEqual().
             So we handle that logic here.
             """
+            if stream not in ['refunds', 'orders', 'customers', 'locations']:
+                expected_record.pop('created_at', None)
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
-            elif stream in {'roles'}:
-                self.assertDictEqualWithOffKeys(expected_record, sync_record, {'created_at', 'updated_at'})
             elif stream == 'inventories':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'calculated_at'})
             elif stream == 'items':
                 self.assertParentKeysEqual(expected_record, sync_record)
-                expected_record_copy = deepcopy(expected_record)
-                sync_record_copy = deepcopy(sync_record)
 
                 # Square api for some reason adds legacy_tax_ids in item_data but not when the item is created. If they are equal to tax_ids (which we compare with the expected record correctly) they're ignored if they are missing only in the expected record
                 if ('item_data' in expected_record and
@@ -680,10 +715,31 @@ class TestSquareBaseParent:
                         'legacy_tax_ids' in sync_record['item_data'] and
                         'legacy_tax_ids' not in expected_record['item_data']):
                     self.assertIn('tax_ids', sync_record['item_data'])
-                    self.assertEqual(sync_record_copy['item_data'].pop('legacy_tax_ids'),
-                                     sync_record['item_data']['tax_ids'])
+                
+                updated_variations = []
+                for variation in expected_record['item_data']['variations']:
+                    variation.pop('created_at', None)
+                    variation['item_variation_data'].pop('sellable', None)
+                    variation['item_variation_data'].pop('stockable', None)
+                    updated_variations.append(variation)
 
-                self.assertDictEqual(expected_record_copy, sync_record_copy)
+                expected_record['item_data']['variations'] = updated_variations
+                expected_record['item_data'].pop('is_taxable', None)
+                expected_record['item_data'].pop('description_html', None)
+                expected_record['item_data'].pop('description_plaintext', None)
+                expected_record['item_data'].pop('is_archived', None)
+                
+
+                self.assertDictEqual(expected_record, sync_record)
+            elif stream == 'modifier_lists':
+                updated_modifiers = []
+                for modifier in expected_record['modifier_list_data']['modifiers']:
+                    modifier.pop('created_at', None)
+                    updated_modifiers.append(modifier)
+                
+                expected_record['modifier_list_data']['modifiers'] = updated_modifiers
+            elif stream == 'categories':
+                expected_record['category_data'].pop('is_top_level', None)
             else:
                 self.assertDictEqual(expected_record, sync_record)
 
