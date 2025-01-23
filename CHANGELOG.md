@@ -1,5 +1,10 @@
 # Changelog
 
+## [v2.3.1](2025-01-23)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.0...v2.3.1)
+* Fixes issue with 'list' object has no attribute 'startswith' [#124](https://github.com/singer-io/tap-square/pull/124)
+
 ## [v2.3.0](2025-01-16)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.2.0...v2.3.0)

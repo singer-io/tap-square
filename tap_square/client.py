@@ -145,7 +145,7 @@ class SquareClient():
             is_service_unavailable = 'Service Unavailable' in error_message
             is_upstream_error = 'upstream connect error or disconnect/reset before headers' in error_message
             is_cf_error_1101 = '<span class="cf-error-code">1101</span>' in error_message
-            is_html_error = error_message.startswith('<!DOCTYPE html>')
+            is_html_error = isinstance(error_message, str) and error_message.startswith('<!DOCTYPE html>')
             is_status_429_or_500 = result.status_code == 429 or result.status_code >= 500
 
             retryable_conditions = {is_service_unavailable, is_upstream_error, is_cf_error_1101, is_html_error, is_status_429_or_500}
