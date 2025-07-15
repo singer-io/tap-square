@@ -64,12 +64,6 @@
             "string"
           ]
         },
-        "is_secondary_tax": {
-          "type": [
-            "null",
-            "boolean"
-          ]
-        },
         "name": {
           "type": [
             "null",
