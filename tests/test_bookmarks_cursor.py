@@ -63,12 +63,13 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in testable_streams:
-            record_count = len(stream_to_expected_records_before_removing_first_page[stream])
-            LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
-                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
-            self.assertGreater(record_count, self.API_LIMIT.get(stream),
-                               msg="Pagination not ensured.\n" +
-                               "{} does not have sufficient data in expecatations.\n ".format(stream))
+            with self.subTest(stream=stream):
+                record_count = len(stream_to_expected_records_before_removing_first_page[stream])
+                LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
+                      "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
+                self.assertGreater(record_count, self.API_LIMIT.get(stream),
+                                   msg="Pagination not ensured.\n" +
+                                   "{} does not have sufficient data in expecatations.\n ".format(stream))
 
         stream_to_first_page_records = dict()
         stream_to_cursor = dict()
