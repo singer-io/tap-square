@@ -558,28 +558,14 @@ class TestClient():
         Poll Square for a specific set of key(s) that we know are not immediately returned.
           ex. A completed payment will have a processing_fee field added after the api call is already returned.
         """
-        attempts = 0
-        while attempts < 25:
-            LOGGER.info('get_object_matching_conditions: Calling %s API in retry loop [attemps: %s]', stream, attempts)
-            all_objects = self.get_all(stream, start_date)
-            found_object = [object for object in all_objects if object['id'] == object_id]
-            attempts += 1
-            if not found_object:
-                LOGGER.warning("Stream %s Object with id %s not found, retrying", stream, object_id)
-                continue
-
-            if not set(found_object[0].keys()).issuperset(keys_exist):
-                LOGGER.warning("Stream %s Object with id %s doesn't have enough keys, [object=%s][keys_exist=%s]", stream, object_id, found_object[0], keys_exist)
-                continue
-
-            if all([found_object[0].get(key) == value for key, value in kwargs.items()]):
-                LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
-                return found_object
-            else:
-                LOGGER.warning("Stream %s Object with id %s doesn't have matching keys and values from the expectation, will poll again [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
-
-        LOGGER.error("Polling Failed for stream %s object with id %s \n [expected key-values: kwargs=%s][found_object=%s]", stream, object_id, kwargs, found_object[0])
-        raise RuntimeError()
+        all_objects = self.get_all(stream, start_date)
+        found_object = [object for object in all_objects if object['id'] == object_id]
+        if len(found_object) > 0 and all([found_object[0].get(key) == value for key, value in kwargs.items()]):
+            LOGGER.info('get_object_matching_conditions found %s object successfully: %s', stream, found_object)
+            return found_object
+        else:
+            msg = f'Object missing keys. {{ "stream": "{stream}", "id": "{object_id}", "expected-key-values": "{kwargs}", "object": "{found_object}"'
+            raise RuntimeError(msg)
 
     ##########################################################################
     ### CREATEs
