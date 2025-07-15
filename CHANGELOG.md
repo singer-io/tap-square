@@ -1,5 +1,12 @@
 # Changelog
 
+## [v2.3.2](2025-07-15)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.1...v2.3.2)
+* Bump dependency versions for twistlock compliance
+* Update tests to fix circleci build
+* [#125](https://github.com/singer-io/tap-square/pull/125)
+
 ## [v2.3.1](2025-01-23)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.0...v2.3.1)
