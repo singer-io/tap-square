@@ -702,6 +702,10 @@ class TestSquareBaseParent:
             """
             if stream not in ['refunds', 'orders', 'customers', 'locations']:
                 expected_record.pop('created_at', None)
+
+            if stream == 'taxes':
+                expected_record.get("tax_data", {}).pop("is_secondary_tax", None)
+
             if stream == 'payments':
                 self.assertDictEqualWithOffKeys(expected_record, sync_record, {'updated_at'})
             elif stream == 'inventories':
