@@ -83,12 +83,13 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
 
         # verify the expected test data exceeds API LIMIT for all testable streams
         for stream in self.TESTABLE_STREAMS:
-            record_count = len(expected_records[stream])
-            LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
-                  "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
-            self.assertGreater(record_count, self.API_LIMIT.get(stream),
-                               msg="Pagination not ensured.\n" +
-                               "{} does not have sufficient data in expecatations.\n ".format(stream))
+            with self.subTest(stream=stream):
+                record_count = len(expected_records[stream])
+                LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
+                      "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
+                self.assertGreater(record_count, self.API_LIMIT.get(stream),
+                                   msg="Pagination not ensured.\n" +
+                                   "{} does not have sufficient data in expecatations.\n ".format(stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
