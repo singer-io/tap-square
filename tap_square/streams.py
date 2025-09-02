@@ -14,9 +14,7 @@ def get_date_windows(start_time):
     window_start = singer.utils.strptime_to_utc(start_time)
     now = singer.utils.now()
     while window_start < now:
-        window_end = window_start + timedelta(days=7)
-        if window_end > now:
-            window_end = now
+        window_end = min(window_start + timedelta(days=7), now)
         yield singer.utils.strftime(window_start), singer.utils.strftime(window_end)
         window_start = window_end
 
@@ -143,7 +141,7 @@ class Locations(FullTableStream):
     @lru_cache()
     @classmethod
     def get_all_location_ids(cls, client):
-        all_location_ids = list()
+        all_location_ids = []
         for page, _ in client.get_locations():
             for location in page:
                 all_location_ids.append(location['id'])

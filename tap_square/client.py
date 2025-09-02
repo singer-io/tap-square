@@ -44,7 +44,7 @@ def write_config(config, config_path, data):
     Updates the provided filepath with json format of the `data` object
     '''
     config.update(data)
-    with open(config_path, "w") as tap_config:
+    with open(config_path, "w", encoding='utf-8') as tap_config:
         json.dump(config, tap_config, indent=2)
     return config
 
@@ -380,7 +380,7 @@ class SquareClient():
     def _get_v1_objects(self, url, params, request_timer_suffix, bookmarked_cursor):
         headers = {
             'content-type': 'application/json',
-            'authorization': 'Bearer {}'.format(self._access_token)
+            'authorization': f'Bearer {self._access_token}'
         }
 
         if bookmarked_cursor:

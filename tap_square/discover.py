@@ -19,8 +19,8 @@ def get_schemas(sandbox):
         if sandbox and stream_name in PRODUCTION_ONLY_STREAMS:
             continue
 
-        schema_path = get_abs_path('schemas/{}.json'.format(stream_name))
-        with open(schema_path) as file:
+        schema_path = get_abs_path(f'schemas/{stream_name}.json')
+        with open(schema_path, encoding='utf-8') as file:
             schema = json.load(file)
 
         meta = metadata.get_standard_metadata(

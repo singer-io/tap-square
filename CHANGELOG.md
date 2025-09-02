@@ -1,5 +1,10 @@
 # Changelog
 
+## [v2.3.2](2025-09-02)
+
+[Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.1...v2.3.2)
+* Fixes miscellaneous pylint issues [#128](https://github.com/singer-io/tap-square/pull/128)
+
 ## [v2.3.1](2025-01-23)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.0...v2.3.1)
