@@ -36,6 +36,10 @@ def get_schemas(sandbox):
         if stream_object.replication_key:
             meta = metadata.write(meta, ('properties', stream_object.replication_key), 'inclusion', 'automatic')
 
+        parent_tap_stream_id = getattr(stream_object, "parent", None)
+        if parent_tap_stream_id:
+            meta = metadata.write(meta, (), 'parent-tap-stream-id', parent_tap_stream_id)
+
         meta = metadata.to_list(meta)
 
         schemas[stream_name] = schema

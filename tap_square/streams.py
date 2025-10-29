@@ -185,6 +185,7 @@ class Payments(Stream):
     # If the records are not updated at all since those are created and if it has missing the updated_at field
     second_replication_key = 'created_at'
     object_type = 'PAYMENT'
+    parent = 'locations'
 
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
@@ -215,6 +216,7 @@ class Orders(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
     object_type = 'ORDER'
+    parent = 'locations'
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -310,6 +312,7 @@ class CashDrawerShifts(FullTableStream):
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None
+    parent = 'locations'
 
     def get_pages(self, bookmarked_cursor, start_time):
         for location_id in Locations.get_all_location_ids(self.client):
@@ -323,6 +326,7 @@ class Payouts(FullTableStream):
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None
+    parent = 'locations'
 
     def get_pages(self, bookmarked_cursor, start_time):
         for location_id in Locations.get_all_location_ids(self.client):
@@ -336,6 +340,7 @@ class TeamMembers(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
     object_type = 'team_members'
+    parent = 'locations'
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
