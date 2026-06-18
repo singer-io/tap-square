@@ -20,9 +20,6 @@ def get_date_windows(start_time):
         window_start = window_end
 
 
-LOGGER = singer.get_logger()
-
-
 class Stream:
     tap_stream_id = None
 
@@ -233,7 +230,11 @@ class Payments(Stream):
     def _probe_access(self):
         location_ids = self._get_probe_location_ids()
         if location_ids:
-            start_time = singer.utils.strftime(singer.utils.now())
+            # Keep probe start in the past to avoid begin_time == end_time.
+            start_time = singer.utils.strftime(
+                singer.utils.now() - timedelta(minutes=1),
+                singer.utils.DATETIME_PARSE,
+            )
             next(self.client.get_payments(location_ids[0], start_time, None), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
