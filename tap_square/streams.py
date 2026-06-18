@@ -231,10 +231,7 @@ class Payments(Stream):
         location_ids = self._get_probe_location_ids()
         if location_ids:
             # Keep probe start in the past to avoid begin_time == end_time.
-            start_time = singer.utils.strftime(
-                singer.utils.now() - timedelta(minutes=1),
-                singer.utils.DATETIME_PARSE,
-            )
+            start_time = singer.utils.strftime(singer.utils.now() - timedelta(minutes=1))
             next(self.client.get_payments(location_ids[0], start_time, None), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
