@@ -24,6 +24,8 @@ LOGGER = singer.get_logger()
 
 
 class Stream:
+    tap_stream_id = None
+
     def __init__(self, client):
         self.client = client
 
