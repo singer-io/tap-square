@@ -77,6 +77,10 @@ class RetryableError(Exception):
     pass
 
 
+class SquareForbiddenError(Exception):
+    """Raised when the Square API returns a 403 Forbidden response."""
+
+
 class SquareClient():
     def __init__(self, config, config_path):
         self._refresh_token = config['refresh_token']
@@ -140,6 +144,9 @@ class SquareClient():
         if result.is_error():
             LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
+
+            if result.status_code == 403:
+                raise SquareForbiddenError(error_message)
 
             # Refactor the conditions into separate variables for readability
             is_service_unavailable = 'Service Unavailable' in error_message
