@@ -50,7 +50,7 @@ class Stream:
             return True
         except SquareForbiddenError as exc:
             LOGGER.warning(
-                "Excluding unauthorized stream '%s' from catalog. HTTP-Error-Message: '%s'",
+                "Unauthorized stream '%s' excluding from catalog. HTTP-Error-Message:'%s'",
                 self.tap_stream_id,
                 str(exc),
             )

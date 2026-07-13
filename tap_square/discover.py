@@ -67,14 +67,13 @@ def _apply_access_checks(client, schemas, schemas_metadata):
 
     if not schemas:
         raise SquareForbiddenError(
-            "HTTP-error-code: 403, Error: The credentials do not have 'read' "
-            "access to any supported streams."
+            "No streams are accessible. Ensure the credentials have read permission for at least one stream."   
         )
 
     if inaccessible_streams:
         LOGGER.warning(
-            "No 'read' access to stream(s): %s. Excluded from catalog.",
-            ", ".join(sorted(inaccessible_streams)),
+            "Unauthorized streams excluded from catalog: %s",
+            ", ".join(inaccessible_streams),
         )
 
 

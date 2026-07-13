@@ -77,7 +77,7 @@ class TestApplyAccessChecks(unittest.TestCase):
         try:
             with self.assertRaises(SquareForbiddenError) as ctx:
                 _apply_access_checks(client, schemas, schemas_metadata)
-            self.assertIn('403', str(ctx.exception))
+            self.assertIn('No streams are accessible', str(ctx.exception))
         finally:
             for name, cls in STREAMS.items():
                 cls.check_access = originals[name]
