@@ -398,7 +398,12 @@ class TestClient():
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        end_time = singer.utils.strftime(singer.utils.now(), singer.utils.DATETIME_PARSE)
+        # Ensure end_time is strictly after begin_time.
+        begin_dt = singer.utils.strptime_to_utc(start_time)
+        end_dt = singer.utils.now() + timedelta(seconds=1)
+        if end_dt <= begin_dt:
+            end_dt = begin_dt + timedelta(seconds=2)
+        end_time = singer.utils.strftime(end_dt, singer.utils.DATETIME_PARSE)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs

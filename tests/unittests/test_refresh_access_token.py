@@ -152,3 +152,42 @@ class TestGetAccessToken(unittest.TestCase):
 
         self.assertIn('Invalid credentials', str(context.exception))
         mock_client_instance.o_auth.obtain_token.assert_called_once()
+
+
+class TestCashDrawerShiftTimeWindow(unittest.TestCase):
+    def _make_client(self):
+        client = SquareClient.__new__(SquareClient)
+        client._client = MagicMock()
+
+        response = MagicMock()
+        response.is_error.return_value = False
+        response.status_code = 200
+        response.errors = None
+        response.body = {'items': [], 'cursor': None}
+        client._client.cash_drawers.list_cash_drawer_shifts.return_value = response
+
+        return client
+
+    def test_cash_drawer_shifts_end_time_is_after_begin_time(self):
+        client = self._make_client()
+        start_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+
+        next(client.get_cash_drawer_shifts('loc_1', start_time, None))
+
+        kwargs = client._client.cash_drawers.list_cash_drawer_shifts.call_args.kwargs
+        begin_time = utils.strptime_to_utc(kwargs['begin_time'])
+        end_time = utils.strptime_to_utc(kwargs['end_time'])
+
+        self.assertGreater(end_time, begin_time)
+
+    def test_cash_drawer_shifts_future_begin_time_still_generates_valid_window(self):
+        client = self._make_client()
+        start_time = utils.strftime(utils.now() + timedelta(days=1), utils.DATETIME_PARSE)
+
+        next(client.get_cash_drawer_shifts('loc_1', start_time, None))
+
+        kwargs = client._client.cash_drawers.list_cash_drawer_shifts.call_args.kwargs
+        begin_time = utils.strptime_to_utc(kwargs['begin_time'])
+        end_time = utils.strptime_to_utc(kwargs['end_time'])
+
+        self.assertGreater(end_time, begin_time)
