@@ -419,8 +419,12 @@ class Customers(Stream):
     replication_key = 'updated_at'
 
     def _probe_access(self):
-        start_time = singer.utils.strftime(singer.utils.now())
-        next(self.client.get_customers(start_time, start_time), None)
+        # `end_at` is exclusive for customer search, so probe with a positive window.
+        window_end = singer.utils.now()
+        window_start = window_end - timedelta(minutes=1)
+        start_time = singer.utils.strftime(window_start)
+        end_time = singer.utils.strftime(window_end)
+        next(self.client.get_customers(start_time, end_time), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
