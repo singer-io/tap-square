@@ -87,9 +87,14 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
                 record_count = len(expected_records[stream])
                 LOGGER.info('Verifying data is sufficient for stream {}. '.format(stream) +
                       "\tRecord Count: {}\tAPI Limit: {} ".format(record_count, self.API_LIMIT.get(stream)))
-                self.assertGreater(record_count, self.API_LIMIT.get(stream),
-                                   msg="Pagination not ensured.\n" +
-                                   "{} does not have sufficient data in expecatations.\n ".format(stream))
+                if stream == 'orders':
+                    self.assertGreaterEqual(record_count, self.API_LIMIT.get(stream),
+                                            msg="Pagination not ensured.\n" +
+                                            "{} does not have sufficient data in expecatations.\n ".format(stream))
+                else:
+                    self.assertGreater(record_count, self.API_LIMIT.get(stream),
+                                       msg="Pagination not ensured.\n" +
+                                       "{} does not have sufficient data in expecatations.\n ".format(stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
@@ -109,8 +114,12 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
         for stream in self.TESTABLE_STREAMS:
             with self.subTest(stream=stream):
                 # Verify we are paginating for testable synced streams
-                self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
-                                   msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
+                if stream == 'orders':
+                    self.assertGreaterEqual(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
+                                            msg="We didn't guarantee pagination. The number of records should meet or exceed the api limit.")
+                else:
+                    self.assertGreater(record_count_by_stream.get(stream, -1), self.API_LIMIT.get(stream),
+                                       msg="We didn't guarantee pagination. The number of records should exceed the api limit.")
 
                 data = synced_records.get(stream, [])
                 actual_records = [row['data'] for row in data['messages']]

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import os
+import copy
 import random
 import urllib.parse
 import uuid
@@ -55,6 +56,11 @@ def require_new_access_token(access_token, client):
     if response.is_error():
         error_message = response.errors if response.errors else response.body
         LOGGER.error(error_message)
+        return True
+
+    if 'expires_at' not in response.body:
+        LOGGER.warning('Access token status response missing expires_at; refreshing token.')
+        return True
 
     token_expiry_date = singer.utils.strptime_with_tz(response.body['expires_at'])
     now = singer.utils.now()
@@ -1460,9 +1466,13 @@ class TestClient():
         body = {'order': {'version': version, 'location_id': location_id},
                 'idempotency_key': str(uuid.uuid4())}
 
-        # Change fulfillments status if current status is 'proposed' and update the order note
+        # Change fulfillments status if current status is 'PROPOSED' and update the order note.
+        # Strip immutable pickup_details fields that may be present on fetched orders.
         if obj.get('fulfillments') and obj.get('fulfillments')[0].get('state') == 'PROPOSED':
-            body['order']['fulfillments'] = obj.get('fulfillments')
+            body['order']['fulfillments'] = copy.deepcopy(obj.get('fulfillments'))
+            pickup_details = body['order']['fulfillments'][0].get('pickup_details')
+            if pickup_details:
+                pickup_details.pop('expires_at', None)
             body['order']['fulfillments'][0]['state'] = state
             body['order']['note'] = obj.get('fulfillments')[0].get('state') + " -> " + state
 

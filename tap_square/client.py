@@ -441,7 +441,11 @@ class SquareClient():
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        begin_dt = utils.strptime_to_utc(start_time)
+        end_dt = utils.now() + timedelta(seconds=1)
+        if end_dt <= begin_dt:
+            end_dt = begin_dt + timedelta(seconds=2)
+        end_time = utils.strftime(end_dt, utils.DATETIME_PARSE)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs
