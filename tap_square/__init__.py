@@ -24,7 +24,7 @@ def main():
         write_catalog(catalog)
     else:
         catalog = args.catalog if args.catalog else discover(client, is_sandbox)
-        sync(args.config, args.config_path, args.state, catalog)
+        sync(args.config, args.config_path, args.state, catalog, client)
 
 if __name__ == '__main__':
     main()
