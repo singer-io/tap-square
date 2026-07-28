@@ -1,12 +1,11 @@
 import singer
 from singer import Transformer, metadata
-from .client import SquareClient
 from .streams import STREAMS
 
 
 LOGGER = singer.get_logger()
 
-def sync(config, config_path, state, catalog, client): # pylint: disable=too-many-statements
+def sync(config, _config_path, state, catalog, client): # pylint: disable=too-many-statements
 
     with Transformer() as transformer:
         for stream in catalog.get_selected_streams(state):
