@@ -81,6 +81,10 @@ class SquareForbiddenError(Exception):
     """Raised when the Square API returns a 403 Forbidden response."""
 
 
+class SquareUnauthorizedError(Exception):
+    """Raised when the Square API returns a 401 Unauthorized response."""
+
+
 class SquareClient():
     def __init__(self, config, config_path):
         self._refresh_token = config['refresh_token']

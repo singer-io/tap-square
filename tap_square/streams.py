@@ -2,7 +2,7 @@ from datetime import timedelta
 import singer
 from methodtools import lru_cache
 from requests.exceptions import RequestException
-from .client import SquareForbiddenError
+from .client import SquareForbiddenError, SquareUnauthorizedError
 
 LOGGER = singer.get_logger()
 
@@ -48,7 +48,7 @@ class Stream:
         try:
             self._probe_access()
             return True
-        except SquareForbiddenError as exc:
+        except (SquareForbiddenError, SquareUnauthorizedError) as exc:
             LOGGER.warning(
                 "Unauthorized stream '%s' excluding from catalog. HTTP-Error-Message:'%s'",
                 self.tap_stream_id,
