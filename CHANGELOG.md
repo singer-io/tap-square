@@ -1,5 +1,9 @@
 # Changelog
 
+## [v2.4.0]
+* Exclude 403-forbidden streams from discovery [#130](https://github.com/singer-io/tap-square/pull/130)
+* Bump dependencies for compliance
+
 ## [v2.3.2](2025-09-02)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.1...v2.3.2)
