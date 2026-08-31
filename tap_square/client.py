@@ -330,6 +330,14 @@ class SquareClient():
             body,
             'refunds')
 
+    @staticmethod
+    def _compute_end_time(start_time):
+        begin_dt = utils.strptime_to_utc(start_time)
+        end_dt = utils.now() + timedelta(seconds=1)
+        if end_dt <= begin_dt:
+            end_dt = begin_dt + timedelta(seconds=2)
+        return utils.strftime(end_dt, utils.DATETIME_PARSE)
+
     def get_payments(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
             cursor = bookmarked_cursor
@@ -337,11 +345,7 @@ class SquareClient():
             cursor = '__initial__' # initial value so while loop is always entered one time
 
         # Ensure end_time is strictly after begin_time by always adding a minimum buffer
-        begin_dt = utils.strptime_to_utc(start_time)
-        end_dt = utils.now() + timedelta(seconds=1)
-        if end_dt <= begin_dt:
-            end_dt = begin_dt + timedelta(seconds=2)
-        end_time = utils.strftime(end_dt, utils.DATETIME_PARSE)
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # Initial text was needed to go into the while loop, but api needs
@@ -371,11 +375,7 @@ class SquareClient():
             cursor = '__initial__' # initial value so while loop is always entered one time
 
         # Ensure end_time is strictly after begin_time.
-        begin_dt = utils.strptime_to_utc(start_time)
-        end_dt = utils.now() + timedelta(seconds=1)
-        if end_dt <= begin_dt:
-            end_dt = begin_dt + timedelta(seconds=2)
-        end_time = utils.strftime(end_dt, utils.DATETIME_PARSE)
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs
@@ -445,11 +445,7 @@ class SquareClient():
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        begin_dt = utils.strptime_to_utc(start_time)
-        end_dt = utils.now() + timedelta(seconds=1)
-        if end_dt <= begin_dt:
-            end_dt = begin_dt + timedelta(seconds=2)
-        end_time = utils.strftime(end_dt, utils.DATETIME_PARSE)
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs

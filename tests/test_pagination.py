@@ -90,11 +90,11 @@ class TestSquarePagination(TestSquareBaseParent.TestSquareBase):
                 if stream == 'orders':
                     self.assertGreaterEqual(record_count, self.API_LIMIT.get(stream),
                                             msg="Pagination not ensured.\n" +
-                                            "{} does not have sufficient data in expecatations.\n ".format(stream))
+                                            "{} does not have sufficient data in expectations.\n ".format(stream))
                 else:
                     self.assertGreater(record_count, self.API_LIMIT.get(stream),
                                        msg="Pagination not ensured.\n" +
-                                       "{} does not have sufficient data in expecatations.\n ".format(stream))
+                                       "{} does not have sufficient data in expectations.\n ".format(stream))
 
         # Create connection but do not use default start date
         conn_id = connections.ensure_connection(self, original_properties=False, payload_hook=self.preserve_access_token)
