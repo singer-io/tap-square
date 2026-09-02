@@ -293,7 +293,7 @@ class Orders(Stream):
 
 class Inventories(FullTableStream):
     tap_stream_id = 'inventories'
-    key_properties = []
+    key_properties = ['catalog_object_id', 'location_id', 'state']
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None
