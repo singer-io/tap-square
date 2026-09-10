@@ -48,7 +48,7 @@ class Stream:
         try:
             self._probe_access()
             return True
-        except (SquareForbiddenError, SquareUnauthorizedError) as exc:
+        except SquareForbiddenError as exc:
             LOGGER.warning(
                 "Unauthorized stream '%s' excluding from catalog. HTTP-Error-Message:'%s'",
                 self.tap_stream_id,
