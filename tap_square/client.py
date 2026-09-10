@@ -77,6 +77,14 @@ class RetryableError(Exception):
     pass
 
 
+class SquareForbiddenError(Exception):
+    """Raised when the Square API returns a 403 Forbidden response."""
+
+
+class SquareUnauthorizedError(Exception):
+    """Raised when the Square API returns a 401 Unauthorized response."""
+
+
 class SquareClient():
     def __init__(self, config, config_path):
         self._refresh_token = config['refresh_token']
@@ -140,6 +148,9 @@ class SquareClient():
         if result.is_error():
             LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
+
+            if result.status_code == 403:
+                raise SquareForbiddenError(error_message)
 
             # Refactor the conditions into separate variables for readability
             is_service_unavailable = 'Service Unavailable' in error_message
@@ -319,13 +330,22 @@ class SquareClient():
             body,
             'refunds')
 
+    @staticmethod
+    def _compute_end_time(start_time):
+        begin_dt = utils.strptime_to_utc(start_time)
+        end_dt = utils.now() + timedelta(seconds=1)
+        if end_dt <= begin_dt:
+            end_dt = begin_dt + timedelta(seconds=2)
+        return utils.strftime(end_dt, utils.DATETIME_PARSE)
+
     def get_payments(self, location_id, start_time, bookmarked_cursor):
         if bookmarked_cursor:
             cursor = bookmarked_cursor
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        # Ensure end_time is strictly after begin_time by always adding a minimum buffer
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # Initial text was needed to go into the while loop, but api needs
@@ -354,7 +374,8 @@ class SquareClient():
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        # Ensure end_time is strictly after begin_time.
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs
@@ -424,7 +445,7 @@ class SquareClient():
         else:
             cursor = '__initial__' # initial value so while loop is always entered one time
 
-        end_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+        end_time = self._compute_end_time(start_time)
         while cursor:
             if cursor == '__initial__':
                 # initial text was needed to go into the while loop, but api needs

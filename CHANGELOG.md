@@ -1,5 +1,13 @@
 # Changelog
 
+## [v2.5.0]
+* Fix invalid empty schema for `item_data.modifier_list_info` and `item_data.item_options` in the `items` stream
+* Fix `inventories` stream discovery failure by adding `key_properties`
+
+## [v2.4.0]
+* Exclude 403-forbidden streams from discovery [#130](https://github.com/singer-io/tap-square/pull/130)
+* Bump dependencies for compliance
+
 ## [v2.3.2](2025-09-02)
 
 [Full Changelog](https://github.com/singer-io/tap-square/compare/v2.3.1...v2.3.2)
