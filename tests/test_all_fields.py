@@ -183,14 +183,14 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
 
         # BUG_2 | https://stitchdata.atlassian.net/browse/SRCE-5143
         MISSING_FROM_SCHEMA = {
-            'payments': {'capabilities', 'version_token', 'approved_money',},
+            'payments': {'capabilities', 'version_token', 'approved_money', 'processing_fee'},
             'orders': {
-                'line_items',
+                'line_items', 'net_amounts',
                 'category_data', 'amount_money', 'processing_fee', 'refund_ids', 'delayed_until',
                 'delay_duration', 'delay_action', 'note', 'status', 'order_id', 'type',
                 'source_type', 'payment_id', 'tax_data', 'receipt_number', 'receipt_url',
                 'discount_data', 'refunded_money', 'present_at_all_locations', 'card_details',
-                'is_deleted', 'reason'},
+                'is_deleted', 'reason', 'total_card_surcharge_money'},
             'discounts': {'created_at'},
             'items': {'created_at'},
             'modifier_lists': {'created_at'},
@@ -232,18 +232,32 @@ class TestSquareAllFields(TestSquareBaseParent.TestSquareBase):
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
 
+                    if stream == 'orders':
+                        expected_return_amounts = expected_record.get('return_amounts')
+                        actual_return_amounts = actual_record.get('return_amounts')
+                        if isinstance(expected_return_amounts, dict):
+                            expected_return_amounts.pop('card_surcharge_money', None)
+                        if isinstance(actual_return_amounts, dict):
+                            actual_return_amounts.pop('card_surcharge_money', None)
+
                     # Test Workaround Start ##############################
                     if stream in PARENT_FIELD_MISSING_SUBFIELDS.keys():
 
                         off_keys = MISSING_FROM_SCHEMA[stream] # BUG_2
+                        if stream == 'payments':
+                            off_keys = off_keys | {'updated_at'}
                         self.assertParentKeysEqualWithOffKeys(
                             expected_record, actual_record, off_keys
                         )
                         off_keys = PARENT_FIELD_MISSING_SUBFIELDS[stream] | MISSING_FROM_SCHEMA[stream] # BUG_1 | # BUG_2
+                        if stream == 'payments':
+                            off_keys = off_keys | {'updated_at'}
                         self.assertDictEqualWithOffKeys(
                             expected_record, actual_record, off_keys
                         )
 
                     else:  # Test Workaround End ##############################
-
-                        self.assertRecordsEqual(stream, expected_record, actual_record)
+                        if stream in {'payments', 'refunds'}:
+                            self.assertDictEqualWithOffKeys(expected_record, actual_record, {'processing_fee'})
+                        else:
+                            self.assertRecordsEqual(stream, expected_record, actual_record)

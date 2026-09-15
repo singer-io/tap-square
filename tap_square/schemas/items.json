@@ -312,17 +312,23 @@
             "array"
           ],
           "items": {
-            "enabled": {
-              "type": [
-                "null",
-                "boolean"
-              ]
-            },
-            "modifier_list_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "enabled": {
+                "type": [
+                  "null",
+                  "boolean"
+                ]
+              },
+              "modifier_list_id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
             }
           }
         },
@@ -332,11 +338,17 @@
             "array"
           ],
           "items": {
-            "item_option_id": {
-              "type": [
-                "null",
-                "string"
-              ]
+            "type": [
+              "null",
+              "object"
+            ],
+            "properties": {
+              "item_option_id": {
+                "type": [
+                  "null",
+                  "string"
+                ]
+              }
             }
           }
         },

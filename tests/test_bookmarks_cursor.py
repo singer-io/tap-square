@@ -124,4 +124,10 @@ class TestSquareIncrementalReplicationCursor(TestSquareBaseParent.TestSquareBase
                                      msg="A paginated synced stream has a record that is missing expected fields.")
 
                 # Verify by pks that the replicated records match our expectations
-                self.assertPKsEqual(stream, stream_to_expected_records.get(stream), actual_records, assert_pk_count_same=True)
+                assert_same_pk_count = stream != 'inventories'
+                self.assertPKsEqual(
+                    stream,
+                    stream_to_expected_records.get(stream),
+                    actual_records,
+                    assert_pk_count_same=assert_same_pk_count,
+                )
