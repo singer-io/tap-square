@@ -2,7 +2,7 @@ from datetime import timedelta
 import singer
 from methodtools import lru_cache
 from requests.exceptions import RequestException
-from .client import SquareForbiddenError, SquareUnauthorizedError
+from .client import SquareForbiddenError
 
 LOGGER = singer.get_logger()
 
