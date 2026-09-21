@@ -2,7 +2,7 @@ from datetime import timedelta
 import singer
 from methodtools import lru_cache
 from requests.exceptions import RequestException
-from .client import SquareForbiddenError, SquareUnauthorizedError
+from .client import SquareForbiddenError
 
 LOGGER = singer.get_logger()
 
@@ -48,7 +48,7 @@ class Stream:
         try:
             self._probe_access()
             return True
-        except (SquareForbiddenError, SquareUnauthorizedError) as exc:
+        except SquareForbiddenError as exc:
             LOGGER.warning(
                 "Unauthorized stream '%s' excluding from catalog. HTTP-Error-Message:'%s'",
                 self.tap_stream_id,
@@ -293,7 +293,7 @@ class Orders(Stream):
 
 class Inventories(FullTableStream):
     tap_stream_id = 'inventories'
-    key_properties = []
+    key_properties = ['catalog_object_id', 'location_id', 'state']
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None

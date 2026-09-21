@@ -190,7 +190,7 @@ class TestSquareBaseParent:
                     self.REPLICATION_KEYS: {'updated_at'}
                 },
                 "inventories": {
-                    self.PRIMARY_KEYS: set(),
+                    self.PRIMARY_KEYS: {'catalog_object_id', 'location_id', 'state'},
                     self.REPLICATION_METHOD: self.FULL,
                     self.START_DATE_KEY: 'calculated_at',
                 },
