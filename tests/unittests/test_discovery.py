@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 from singer.catalog import Catalog
 
 from tap_square.discover import discover, _apply_access_checks, get_schemas, PRODUCTION_ONLY_STREAMS
-from tap_square.client import SquareForbiddenError
+from tap_square.client import SquareForbiddenError, SquareUnauthorizedError
 from tap_square.streams import STREAMS
 
 
@@ -218,6 +218,13 @@ class TestCheckAccess(unittest.TestCase):
         from tap_square.streams import Items
         client = self._make_client()
         client.get_catalog.side_effect = SquareForbiddenError("403 Forbidden")
+        stream = Items(client=client)
+        self.assertFalse(stream.check_access())
+
+    def test_check_access_returns_false_when_catalog_stream_probe_unauthorized(self):
+        from tap_square.streams import Items
+        client = self._make_client()
+        client.get_catalog.side_effect = SquareUnauthorizedError("401 Unauthorized")
         stream = Items(client=client)
         self.assertFalse(stream.check_access())
 

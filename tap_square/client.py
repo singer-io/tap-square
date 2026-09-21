@@ -149,6 +149,9 @@ class SquareClient():
             LOGGER.info("HTTP status code when it errors out: %s", result.status_code)
             error_message = result.errors if result.errors else result.body
 
+            if result.status_code == 401:
+                raise SquareUnauthorizedError(error_message)
+
             if result.status_code == 403:
                 raise SquareForbiddenError(error_message)
 

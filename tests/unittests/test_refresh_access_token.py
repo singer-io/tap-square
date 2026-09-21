@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 from singer import utils
-from tap_square.client import require_new_access_token, SquareClient
+from tap_square.client import (
+    require_new_access_token,
+    SquareClient,
+    SquareUnauthorizedError,
+)
 
 REFRESH_TOKEN_BEFORE = 22
 
@@ -152,6 +156,20 @@ class TestGetAccessToken(unittest.TestCase):
 
         self.assertIn('Invalid credentials', str(context.exception))
         mock_client_instance.o_auth.obtain_token.assert_called_once()
+
+
+class TestRetryableV2Method(unittest.TestCase):
+    def test_401_raises_square_unauthorized_error(self):
+        response = MagicMock(
+            is_error=MagicMock(return_value=True),
+            status_code=401,
+            errors='Invalid access token',
+        )
+
+        with self.assertRaises(SquareUnauthorizedError) as context:
+            SquareClient._retryable_v2_method(lambda _body: response, None)
+
+        self.assertIn('Invalid access token', str(context.exception))
 
 
 class TestCashDrawerShiftTimeWindow(unittest.TestCase):
