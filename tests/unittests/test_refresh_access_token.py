@@ -147,14 +147,44 @@ class TestGetAccessToken(unittest.TestCase):
         # Mock the Client's o_auth.obtain_token method to return an error
         mock_client_instance = mock_client.return_value
         mock_client_instance.o_auth.obtain_token.return_value = MagicMock(
-            is_error=MagicMock(return_value=True), errors=['Invalid credentials']
+            is_error=MagicMock(return_value=True),
+            status_code=500,
+            errors=['Internal Server Error'],
         )
 
         # Call the method and check for exception
         with self.assertRaises(RuntimeError) as context:
             SquareClient(self.config, self.config_path)
 
-        self.assertIn('Invalid credentials', str(context.exception))
+        self.assertIn('Internal Server Error', str(context.exception))
+        mock_client_instance.o_auth.obtain_token.assert_called_once()
+
+    @patch('tap_square.client.Client')
+    @patch('tap_square.client.require_new_access_token')
+    @patch('singer.http_request_timer')
+    def test_get_access_token_refresh_needed_401_error(
+        self, mock_http_timer, mock_require_new_access_token, mock_client
+    ):
+        '''
+        Test the case where the API returns 401 while refreshing the access token
+        '''
+        mock_require_new_access_token.return_value = True
+
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.o_auth.obtain_token.return_value = MagicMock(
+            is_error=MagicMock(return_value=True),
+            status_code=401,
+            errors=['Invalid credentials'],
+        )
+
+        with self.assertRaises(SquareUnauthorizedError) as context:
+            SquareClient(self.config, self.config_path)
+
+        self.assertIn('Failed to refresh access token', str(context.exception))
+        self.assertIn(
+            'Ensure the credentials (client_id, client_secret, refresh_token) are valid.',
+            str(context.exception),
+        )
         mock_client_instance.o_auth.obtain_token.assert_called_once()
 
 

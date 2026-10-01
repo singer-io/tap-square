@@ -67,7 +67,7 @@ def _apply_access_checks(client, schemas, schemas_metadata):
 
     if not schemas:
         raise SquareForbiddenError(
-            "No streams are accessible. Ensure the credentials have read permission for at least one stream."   
+            "No streams are accessible. Ensure the credentials have read permission for at least one stream."
         )
 
     if inaccessible_streams:

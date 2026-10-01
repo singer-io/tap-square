@@ -119,6 +119,12 @@ class SquareClient():
 
             if result.is_error():
                 error_message = result.errors if result.errors else result.body
+                if getattr(result, 'status_code', None) == 401:
+                    raise SquareUnauthorizedError(
+                        f"Failed to refresh access token: {error_message}. "
+                        "Ensure the credentials "
+                        "(client_id, client_secret, refresh_token) are valid."
+                    )
                 raise RuntimeError(error_message)
 
             access_token = result.body['access_token']

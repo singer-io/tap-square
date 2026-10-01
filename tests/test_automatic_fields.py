@@ -102,7 +102,6 @@ class TestAutomaticFields(TestSquareBaseParent.TestSquareBase):
 
                 for pks_tuple, expected_record in expected_pks_to_record_dict.items():
                     actual_record = actual_pks_to_record_dict.get(pks_tuple)
-                    
                     # For orders, the updated_at timestamp can drift between creation and sync
                     if stream == 'orders':
                         expected_record_copy = dict(expected_record)
