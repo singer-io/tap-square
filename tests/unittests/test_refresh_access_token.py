@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 from singer import utils
-from tap_square.client import require_new_access_token, SquareClient
+from tap_square.client import (
+    require_new_access_token,
+    SquareClient,
+    SquareUnauthorizedError,
+)
 
 REFRESH_TOKEN_BEFORE = 22
 
@@ -143,12 +147,95 @@ class TestGetAccessToken(unittest.TestCase):
         # Mock the Client's o_auth.obtain_token method to return an error
         mock_client_instance = mock_client.return_value
         mock_client_instance.o_auth.obtain_token.return_value = MagicMock(
-            is_error=MagicMock(return_value=True), errors=['Invalid credentials']
+            is_error=MagicMock(return_value=True),
+            status_code=500,
+            errors=['Internal Server Error'],
         )
 
         # Call the method and check for exception
         with self.assertRaises(RuntimeError) as context:
             SquareClient(self.config, self.config_path)
 
-        self.assertIn('Invalid credentials', str(context.exception))
+        self.assertIn('Internal Server Error', str(context.exception))
         mock_client_instance.o_auth.obtain_token.assert_called_once()
+
+    @patch('tap_square.client.Client')
+    @patch('tap_square.client.require_new_access_token')
+    @patch('singer.http_request_timer')
+    def test_get_access_token_refresh_needed_401_error(
+        self, mock_http_timer, mock_require_new_access_token, mock_client
+    ):
+        '''
+        Test the case where the API returns 401 while refreshing the access token
+        '''
+        mock_require_new_access_token.return_value = True
+
+        mock_client_instance = mock_client.return_value
+        mock_client_instance.o_auth.obtain_token.return_value = MagicMock(
+            is_error=MagicMock(return_value=True),
+            status_code=401,
+            errors=['Invalid credentials'],
+        )
+
+        with self.assertRaises(SquareUnauthorizedError) as context:
+            SquareClient(self.config, self.config_path)
+
+        self.assertIn('Failed to refresh access token', str(context.exception))
+        self.assertIn(
+            'Ensure the credentials (client_id, client_secret, refresh_token) are valid.',
+            str(context.exception),
+        )
+        mock_client_instance.o_auth.obtain_token.assert_called_once()
+
+
+class TestRetryableV2Method(unittest.TestCase):
+    def test_401_raises_square_unauthorized_error(self):
+        response = MagicMock(
+            is_error=MagicMock(return_value=True),
+            status_code=401,
+            errors='Invalid access token',
+        )
+
+        with self.assertRaises(SquareUnauthorizedError) as context:
+            SquareClient._retryable_v2_method(lambda _body: response, None)
+
+        self.assertIn('Invalid access token', str(context.exception))
+
+
+class TestCashDrawerShiftTimeWindow(unittest.TestCase):
+    def _make_client(self):
+        client = SquareClient.__new__(SquareClient)
+        client._client = MagicMock()
+
+        response = MagicMock()
+        response.is_error.return_value = False
+        response.status_code = 200
+        response.errors = None
+        response.body = {'items': [], 'cursor': None}
+        client._client.cash_drawers.list_cash_drawer_shifts.return_value = response
+
+        return client
+
+    def test_cash_drawer_shifts_end_time_is_after_begin_time(self):
+        client = self._make_client()
+        start_time = utils.strftime(utils.now(), utils.DATETIME_PARSE)
+
+        next(client.get_cash_drawer_shifts('loc_1', start_time, None))
+
+        kwargs = client._client.cash_drawers.list_cash_drawer_shifts.call_args.kwargs
+        begin_time = utils.strptime_to_utc(kwargs['begin_time'])
+        end_time = utils.strptime_to_utc(kwargs['end_time'])
+
+        self.assertGreater(end_time, begin_time)
+
+    def test_cash_drawer_shifts_future_begin_time_still_generates_valid_window(self):
+        client = self._make_client()
+        start_time = utils.strftime(utils.now() + timedelta(days=1), utils.DATETIME_PARSE)
+
+        next(client.get_cash_drawer_shifts('loc_1', start_time, None))
+
+        kwargs = client._client.cash_drawers.list_cash_drawer_shifts.call_args.kwargs
+        begin_time = utils.strptime_to_utc(kwargs['begin_time'])
+        end_time = utils.strptime_to_utc(kwargs['end_time'])
+
+        self.assertGreater(end_time, begin_time)

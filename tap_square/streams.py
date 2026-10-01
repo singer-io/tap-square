@@ -2,6 +2,7 @@ from datetime import timedelta
 import singer
 from methodtools import lru_cache
 from requests.exceptions import RequestException
+from .client import SquareForbiddenError, SquareUnauthorizedError
 
 LOGGER = singer.get_logger()
 
@@ -20,14 +21,50 @@ def get_date_windows(start_time):
 
 
 class Stream:
+    tap_stream_id = None
+
     def __init__(self, client):
         self.client = client
+
+    def _probe_access(self):
+        """Override in subclasses to make a lightweight API probe request.
+        Raise SquareForbiddenError if access is denied."""
+
+    def _get_probe_location_ids(self):
+        """Fetch location IDs directly for use in probe methods.
+        Returns an empty list (without raising) if locations are inaccessible,
+        so each stream's probe remains independent of the Locations stream."""
+        location_ids = []
+        try:
+            for page, _ in self.client.get_locations():
+                for loc in page:
+                    location_ids.append(loc['id'])
+                break  # only need first page to get at least one ID
+        except SquareForbiddenError:
+            pass
+        return location_ids
+
+    def check_access(self) -> bool:
+        try:
+            self._probe_access()
+            return True
+        except (SquareForbiddenError, SquareUnauthorizedError) as exc:
+            LOGGER.warning(
+                "Unauthorized stream '%s' excluding from catalog. HTTP-Error-Message:'%s'",
+                self.tap_stream_id,
+                str(exc),
+            )
+            return False
 
 
 class CatalogStream(Stream):
     object_type = None
     tap_stream_id = None
     replication_key = None
+
+    def _probe_access(self):
+        start_time = singer.utils.strftime(singer.utils.now())
+        next(self.client.get_catalog(self.object_type, start_time), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -53,6 +90,10 @@ class FullTableStream(Stream):
     replication_method = 'FULL_TABLE'
     valid_replication_keys = []
     replication_key = None
+
+    def _probe_access(self):
+        start_time = singer.utils.strftime(singer.utils.now())
+        next(self.get_pages(None, start_time), None)
 
     def get_pages_safe(self, state, bookmarked_cursor, start_time):
         try:
@@ -186,6 +227,12 @@ class Payments(Stream):
     second_replication_key = 'created_at'
     object_type = 'PAYMENT'
 
+    def _probe_access(self):
+        location_ids = self._get_probe_location_ids()
+        if location_ids:
+            # Keep probe start in the past to avoid begin_time == end_time.
+            start_time = singer.utils.strftime(singer.utils.now() - timedelta(minutes=1))
+            next(self.client.get_payments(location_ids[0], start_time, None), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         bookmarked_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -215,6 +262,12 @@ class Orders(Stream):
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
     object_type = 'ORDER'
+
+    def _probe_access(self):
+        location_ids = self._get_probe_location_ids()
+        if location_ids:
+            start_time = singer.utils.strftime(singer.utils.now())
+            next(self.client.get_orders(location_ids[:10], start_time), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
@@ -337,6 +390,10 @@ class TeamMembers(Stream):
     replication_key = 'updated_at'
     object_type = 'team_members'
 
+    def _probe_access(self):
+        location_ids = self._get_probe_location_ids()
+        next(self.client.get_team_members(location_ids), None)
+
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
         max_record_value = start_time
@@ -360,6 +417,14 @@ class Customers(Stream):
     replication_method = 'INCREMENTAL'
     valid_replication_keys = ['updated_at']
     replication_key = 'updated_at'
+
+    def _probe_access(self):
+        # `end_at` is exclusive for customer search, so probe with a positive window.
+        window_end = singer.utils.now()
+        window_start = window_end - timedelta(minutes=1)
+        start_time = singer.utils.strftime(window_start)
+        end_time = singer.utils.strftime(window_end)
+        next(self.client.get_customers(start_time, end_time), None)
 
     def sync(self, state, stream_schema, stream_metadata, config, transformer):
         start_time = singer.get_bookmark(state, self.tap_stream_id, self.replication_key, config['start_date'])
